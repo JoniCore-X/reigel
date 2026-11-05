@@ -1,0 +1,279 @@
+
+/* ======================================================
+   POWER SOLAR — TEAM CAGUAS
+   HERO ART · ENTERPRISE VISUAL DESIGN
+   ====================================================== */
+
+.hero-art {
+  --art-radius: 20px;
+  --art-orange: #ff8500;
+  --art-blue: #0b3474;
+
+  position: relative;
+  isolation: isolate;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(8px, 1.5vw, 20px);
+}
+
+/* Ocultar ilustraciones anteriores */
+
+.hero-art .scene-orbit,
+.hero-art .solar-sun,
+.hero-art .solar-panels,
+.hero-art .art-caption {
+  display: none;
+}
+
+/* Iluminación ambiental */
+
+.hero-art::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+
+  top: 12%;
+  left: 10%;
+
+  width: 80%;
+  height: 76%;
+
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 137, 26, 0.15) 0%,
+    rgba(64, 134, 235, 0.10) 42%,
+    transparent 75%
+  );
+
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+/* Imagen principal Power Solar */
+
+.hero-art::after {
+  content: "";
+  display: block;
+  position: relative;
+  flex: 0 1 560px;
+
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 303 / 206;
+
+  background-color: #092653;
+  background-image:
+    url("../power-solar-brand-hero.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--art-radius);
+
+  outline: 1px solid rgba(255, 255, 255, 0.05);
+  outline-offset: 4px;
+
+  box-shadow:
+    0 24px 55px rgba(3, 15, 43, 0.25),
+    0 8px 20px rgba(3, 15, 43, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease,
+    border-color 300ms ease;
+
+  will-change: auto;
+}
+
+/* Interacción elegante en escritorio */
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-art:hover::after {
+    transform: translateY(-4px);
+
+    border-color: rgba(255, 174, 74, 0.52);
+
+    box-shadow:
+      0 32px 65px rgba(3, 15, 43, 0.31),
+      0 10px 25px rgba(3, 15, 43, 0.12),
+      0 0 25px rgba(255, 133, 0, 0.07);
+  }
+}
+
+/* ======================================================
+   TABLET · 601px–950px
+   ====================================================== */
+
+@media (min-width: 601px) and (max-width: 950px) {
+
+  .hero-art {
+    padding: 12px;
+  }
+
+  .hero-art::after {
+    flex-basis: 520px;
+    max-width: 520px;
+
+    border-radius: 18px;
+
+    box-shadow:
+      0 20px 45px rgba(3, 15, 43, 0.23),
+      0 6px 16px rgba(3, 15, 43, 0.08);
+  }
+
+  /* Eliminar compensación rígida anterior */
+
+  .hero-footnote {
+    padding-right: 0;
+    max-width: 65ch;
+  }
+}
+
+/* ======================================================
+   MOBILE · 600px y menos
+   ====================================================== */
+
+@media (max-width: 600px) {
+
+  .hero-art {
+    width: 100%;
+    padding: 6px 0;
+  }
+
+  .hero-art::before {
+    top: 15%;
+    left: 8%;
+
+    width: 84%;
+    height: 70%;
+
+    filter: blur(22px);
+    opacity: 0.7;
+  }
+
+  .hero-art::after {
+    flex-basis: auto;
+
+    width: 100%;
+    max-width: 100%;
+
+    aspect-ratio: 303 / 206;
+
+    border-radius: 14px;
+    outline: none;
+
+    box-shadow:
+      0 14px 32px rgba(3, 15, 43, 0.19),
+      0 4px 12px rgba(3, 15, 43, 0.07);
+  }
+
+  /* R.E.I.G.E.L. floating launcher */
+
+  .chat-launcher {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    min-height: 54px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    padding: 8px;
+    border-radius: 50%;
+
+    box-shadow:
+      0 8px 24px rgba(3, 18, 54, 0.24);
+
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .chat-launcher:active {
+    transform: scale(0.96);
+  }
+
+  .chat-launcher:focus-visible {
+    outline: 3px solid #ffc247;
+    outline-offset: 4px;
+  }
+
+  /* Ocultar texto visual, mantener accesibilidad */
+
+  .chat-launcher > span:not(.chat-launcher-symbol) {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    padding: 0;
+    margin: -1px;
+
+    overflow: hidden;
+    white-space: nowrap;
+
+    border: 0;
+    clip-path: inset(50%);
+  }
+
+  /* Pie de hero */
+
+  .hero-footnote {
+    max-width: 100%;
+    padding-right: 0;
+
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
+
+/* ======================================================
+   SMALL MOBILE · 360px o menos
+   ====================================================== */
+
+@media (max-width: 360px) {
+
+  .hero-art {
+    padding: 4px 0;
+  }
+
+  .hero-art::after {
+    border-radius: 12px;
+  }
+
+  .chat-launcher {
+    width: 50px;
+    height: 50px;
+
+    min-width: 50px;
+    min-height: 50px;
+  }
+}
+
+/* ======================================================
+   ACCESSIBILITY · REDUCED MOTION
+   ====================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .hero-art::after,
+  .chat-launcher {
+    transition: none;
+  }
+
+  .hero-art:hover::after,
+  .chat-launcher:active {
+    transform: none;
+  }
+}

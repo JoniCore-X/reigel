@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+!.env.example
+.local-access.txt
+data
+backups
+artifacts
+tests
+__pycache__
+.pytest_cache
+.venv
+node_modules
+*.db*
+*.sqlite*
+*.log

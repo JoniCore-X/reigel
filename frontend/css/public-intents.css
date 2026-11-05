@@ -1,0 +1,870 @@
+
+/* ============================================================
+   POWER SOLAR — TEAM CAGUAS
+   R.E.I.G.E.L. · ENTERPRISE HERO V5
+   Production UI / Responsive / Accessible
+   ============================================================ */
+
+/* ============================================================
+   01 — DESIGN TOKENS
+   ============================================================ */
+
+.public-hero {
+  --hero-navy: #061b3c;
+  --hero-blue: #123d80;
+  --hero-orange: #ff7900;
+  --hero-yellow: #ffc247;
+
+  --hero-ink: #0a2853;
+  --hero-muted: #526780;
+  --hero-border: #dfe7f0;
+  --hero-surface: #ffffff;
+
+  --hero-radius: 20px;
+  --hero-container: 1280px;
+}
+
+/* ============================================================
+   02 — MAIN HERO GRID
+   ============================================================ */
+
+.public-hero .hero-grid {
+  display: grid;
+
+  width: 100%;
+  max-width: var(--hero-container);
+
+  margin-inline: auto;
+
+  grid-template-columns:
+    minmax(0, 1.04fr)
+    minmax(0, 0.96fr);
+
+  align-items: center;
+
+  gap: clamp(32px, 4.5vw, 64px);
+
+  min-height: 0;
+  padding-block: clamp(40px, 5vw, 76px);
+}
+
+.public-hero .hero-grid > * {
+  min-width: 0;
+}
+
+/* ============================================================
+   03 — HERO COPY
+   ============================================================ */
+
+.public-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  width: 100%;
+  max-width: 630px;
+
+  padding-block: 12px;
+}
+
+/* Eyebrow */
+
+.public-hero-copy > .eyebrow {
+  margin: 0 0 22px;
+
+  color: #ffd292;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.15em;
+  line-height: 1.5;
+
+  text-transform: uppercase;
+}
+
+/* Main title */
+
+.public-hero h1 {
+  max-width: 14ch;
+
+  margin: 0 0 25px;
+
+  color: #ffffff;
+
+  font-size: clamp(
+    44px,
+    4.75vw,
+    70px
+  );
+
+  font-weight: 800;
+
+  line-height: 1.07;
+  letter-spacing: -0.045em;
+
+  text-wrap: balance;
+  overflow-wrap: normal;
+}
+
+/* Description */
+
+.public-hero-copy > p:not(.eyebrow) {
+  max-width: 52ch;
+
+  margin: 0 0 24px;
+
+  color: rgba(255, 255, 255, 0.87);
+
+  font-size: clamp(
+    15px,
+    1.2vw,
+    18px
+  );
+
+  font-weight: 400;
+
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+/* Small supporting copy */
+
+.public-hero-copy > small {
+  display: block;
+
+  max-width: 54ch;
+
+  color: rgba(225, 236, 255, 0.75);
+
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+/* ============================================================
+   04 — SMART INTENT SELECTOR
+   ============================================================ */
+
+.hero-intents {
+  position: relative;
+  isolation: isolate;
+
+  width: 100%;
+  max-width: 590px;
+  min-width: 0;
+
+  justify-self: end;
+
+  padding: clamp(
+    24px,
+    2.6vw,
+    38px
+  );
+
+  color: var(--hero-ink);
+
+  background:
+    linear-gradient(
+      155deg,
+      #ffffff 0%,
+      #fbfcff 56%,
+      #f5f8fd 100%
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: var(--hero-radius);
+
+  box-shadow:
+    0 26px 62px rgba(3, 18, 48, 0.20),
+    0 7px 20px rgba(3, 18, 48, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Orange corporate accent */
+
+.hero-intents::before {
+  content: "";
+
+  position: absolute;
+  z-index: 1;
+
+  top: 0;
+  left: 28px;
+  right: 28px;
+
+  height: 4px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--hero-orange),
+      #ffa52f,
+      var(--hero-yellow)
+    );
+
+  border-radius: 0 0 5px 5px;
+  pointer-events: none;
+}
+
+/* ============================================================
+   05 — SELECTOR HEADING
+   ============================================================ */
+
+.hero-intents-heading {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.hero-intents-heading .eyebrow {
+  display: block;
+
+  margin: 0 0 13px;
+
+  color: #a34a10;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.13em;
+  line-height: 1.5;
+
+  text-transform: uppercase;
+}
+
+.hero-intents-heading h2 {
+  max-width: 19ch;
+
+  margin: 0;
+
+  color: var(--hero-ink);
+
+  font-size: clamp(
+    26px,
+    2.35vw,
+    34px
+  );
+
+  font-weight: 800;
+
+  line-height: 1.17;
+  letter-spacing: -0.04em;
+
+  text-wrap: balance;
+}
+
+.hero-intents-heading > p:last-child {
+  max-width: 47ch;
+
+  margin: 13px 0 0;
+
+  color: var(--hero-muted);
+
+  font-size: 13px;
+  font-weight: 400;
+
+  line-height: 1.7;
+}
+
+/* ============================================================
+   06 — OPTIONS GRID
+   ============================================================ */
+
+.intent-options {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  width: 100%;
+
+  padding: 0;
+  margin: 0;
+
+  overflow: visible;
+
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ============================================================
+   07 — INTERACTIVE OPTION CARD
+   ============================================================ */
+
+.intent-option {
+  position: relative;
+  isolation: isolate;
+
+  display: grid;
+
+  grid-template-columns:
+    32px
+    minmax(0, 1fr)
+    16px;
+
+  align-items: start;
+
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 125px;
+
+  padding: 19px 15px;
+
+  border: 1px solid var(--hero-border);
+  border-radius: 13px;
+
+  background: var(--hero-surface);
+
+  color: var(--hero-ink);
+
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+
+  text-align: left;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 3px 10px rgba(12, 38, 79, 0.025);
+
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+/* Hover */
+
+@media (hover: hover) and (pointer: fine) {
+  .intent-option:hover {
+    transform: translateY(-2px);
+
+    background: #fffaf4;
+    border-color: #ffc08a;
+
+    box-shadow:
+      0 10px 24px rgba(16, 44, 87, 0.09);
+  }
+}
+
+/* Keyboard focus */
+
+.intent-option:focus-visible {
+  outline: 3px solid var(--hero-yellow);
+  outline-offset: 3px;
+}
+
+/* Selected state */
+
+.intent-option.is-selected,
+.intent-option[aria-pressed="true"],
+.intent-option[aria-selected="true"] {
+  background:
+    linear-gradient(
+      145deg,
+      #fffaf4,
+      #fff1e2
+    );
+
+  border-color: var(--hero-orange);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 121, 0, 0.20),
+    0 7px 18px rgba(255, 121, 0, 0.08);
+}
+
+/* Active press */
+
+.intent-option:active {
+  transform: translateY(0);
+  background: #fff1e3;
+}
+
+/* ============================================================
+   08 — OPTION NUMBER
+   ============================================================ */
+
+.intent-number {
+  display: inline-flex;
+
+  width: 30px;
+  height: 30px;
+
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 30px;
+
+  margin: 0;
+  padding: 0;
+
+  background: #fff1e3;
+
+  border: 1px solid #ffe0c3;
+  border-radius: 9px;
+
+  color: #ae510f;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+
+  letter-spacing: 0.03em;
+}
+
+.intent-option.is-selected .intent-number,
+.intent-option[aria-pressed="true"] .intent-number,
+.intent-option[aria-selected="true"] .intent-number {
+  background: var(--hero-orange);
+  border-color: var(--hero-orange);
+  color: #ffffff;
+}
+
+/* ============================================================
+   09 — OPTION CONTENT
+   ============================================================ */
+
+.intent-copy {
+  display: grid;
+  align-content: start;
+
+  min-width: 0;
+  gap: 7px;
+}
+
+.intent-copy strong {
+  display: block;
+
+  color: var(--hero-ink);
+
+  font-size: 14px;
+  font-weight: 750;
+
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+
+  overflow-wrap: break-word;
+}
+
+.intent-copy small {
+  display: block;
+
+  max-width: none;
+  margin: 0;
+
+  color: #60728a;
+
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.55;
+
+  overflow-wrap: break-word;
+}
+
+/* ============================================================
+   10 — DIRECTIONAL ARROW
+   ============================================================ */
+
+.intent-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 18px;
+  height: 20px;
+
+  margin-top: 4px;
+
+  color: #bd5c15;
+
+  font-size: 16px;
+  line-height: 1;
+
+  transition:
+    transform 200ms ease,
+    color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .intent-option:hover .intent-arrow {
+    transform: translate(2px, -2px);
+    color: var(--hero-orange);
+  }
+}
+
+.intent-option:focus-visible .intent-arrow,
+.intent-option.is-selected .intent-arrow,
+.intent-option[aria-pressed="true"] .intent-arrow,
+.intent-option[aria-selected="true"] .intent-arrow {
+  color: var(--hero-orange);
+}
+
+/* ============================================================
+   11 — HERO TRUST FOOTNOTE
+   ============================================================ */
+
+.hero-footnote {
+  display: flex;
+
+  width: 100%;
+  max-width: var(--hero-container);
+
+  align-items: center;
+  justify-content: space-between;
+
+  flex-wrap: wrap;
+
+  gap: 14px 26px;
+
+  margin: 0 auto;
+  padding: 24px 0 26px;
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.18);
+
+  color: #d6e2f7;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  list-style: none;
+}
+
+.hero-footnote li {
+  display: inline-flex;
+
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-footnote li b {
+  color: #ffc080;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   12 — COMPACT DESKTOP
+   ============================================================ */
+
+@media (max-width: 1100px) {
+
+  .public-hero .hero-grid {
+    gap: 30px;
+    padding-block: 48px;
+  }
+
+  .public-hero h1 {
+    font-size: clamp(42px, 4.8vw, 58px);
+  }
+
+  .hero-intents {
+    padding: 24px;
+  }
+
+  .intent-options {
+    gap: 9px;
+  }
+
+  .intent-option {
+    grid-template-columns:
+      28px
+      minmax(0, 1fr)
+      14px;
+
+    gap: 8px;
+    padding: 15px 12px;
+  }
+
+  .intent-number {
+    width: 27px;
+    height: 27px;
+    flex-basis: 27px;
+  }
+
+  .intent-copy strong {
+    font-size: 13px;
+  }
+}
+
+/* ============================================================
+   13 — TABLET
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+  .public-hero .hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+
+    gap: 36px;
+
+    padding-block: 42px 35px;
+  }
+
+  .public-hero-copy {
+    max-width: 690px;
+    padding-block: 0;
+  }
+
+  .public-hero h1 {
+    max-width: 15ch;
+
+    font-size: clamp(
+      44px,
+      6.4vw,
+      64px
+    );
+  }
+
+  .public-hero-copy > p:not(.eyebrow) {
+    max-width: 58ch;
+  }
+
+  .hero-intents {
+    width: 100%;
+    max-width: 690px;
+
+    justify-self: start;
+
+    padding: 30px;
+    margin: 0;
+  }
+
+  .intent-option {
+    min-height: 110px;
+    padding: 18px;
+  }
+
+  .hero-footnote {
+    justify-content: flex-start;
+    gap: 16px 30px;
+  }
+}
+
+/* ============================================================
+   14 — MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+  .public-hero .hero-grid {
+    gap: 28px;
+    padding-block: 32px 24px;
+  }
+
+  .public-hero-copy {
+    width: 100%;
+    padding: 0;
+  }
+
+  .public-hero-copy > .eyebrow {
+    margin-bottom: 17px;
+    font-size: 10px;
+  }
+
+  .public-hero h1 {
+    max-width: 14ch;
+
+    margin-bottom: 20px;
+
+    font-size: clamp(
+      38px,
+      9.5vw,
+      52px
+    );
+
+    line-height: 1.09;
+    letter-spacing: -0.04em;
+  }
+
+  .public-hero-copy > p:not(.eyebrow) {
+    max-width: 100%;
+
+    margin-bottom: 20px;
+
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .public-hero-copy > small {
+    font-size: 11px;
+  }
+
+  /* Intent card */
+
+  .hero-intents {
+    max-width: 100%;
+
+    padding: 23px 19px;
+
+    border-radius: 17px;
+
+    box-shadow:
+      0 16px 38px rgba(3, 18, 48, 0.16);
+  }
+
+  .hero-intents::before {
+    left: 20px;
+    right: 20px;
+  }
+
+  .hero-intents-heading {
+    margin-bottom: 20px;
+  }
+
+  .hero-intents-heading h2 {
+    font-size: clamp(25px, 6vw, 30px);
+  }
+
+  .hero-intents-heading > p:last-child {
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  /* Single-column selector */
+
+  .intent-options {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .intent-option {
+    grid-template-columns:
+      30px
+      minmax(0, 1fr)
+      18px;
+
+    align-items: center;
+
+    min-height: 77px;
+
+    padding: 14px;
+    gap: 12px;
+
+    border-radius: 11px;
+  }
+
+  .intent-copy {
+    gap: 4px;
+  }
+
+  .intent-copy strong {
+    font-size: 13px;
+  }
+
+  .intent-copy small {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .intent-arrow {
+    margin: 0;
+  }
+
+  /* Footnote */
+
+  .hero-footnote {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+
+    gap: 13px;
+
+    padding-block: 20px 25px;
+  }
+}
+
+/* ============================================================
+   15 — SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 380px) {
+
+  .public-hero h1 {
+    font-size: clamp(35px, 9vw, 42px);
+  }
+
+  .hero-intents {
+    padding: 19px 14px;
+    border-radius: 14px;
+  }
+
+  .hero-intents-heading h2 {
+    font-size: 24px;
+  }
+
+  .intent-option {
+    grid-template-columns:
+      27px
+      minmax(0, 1fr)
+      14px;
+
+    gap: 9px;
+    padding: 12px 10px;
+  }
+
+  .intent-number {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+  }
+
+  .intent-copy strong {
+    font-size: 12px;
+  }
+
+  .intent-copy small {
+    font-size: 11px;
+  }
+}
+
+/* ============================================================
+   16 — CHAT LAUNCHER COMPATIBILITY
+   ============================================================ */
+
+/*
+   Mantiene el comportamiento actual:
+   ocultar el launcher cuando el selector está visible
+   en pantallas pequeñas.
+
+   No modifica la lógica JavaScript existente.
+*/
+
+@media (max-width: 600px) {
+  .public-body.intent-selector-visible .chat-launcher {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* ============================================================
+   17 — ACCESSIBILITY
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .intent-option,
+  .intent-arrow {
+    transition: none;
+  }
+
+  .intent-option:hover,
+  .intent-option:active {
+    transform: none;
+  }
+}

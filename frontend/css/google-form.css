@@ -1,0 +1,300 @@
+
+/* =====================================================
+   POWER SOLAR — TEAM CAGUAS
+   GOOGLE FORMS · ENTERPRISE DESIGN SYSTEM
+   ===================================================== */
+
+.google-form-card {
+  --form-navy: #061b3c;
+  --form-blue: #16458f;
+  --form-orange: #ff7900;
+  --form-yellow: #ffc247;
+  --form-white: #ffffff;
+
+  --form-border: #dce5f2;
+  --form-radius: 22px;
+  --form-height: 2682px;
+
+  position: relative;
+  isolation: isolate;
+
+  width: 100%;
+  max-width: 980px;
+  min-width: 0;
+
+  margin-inline: auto;
+  padding: clamp(22px, 3vw, 40px);
+
+  background:
+    linear-gradient(
+      155deg,
+      rgba(242, 247, 255, 0.96) 0%,
+      rgba(255, 255, 255, 1) 42%,
+      #ffffff 100%
+    );
+
+  border: 1px solid var(--form-border);
+  border-radius: var(--form-radius);
+
+  box-shadow:
+    0 24px 64px rgba(5, 25, 65, 0.10),
+    0 8px 22px rgba(5, 25, 65, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  overflow: hidden;
+}
+
+/* ===========================================
+   SOLAR BRAND ACCENT
+   =========================================== */
+
+.google-form-card::before {
+  content: "";
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 5px;
+  z-index: 2;
+
+  background: linear-gradient(
+    90deg,
+    #f66b00 0%,
+    var(--form-orange) 38%,
+    #ff9c18 70%,
+    var(--form-yellow) 100%
+  );
+}
+
+/* Subtle background lighting */
+
+.google-form-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+
+  top: -140px;
+  right: -160px;
+
+  width: 400px;
+  height: 400px;
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(255, 145, 0, 0.055),
+    transparent 70%
+  );
+
+  pointer-events: none;
+}
+
+/* ===========================================
+   SECTION HEADING
+   =========================================== */
+
+.google-form-card h3 {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  margin: 0 0 26px;
+  padding: 0 0 21px;
+
+  color: var(--form-navy);
+
+  font-family: inherit;
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+
+  border-bottom: 1px solid var(--form-border);
+}
+
+/* Orange heading decoration */
+
+.google-form-card h3::before {
+  content: "";
+  display: block;
+
+  width: 5px;
+  height: 30px;
+  flex: 0 0 5px;
+
+  border-radius: 100px;
+
+  background: linear-gradient(
+    180deg,
+    var(--form-yellow),
+    var(--form-orange)
+  );
+
+  box-shadow:
+    0 0 12px rgba(255, 121, 0, 0.15);
+}
+
+/* ===========================================
+   GOOGLE FORM EMBED
+   =========================================== */
+
+.google-form-embed {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+  height: var(--form-height);
+
+  margin: 0;
+  padding: 0;
+
+  background: var(--form-white);
+
+  border: 1px solid #e4eaf3;
+  border-radius: 14px;
+
+  box-shadow:
+    0 6px 24px rgba(15, 39, 78, 0.035);
+
+  color-scheme: light;
+}
+
+/* Keyboard accessibility */
+
+.google-form-embed:focus-visible {
+  outline: 3px solid var(--form-orange);
+  outline-offset: 3px;
+}
+
+/* Focus on embedded form */
+
+.google-form-card:focus-within {
+  border-color: rgba(255, 121, 0, 0.35);
+}
+
+/* ===========================================
+   TABLET · 601px — 1024px
+   =========================================== */
+
+@media (min-width: 601px) and (max-width: 1024px) {
+
+  .google-form-card {
+    width: 100%;
+    max-width: 100%;
+
+    padding: 24px;
+    border-radius: 18px;
+  }
+
+  .google-form-card h3 {
+    font-size: 25px;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+  }
+
+  .google-form-embed {
+    border-radius: 12px;
+  }
+}
+
+/* ===========================================
+   MOBILE · 600px AND BELOW
+   =========================================== */
+
+@media (max-width: 600px) {
+
+  .google-form-card {
+    --form-height: 3200px;
+
+    width: 100%;
+    max-width: 100%;
+
+    margin-inline: auto;
+    padding: 16px;
+
+    border-radius: 16px;
+
+    box-shadow:
+      0 12px 30px rgba(5, 25, 65, 0.075),
+      0 4px 12px rgba(5, 25, 65, 0.035);
+  }
+
+  .google-form-card::before {
+    height: 4px;
+  }
+
+  .google-form-card::after {
+    width: 220px;
+    height: 220px;
+    top: -100px;
+    right: -100px;
+  }
+
+  .google-form-card h3 {
+    gap: 11px;
+
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+
+    font-size: clamp(20px, 5.2vw, 25px);
+    line-height: 1.3;
+  }
+
+  .google-form-card h3::before {
+    width: 4px;
+    height: 26px;
+    flex-basis: 4px;
+  }
+
+  .google-form-embed {
+    width: 100%;
+    height: var(--form-height);
+
+    border-radius: 10px;
+    border-color: #e6ebf3;
+
+    box-shadow: none;
+  }
+}
+
+/* ===========================================
+   SMALL MOBILE · 360px AND BELOW
+   =========================================== */
+
+@media (max-width: 360px) {
+
+  .google-form-card {
+    padding: 12px;
+    border-radius: 13px;
+  }
+
+  .google-form-card h3 {
+    font-size: 19px;
+    gap: 9px;
+  }
+
+  .google-form-embed {
+    border-radius: 8px;
+  }
+}
+
+/* ===========================================
+   ACCESSIBILITY · REDUCED MOTION
+   =========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .google-form-card,
+  .google-form-card *,
+  .google-form-card::before,
+  .google-form-card::after {
+    animation: none;
+    transition: none;
+  }
+}

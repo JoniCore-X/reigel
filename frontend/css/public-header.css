@@ -1,0 +1,905 @@
+
+/* ==========================================================
+   POWER SOLAR — TEAM CAGUAS
+   ENTERPRISE HEADER V4
+   Responsive · Accessible · Production-oriented
+   ========================================================== */
+
+/* DESIGN TOKENS */
+
+.public-header {
+  --psh-navy: #061a39;
+  --psh-blue: #103d82;
+  --psh-blue-light: #21559e;
+
+  --psh-orange: #ff7900;
+  --psh-orange-light: #ff982c;
+  --psh-yellow: #ffc44d;
+
+  --psh-white: #ffffff;
+  --psh-muted: #b8c9e5;
+
+  --psh-container: 1360px;
+  --psh-height: 84px;
+
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  isolation: isolate;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  max-width: none;
+  min-height: var(--psh-height);
+
+  margin: 0;
+  padding-inline:
+    max(24px, calc((100% - var(--psh-container)) / 2));
+
+  gap: clamp(16px, 2vw, 32px);
+
+  color: var(--psh-white);
+
+  background:
+    radial-gradient(
+      ellipse at 88% -45%,
+      rgba(51, 115, 205, 0.22),
+      transparent 58%
+    ),
+    linear-gradient(
+      110deg,
+      #061a39 0%,
+      #082b60 58%,
+      #103d82 100%
+    );
+
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+
+  box-shadow:
+    0 6px 24px rgba(3, 18, 47, 0.16);
+
+  box-sizing: border-box;
+}
+
+/* RESET LOCAL */
+
+.public-header *,
+.public-header *::before,
+.public-header *::after {
+  box-sizing: border-box;
+}
+
+/* SUBTLE TECHNICAL TEXTURE */
+
+.public-header::before {
+  content: "";
+
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 79px,
+      rgba(150, 190, 255, 0.045) 80px,
+      transparent 81px
+    );
+
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 35%,
+      #000 100%
+    );
+
+  opacity: 0.65;
+}
+
+/* BRAND SIGNATURE */
+
+.public-header::after {
+  content: "";
+
+  position: absolute;
+  z-index: 3;
+
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  height: 3px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ef6900 0%,
+      #ff8500 52%,
+      #ffc44d 100%
+    );
+
+  pointer-events: none;
+}
+
+/* CONTENT ABOVE DECORATION */
+
+.public-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ==========================================================
+   01 — POWER SOLAR IDENTITY
+   ========================================================== */
+
+.public-header .wordmark {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  flex: 0 0 185px;
+  width: 185px;
+  min-width: 0;
+  min-height: 60px;
+
+  margin: 0;
+  padding: 0;
+
+  color: #ffffff;
+  text-decoration: none;
+
+  transition: opacity 200ms ease;
+}
+
+.public-header .wordmark:hover {
+  opacity: 0.94;
+}
+
+/* WORDMARK CONTAINER */
+
+.public-header .wordmark-copy {
+  display: grid;
+  width: max-content;
+  max-width: 100%;
+  gap: 0;
+
+  text-align: left;
+}
+
+/* CORPORATE TYPOGRAPHY */
+
+.public-header .wordmark-power,
+.public-header .wordmark-solar {
+  display: block;
+
+  margin: 0;
+  padding: 0;
+
+  font-family:
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  font-style: italic;
+  font-weight: 900;
+
+  color: #ffffff;
+
+  text-shadow: none;
+}
+
+/* POWER */
+
+.public-header .wordmark-power {
+  position: relative;
+
+  width: max-content;
+  padding-right: 8px;
+  padding-bottom: 4px;
+
+  font-size: 26px;
+  line-height: 0.95;
+  letter-spacing: -1.5px;
+}
+
+/* ORANGE UNDERLINE */
+
+.public-header .wordmark-power::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  right: 6px;
+  bottom: 0;
+
+  height: 3px;
+  border-radius: 4px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--psh-orange),
+      var(--psh-yellow)
+    );
+
+  box-shadow: none;
+}
+
+/* SOLAR */
+
+.public-header .wordmark .wordmark-solar {
+  margin-top: 5px;
+
+  font-size: 27px;
+  font-weight: 900;
+
+  letter-spacing: 2px;
+  line-height: 0.95;
+}
+
+/* TAGLINE */
+
+.public-header .wordmark small {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #d5e4fb;
+
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1.25;
+
+  letter-spacing: 1.65px;
+  white-space: nowrap;
+}
+
+/* SUN ICON */
+
+.public-header .sun-mark {
+  position: absolute;
+
+  top: 1px;
+  right: 6px;
+  left: auto;
+
+  display: block;
+
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+
+  fill: none;
+  stroke: var(--psh-orange);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+
+  filter: none;
+
+  transition: transform 250ms ease;
+}
+
+.public-header .wordmark:hover .sun-mark {
+  transform: rotate(8deg);
+  filter: none;
+}
+
+.public-header .sun-mark::before,
+.public-header .sun-mark::after {
+  display: none;
+  content: none;
+}
+
+/* ==========================================================
+   02 — MAIN NAVIGATION
+   ========================================================== */
+
+.public-header .public-nav {
+  display: flex;
+
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 4px;
+
+  margin-left: auto;
+}
+
+/* ==========================================================
+   03 — TEAM CAGUAS BRAND BADGE
+   ========================================================== */
+
+.public-header .team-badge {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+  gap: 10px;
+
+  min-height: 42px;
+
+  margin-right: clamp(8px, 1.5vw, 24px);
+  padding: 8px 14px;
+
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.075),
+      rgba(255,255,255,0.025)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06);
+
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+
+  white-space: nowrap;
+
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ORANGE IDENTITY DETAIL */
+
+.public-header .team-badge::before {
+  content: "";
+
+  position: absolute;
+
+  left: -1px;
+  top: 20%;
+  bottom: 20%;
+
+  width: 3px;
+  border-radius: 3px;
+
+  background: var(--psh-orange);
+}
+
+/* LOCATION ICON */
+
+.public-header .team-badge svg {
+  display: block;
+
+  width: 19px;
+  height: 19px;
+
+  flex: 0 0 19px;
+
+  fill: var(--psh-orange);
+  stroke: var(--psh-orange);
+  stroke-width: 1.5;
+}
+
+.public-header .team-badge svg circle {
+  fill: var(--psh-navy);
+  stroke: var(--psh-navy);
+}
+
+/* TEAM NAME */
+
+.public-header .team-badge strong {
+  color: var(--psh-yellow);
+  font-weight: 800;
+}
+
+/* ==========================================================
+   04 — NAVIGATION LINKS
+   ========================================================== */
+
+.public-header .public-nav > a:not(.button),
+.public-header .nav-chat {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 44px;
+
+  padding: 11px 13px;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: rgba(245,249,255,0.88);
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  line-height: 1.35;
+
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+/* UNDERLINE INTERACTION */
+
+.public-header .public-nav > a:not(.button)::after,
+.public-header .nav-chat::after {
+  content: "";
+
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+
+  width: 0;
+  height: 2px;
+
+  border-radius: 2px;
+  background: var(--psh-orange);
+
+  transform: translateX(-50%);
+
+  transition: width 200ms ease;
+}
+
+/* HOVER / FOCUS */
+
+.public-header .public-nav > a:not(.button):hover,
+.public-header .public-nav > a:not(.button):focus-visible,
+.public-header .nav-chat:hover,
+.public-header .nav-chat:focus-visible {
+  color: #ffffff;
+
+  background: rgba(255,255,255,0.065);
+
+  border-color: rgba(255,255,255,0.055);
+}
+
+.public-header .public-nav > a:not(.button):hover::after,
+.public-header .public-nav > a:not(.button):focus-visible::after,
+.public-header .nav-chat:hover::after,
+.public-header .nav-chat:focus-visible::after {
+  width: 44%;
+}
+
+/* ==========================================================
+   05 — R.E.I.G.E.L. ASSISTANT
+   ========================================================== */
+
+.public-header .nav-chat {
+  color: #ffd69c;
+
+  background: rgba(255,151,46,0.07);
+  border-color: rgba(255,151,46,0.17);
+
+  font-weight: 700;
+}
+
+.public-header .nav-chat:hover,
+.public-header .nav-chat:focus-visible {
+  color: #ffffff;
+
+  background: rgba(255,151,46,0.13);
+  border-color: rgba(255,151,46,0.34);
+}
+
+/* ==========================================================
+   06 — PRIMARY CTA
+   ========================================================== */
+
+.public-header .public-nav > a.button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 11px;
+
+  flex-shrink: 0;
+
+  min-height: 48px;
+
+  margin-left: 12px;
+  padding: 0 19px;
+
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      125deg,
+      #ff982c 0%,
+      #ff7900 60%,
+      #ee6800 100%
+    );
+
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+
+  line-height: 1.25;
+  text-decoration: none;
+  white-space: nowrap;
+
+  box-shadow:
+    0 7px 18px rgba(255,107,0,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.20);
+
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+/* CTA SHINE */
+
+.public-header .public-nav > a.button::before {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  top: -80%;
+  left: -75%;
+
+  width: 45%;
+  height: 260%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.17),
+      transparent
+    );
+
+  transform: rotate(25deg);
+
+  transition: left 500ms ease;
+}
+
+.public-header .public-nav > a.button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 11px 24px rgba(255,107,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.24);
+}
+
+.public-header .public-nav > a.button:hover::before {
+  left: 135%;
+}
+
+/* CTA ICON */
+
+.public-header .public-nav > a.button span {
+  display: inline-flex;
+  align-items: center;
+
+  transition: transform 200ms ease;
+}
+
+.public-header .public-nav > a.button:hover span {
+  transform: translate(2px, -2px);
+}
+
+/* ==========================================================
+   07 — KEYBOARD ACCESSIBILITY
+   ========================================================== */
+
+.public-header a:focus-visible,
+.public-header button:focus-visible {
+  outline: 3px solid var(--psh-yellow);
+  outline-offset: 3px;
+}
+
+/* ==========================================================
+   08 — MOBILE MENU TOGGLE
+   ========================================================== */
+
+.public-header .menu-toggle {
+  display: none;
+
+  width: 44px;
+  height: 44px;
+
+  flex: 0 0 44px;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.07);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.public-header .menu-toggle:hover {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,255,255,0.34);
+}
+
+.public-header .menu-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ==========================================================
+   09 — TABLET AND COMPACT DESKTOP
+   JS BREAKPOINT: 1240 / 1241px
+   ========================================================== */
+
+@media (max-width: 1240px) {
+  .public-header {
+    --psh-height: 78px;
+
+    min-height: var(--psh-height);
+
+    padding-inline: 20px;
+    gap: 16px;
+  }
+
+  .public-header .wordmark {
+    flex-basis: 170px;
+    width: 170px;
+    min-height: 56px;
+  }
+
+  .public-header .wordmark-power {
+    font-size: 24px;
+  }
+
+  .public-header .wordmark .wordmark-solar {
+    font-size: 25px;
+  }
+
+  .public-header .sun-mark {
+    top: 2px;
+    right: 5px;
+
+    width: 29px;
+    height: 29px;
+  }
+
+  .public-header .menu-toggle {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  /* COLLAPSIBLE NAVIGATION */
+
+  .public-header .public-nav {
+    position: absolute;
+
+    top: calc(100% + 3px);
+    right: 20px;
+
+    display: none;
+
+    width: min(400px, calc(100vw - 40px));
+
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 5px;
+
+    margin: 0;
+    padding: 14px;
+
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 0 0 14px 14px;
+
+    background:
+      linear-gradient(
+        145deg,
+        #0c3069,
+        #061a39
+      );
+
+    box-shadow:
+      0 18px 45px rgba(0,0,0,0.26);
+  }
+
+  /* Existing JavaScript controls this class */
+
+  .public-header .public-nav.is-open {
+    display: flex;
+  }
+
+  /* TEAM CAGUAS INSIDE MENU */
+
+  .public-header .team-badge {
+    width: 100%;
+
+    min-height: 45px;
+
+    margin: 0 0 9px;
+
+    padding: 10px 14px;
+
+    border-color: rgba(255,255,255,0.13);
+  }
+
+  /* MOBILE NAVIGATION ITEMS */
+
+  .public-header .public-nav > a:not(.button),
+  .public-header .nav-chat {
+    width: 100%;
+    min-height: 48px;
+
+    justify-content: flex-start;
+
+    padding: 13px 15px;
+
+    font-size: 14px;
+    text-align: left;
+  }
+
+  .public-header .public-nav > a:not(.button)::after,
+  .public-header .nav-chat::after {
+    display: none;
+  }
+
+  /* FULL-WIDTH CTA */
+
+  .public-header .public-nav > a.button {
+    width: 100%;
+    min-height: 51px;
+
+    margin: 10px 0 0;
+    padding: 0 18px;
+
+    font-size: 14px;
+  }
+}
+
+/* ==========================================================
+   10 — MOBILE
+   ========================================================== */
+
+@media (max-width: 600px) {
+  .public-header {
+    --psh-height: 72px;
+
+    min-height: var(--psh-height);
+
+    padding-inline: 14px;
+    gap: 10px;
+  }
+
+  .public-header::before {
+    opacity: 0.30;
+  }
+
+  .public-header .wordmark {
+    flex-basis: 150px;
+    width: 150px;
+    min-height: 50px;
+  }
+
+  .public-header .wordmark-power {
+    font-size: 21px;
+    letter-spacing: -1.2px;
+  }
+
+  .public-header .wordmark .wordmark-solar {
+    margin-top: 4px;
+
+    font-size: 23px;
+    letter-spacing: 1.6px;
+  }
+
+  .public-header .wordmark small {
+    margin-top: 6px;
+
+    font-size: 6px;
+    letter-spacing: 1.4px;
+  }
+
+  .public-header .sun-mark {
+    top: 1px;
+    right: 3px;
+
+    width: 26px;
+    height: 26px;
+  }
+
+  .public-header .menu-toggle {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .public-header .public-nav {
+    right: 14px;
+    width: calc(100vw - 28px);
+
+    padding: 12px;
+  }
+}
+
+/* ==========================================================
+   11 — SMALL MOBILE
+   ========================================================== */
+
+@media (max-width: 360px) {
+  .public-header {
+    padding-inline: 12px;
+  }
+
+  .public-header .wordmark {
+    flex-basis: 140px;
+    width: 140px;
+  }
+
+  .public-header .wordmark-power {
+    font-size: 20px;
+  }
+
+  .public-header .wordmark .wordmark-solar {
+    font-size: 22px;
+  }
+
+  .public-header .sun-mark {
+    width: 24px;
+    height: 24px;
+  }
+
+  .public-header .public-nav {
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+}
+
+/* ==========================================================
+   12 — REDUCED MOTION
+   ========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .public-header *,
+  .public-header *::before,
+  .public-header *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
