@@ -1483,3 +1483,53 @@ preguntas sin cifras, fuentes registradas). Navegador: `/ia` a 1280 y 375 px y
 Límites: la búsqueda usa `LIKE`, sin acentos insensibles ni ranking. Eliminar
 es definitivo y no pasa por el flujo de privacidad comercial (son
 conversaciones de `/ia` del propio dueño). No se probó con lector de pantalla.
+
+## Chat de coordinación: rediseño visual y reserva por pasos, 19 de noviembre de 2026
+
+Diálogo `#reigel-chat` de `/chat` y del shell corporativo (`landing.html`),
+mismo marcado e IDs en ambos. Estilo nuevo en `frontend/css/coordination-chat.css?v=1`,
+cargado el último y limitado a `.reigel-chat`; `chat.js?v=7`.
+
+- Cabecera con el logo real, píldora de modo («Asistente automático · el equipo
+  puede intervenir», «Atención del equipo solicitada», «Asistencia comercial
+  detenida») y arco solar decorativo en CSS.
+- Bienvenida con tres tarjetas fotográficas locales que envían una pregunta sin
+  cifras ni promesas; se oculta cuando existe un mensaje del visitante. Los tres
+  chips anteriores se conservan.
+- Burbujas con avatar, fuentes como chips, puntos de «preparando respuesta»,
+  dock con «Coordinar evaluación» y «Hablar con el equipo» (`data-chat-book`,
+  `data-chat-human`), compositor en cápsula con autoajuste hasta 140 px y alertas
+  compactas que siguen siendo `role="alert"`.
+- Reserva en tres pasos (Horario, Tus datos, Confirmar) sobre el formulario
+  existente: sin JavaScript todo queda visible como un solo formulario. Validación
+  por paso con `noValidate`, Enter avanza en los pasos 1 y 2, resumen generado con
+  `textContent`, consentimiento sin marcar y obligatorio; un 409 vuelve al paso 1
+  con horarios refrescados. La confirmación solo aparece con la cita del servidor.
+- Uiverse (MIT): andrew-demchenk0/spicy-fish-10 en las píldoras de horario y
+  AqFox/tasty-robin-91 solo en el botón de enviar; avisos en
+  `docs/UIVERSE_COMPONENTS.md` y `frontend/assets/licenses/uiverse-components.txt`.
+
+Pruebas: `tests/frontend_chat.test.cjs` (chat.js real sobre el marcado real de
+`chat.html` en un DOM sintético: validación de cada paso, Enter, 409, nuevo
+`request_id`, confirmación) y su envoltura `tests/test_frontend_chat.py`;
+`tests/test_core.py` comprueba `chat.js?v=7` y el orden de la hoja nueva.
+Navegador (vista previa sintética): `/chat` a 1280, 375 y 320 px y `/soluciones`
+a 1280, 768 y 375 px, sin desplazamiento horizontal ni objetivos menores de 44 px;
+reserva completa de prueba con el asesor ficticio.
+
+Límites: no se probó con lector de pantalla, ni `forced-colors` o
+`prefers-reduced-motion` emulados (las reglas existen pero no se observaron). El
+409 se verificó en la prueba Node, no contra el servidor. Las rutas de los dos
+componentes de Uiverse proceden del encargo y no se volvieron a consultar.
+
+Ajustes tras la revisión de diseño (mismo día): espacio vertical recuperado
+(cabecera de una línea, avisos compactos, fotos con altura según la ventana);
+mientras la reserva está abierta (`data-booking="open"`) el dock se reduce al
+enlace con el equipo, se oculta el aviso de historial y Atrás/Continuar quedan
+fijos al pie del panel; con una cita confirmada (`data-appointment="confirmed"`)
+el botón principal pasa a «Ver mi cita» y se destaca «Hablar con el equipo»; la
+confirmación muestra el sol completo sobre el horizonte; las fuentes se presentan
+como «Fuente: <título publicado>» sin alterar el dato; los textos de interfaz
+quedan en 13 px o más. Medido en vista previa sintética: a 1280×800 las tres
+tarjetas caben completas en la primera vista; a 320×640 el área de conversación
+pasa de 235 a 329 px y muestra dos tarjetas completas.

@@ -1,0 +1,854 @@
+/*
+ * R.E.I.G.E.L. coordination chat · "Atardecer solar en la isla".
+ * Loaded last on /chat and on the corporate shell. Every rule is scoped to the
+ * shared <dialog class="reigel-chat"> (and .chat-page-body for the full page),
+ * so the private workspace and the rest of the public site keep their styles.
+ * Adapted Uiverse components (MIT): andrew-demchenk0/spicy-fish-10 (slot pills)
+ * and AqFox/tasty-robin-91 (send button hover). Notices:
+ * /static/assets/licenses/uiverse-components.txt · docs/UIVERSE_COMPONENTS.md
+ */
+.reigel-chat {
+  --rc-navy: #071d43;
+  --rc-navy-2: #0d2a5c;
+  --rc-blue: #164494;
+  --rc-blue-2: #1f4298;
+  --rc-orange: #e96100;
+  --rc-orange-2: #ff8a2b;
+  --rc-amber: #ffb36b;
+  --rc-orange-ink: #a84400;
+  --rc-paper: #f7f7f2;
+  --rc-sand: #fbf6ee;
+  --rc-card: #fff;
+  --rc-line: #dbe3ed;
+  --rc-line-strong: #b9c7da;
+  --rc-ink: #17233d;
+  --rc-muted: #506178;
+  --rc-tint: #eef3fa;
+  --rc-focus: #bc4e00;
+  --rc-danger: #9d1c2a;
+  --rc-danger-bg: #fdf1ef;
+  --rc-danger-line: #efc4bf;
+  --rc-ok: #1d6342;
+  --rc-ok-bg: #edf7f1;
+  --rc-neo: #edf1f6;
+  --rc-neo-dark: #c5cfdc;
+  --rc-photo-h: clamp(76px, 13vh, 118px);
+  --rc-ease: cubic-bezier(.2, .7, .2, 1);
+  color: var(--rc-ink);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+.reigel-chat [hidden] { display: none !important; }
+.reigel-chat :is(a, button, input, select, textarea, legend):focus-visible { outline: 3px solid var(--rc-focus); outline-offset: 3px; }
+.reigel-chat svg { flex: none; }
+
+/* Frame -------------------------------------------------------------------- */
+dialog.reigel-chat {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid #c3d0e3;
+  border-radius: 22px;
+  background: var(--rc-paper);
+  box-shadow: 0 30px 90px #071d4359, 0 2px 0 #ffffff inset;
+}
+.reigel-chat::backdrop { background: #071d4373; }
+
+/* /chat: the dialog is the page. A warm horizon glows behind the card. */
+.chat-page-body { background: #f3f1ea; }
+dialog.reigel-chat.chat-page-dialog {
+  background:
+    radial-gradient(70% 55% at 50% 118%, #ffd9b4 0%, #ffe9d400 70%),
+    linear-gradient(180deg, #f6f4ee 0%, #f3efe6 100%);
+}
+.chat-page-dialog::backdrop { background: #f3f1ea; }
+.chat-page-body .reigel-chat .chat-page-header { min-height: 62px; padding-block: 8px; background: #ffffffd9; border-bottom-color: #e6e1d6; }
+.chat-page-body .reigel-chat .chat-page-header .sun-mark { display: block; width: 30px; height: 30px; fill: none; stroke: var(--rc-orange); stroke-width: 2.6; stroke-linecap: round; }
+.chat-page-body .reigel-chat .chat-page-header .sun-mark circle { fill: var(--rc-orange-2); stroke: none; }
+.chat-page-body .reigel-chat .chat-page-main { width: min(1000px, 100%); padding: 12px 20px 14px; }
+.chat-page-body .reigel-chat .chat-page-conversation {
+  border: 1px solid #d3dbe6;
+  border-radius: 24px;
+  background: var(--rc-paper);
+  box-shadow: 0 24px 60px #071d4318, 0 2px 6px #071d430d;
+}
+
+/* Header: night sky, concentric horizon lines and a rising sun -------------- */
+.reigel-chat .chat-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  gap: 14px;
+  padding: 14px 18px 15px;
+  border-bottom: 0;
+  color: #fff;
+  background: linear-gradient(100deg, var(--rc-navy) 0%, #0b2858 52%, #183f84 100%);
+  box-shadow: inset 0 -3px 0 var(--rc-orange);
+}
+.reigel-chat .chat-header::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: repeating-radial-gradient(circle at 82% 112%, #ffffff00 0 33px, #ffffff2e 33px 34.5px, #ffffff00 34.5px 36px);
+  -webkit-mask-image: linear-gradient(90deg, #0000 0%, #000a 38%, #000 70%);
+  mask-image: linear-gradient(90deg, #0000 0%, #000a 38%, #000 70%);
+  pointer-events: none;
+}
+.reigel-chat .chat-header::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: calc(82% - 31px);
+  top: calc(112% - 31px);
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #ffe6c6 0%, var(--rc-amber) 34%, var(--rc-orange-2) 62%, var(--rc-orange) 100%);
+  box-shadow: 0 0 0 9px #ff8a2b1f, 0 0 46px 14px #ff8a2b55;
+  pointer-events: none;
+}
+.reigel-chat .chat-identity { min-width: 0; gap: 14px; }
+.reigel-chat .rc-logo {
+  width: 50px;
+  height: 50px;
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--rc-navy), 0 0 0 4px var(--rc-orange-2);
+  object-fit: cover;
+}
+.reigel-chat .rc-identity-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
+.reigel-chat .chat-header h2 { flex: 0 0 100%; font-size: 20px; font-weight: 700; letter-spacing: .12em; line-height: 1.2; color: #fff; }
+.reigel-chat .chat-header p.rc-subtitle { margin: 0; font-size: 13.5px; line-height: 1.4; color: #d3def3; }
+.reigel-chat .chat-header p.rc-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  margin: 0;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid #ffffff33;
+  border-radius: 999px;
+  background: #ffffff17;
+  color: #f1f5fd;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.reigel-chat .rc-mode-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--rc-amber); box-shadow: 0 0 0 3px #ffb36b33; animation: rc-pulse 2.4s ease-in-out infinite; }
+.reigel-chat[data-chat-mode="human"] .rc-mode-dot { background: #7ed9a8; box-shadow: 0 0 0 3px #7ed9a833; }
+.reigel-chat[data-chat-mode="stopped"] .rc-mode-dot { background: #aab6c8; box-shadow: none; animation: none; }
+.reigel-chat .chat-header .rc-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  align-self: center;
+  border: 1px solid #ffffff3d;
+  border-radius: 14px;
+  background: #071d4359;
+  color: #fff;
+  transition: background-color .2s, border-color .2s;
+}
+.reigel-chat .chat-header .rc-icon-button:hover { background: #ffffff24; border-color: #ffffff73; }
+.reigel-chat .rc-icon-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* Scroll surface ----------------------------------------------------------- */
+.reigel-chat .chat-scroll {
+  padding: 16px 18px 14px;
+  background:
+    radial-gradient(90% 180px at 50% 0%, #fff3e4 0%, #fff3e400 100%),
+    var(--rc-paper);
+  background-attachment: local, local;
+}
+.chat-page-body .reigel-chat .chat-page-conversation .chat-scroll { padding: 18px 24px 16px; }
+.chat-page-body .reigel-chat .chat-scroll > *,
+.chat-page-body .reigel-chat .chat-bottom > * { max-width: 780px; margin-inline: auto; }
+.reigel-chat .chat-session-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--rc-ok);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.reigel-chat .chat-session-state::before { content: ""; width: 8px; height: 8px; flex: none; border-radius: 50%; background: #2f9a64; box-shadow: 0 0 0 3px #2f9a6426; }
+
+/* Welcome: three photographic intents ------------------------------------- */
+.reigel-chat .rc-welcome { margin-bottom: 14px; animation: rc-rise .5s var(--rc-ease) both; }
+.reigel-chat[data-chat-started="true"] .rc-welcome { display: none; }
+.reigel-chat .rc-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--rc-orange-ink);
+}
+.reigel-chat .rc-kicker::before { content: ""; width: 22px; height: 3px; flex: none; border-radius: 3px; background: linear-gradient(90deg, var(--rc-orange), var(--rc-amber)); }
+.reigel-chat .rc-welcome h3 { font-size: clamp(22px, 2.6vw, 28px); font-weight: 700; line-height: 1.12; letter-spacing: -.035em; color: var(--rc-navy); text-wrap: balance; }
+.reigel-chat .rc-welcome-lead { max-width: 620px; margin-top: 6px; font-size: 15px; line-height: 1.5; color: var(--rc-muted); }
+.reigel-chat .rc-intents { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.reigel-chat .rc-intents li { display: flex; min-width: 0; animation: rc-rise .55s var(--rc-ease) both; }
+.reigel-chat .rc-intents li:nth-child(2) { animation-delay: .07s; }
+.reigel-chat .rc-intents li:nth-child(3) { animation-delay: .14s; }
+.reigel-chat .rc-intent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--rc-line);
+  border-radius: 18px;
+  background: var(--rc-card);
+  color: var(--rc-ink);
+  text-align: left;
+  box-shadow: 0 1px 2px #071d430d;
+  transition: transform .25s var(--rc-ease), box-shadow .25s var(--rc-ease), border-color .25s;
+}
+.reigel-chat .rc-intent-photo { position: relative; display: block; flex: none; height: var(--rc-photo-h); overflow: hidden; background: #dfe6ef; }
+.reigel-chat .rc-intent-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #071d4300 50%, #071d4347 100%); pointer-events: none; }
+.reigel-chat .rc-intent img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  object-position: var(--rc-focal, 50% 50%);
+  background: #dfe6ef;
+  transform: scale(var(--rc-zoom, 1));
+  transform-origin: var(--rc-focal, 50% 50%);
+  transition: transform .5s var(--rc-ease);
+}
+/* The residential photo is mostly dark roof: frame the palms, houses and bay. */
+.reigel-chat .rc-intents li:first-child .rc-intent img { --rc-focal: 50% 34%; --rc-zoom: 1.45; filter: brightness(1.07) saturate(1.08); }
+.reigel-chat .rc-intent-copy { display: grid; gap: 2px; padding: 10px 12px 12px; }
+.reigel-chat .rc-intent strong { font-size: 15px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; color: var(--rc-navy); }
+.reigel-chat .rc-intent small { font-size: 13px; line-height: 1.35; color: var(--rc-muted); }
+.reigel-chat .rc-intent-go {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--rc-orange-2);
+  color: var(--rc-navy);
+  font-weight: 700;
+  box-shadow: 0 4px 12px #071d4333;
+  transition: transform .25s var(--rc-ease);
+}
+.reigel-chat .rc-intent:enabled:is(:hover, :focus-visible) { transform: translateY(-3px); border-color: var(--rc-orange-2); box-shadow: 0 14px 30px #071d431f; }
+.reigel-chat .rc-intent:enabled:is(:hover, :focus-visible) img { transform: scale(calc(var(--rc-zoom, 1) * 1.05)); }
+.reigel-chat .rc-intent:enabled:is(:hover, :focus-visible) .rc-intent-go { transform: translateX(3px); }
+.reigel-chat .rc-intent:disabled { cursor: progress; opacity: .6; }
+
+/* Messages ----------------------------------------------------------------- */
+.reigel-chat .chat-messages { gap: 14px; }
+.reigel-chat .chat-bubble {
+  position: relative;
+  max-width: min(88%, 620px);
+  padding: 12px 15px 13px;
+  border: 1px solid #d5dfec;
+  border-radius: 6px 20px 20px 20px;
+  background: var(--rc-card);
+  box-shadow: inset 3px 0 0 var(--rc-blue), 0 2px 8px #071d430a;
+}
+.reigel-chat .chat-bubble.assistant { margin-left: 42px; max-width: min(calc(92% - 42px), 620px); }
+.reigel-chat .rc-bubble-avatar {
+  position: absolute;
+  top: 0;
+  left: -42px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #ffb36b;
+}
+.reigel-chat .chat-bubble.customer {
+  border: 0;
+  border-radius: 20px 6px 20px 20px;
+  background: linear-gradient(135deg, var(--rc-orange-2) 0%, var(--rc-amber) 100%);
+  box-shadow: 0 6px 16px #e9610026;
+}
+.reigel-chat .chat-speaker {
+  display: block;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--rc-blue);
+}
+.reigel-chat .chat-bubble.customer .chat-speaker { color: #4b1f00; }
+.reigel-chat .chat-bubble p { margin-top: 4px; font-size: 15.5px; line-height: 1.6; color: var(--rc-ink); }
+.reigel-chat .chat-bubble.customer p { color: var(--rc-navy); }
+.reigel-chat .chat-messages > .chat-bubble:last-child { animation: rc-rise .38s var(--rc-ease) both; }
+
+.reigel-chat .chat-human-note {
+  margin-top: 14px;
+  padding: 11px 14px;
+  border: 1px solid #f3d3b6;
+  border-left: 0;
+  border-radius: 14px;
+  background: #fff4e8;
+  color: #6a3a10;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Quick prompts: navy hairline pills with a small sun, orange on hover */
+.reigel-chat .chat-suggestions { gap: 8px; padding: 14px 0 4px; }
+.reigel-chat[data-chat-started="false"] .chat-suggestions { padding-left: 42px; }
+.reigel-chat .chat-suggestions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 16px 8px 12px;
+  border: 1px solid var(--rc-navy);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--rc-navy);
+  font-size: 14.5px;
+  font-weight: 650;
+  box-shadow: 0 2px 0 #071d4314;
+  transition: background-color .2s, border-color .2s, transform .2s var(--rc-ease);
+}
+.reigel-chat .chat-suggestions button::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rc-amber) 0 38%, var(--rc-orange) 40% 100%);
+  box-shadow: 0 0 0 3px #ff8a2b29;
+}
+.reigel-chat .chat-suggestions button:enabled:hover { border-color: var(--rc-orange); background: #fff4e8; transform: translateY(-1px); }
+
+/* Sources as labelled link chips */
+.reigel-chat .chat-sources { gap: 8px; padding-top: 12px; }
+.reigel-chat .chat-sources a {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--rc-line-strong);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--rc-blue);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.reigel-chat .rc-source-label { color: var(--rc-orange-ink); font-weight: 700; }
+.reigel-chat .chat-sources a::after { content: "↗"; color: var(--rc-orange-ink); }
+.reigel-chat .chat-sources a:hover { border-color: var(--rc-blue); background: var(--rc-tint); }
+
+/* Thinking: three suns on a rising path */
+.reigel-chat .chat-thinking { display: flex; align-items: center; gap: 10px; padding: 14px 0 4px 42px; font-size: 14px; color: var(--rc-blue); }
+.reigel-chat .chat-thinking::before { content: none; display: none; }
+.reigel-chat .rc-dots { display: inline-flex; align-items: flex-end; gap: 5px; height: 18px; }
+.reigel-chat .rc-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--rc-orange-2); animation: rc-arc-dot 1.2s ease-in-out infinite; }
+.reigel-chat .rc-dots i:nth-child(2) { animation-delay: .15s; background: var(--rc-orange); }
+.reigel-chat .rc-dots i:nth-child(3) { animation-delay: .3s; background: var(--rc-amber); }
+
+/* Bottom: action dock, composer, alert, privacy ---------------------------- */
+.reigel-chat .chat-bottom { padding: 0 16px 10px; border-top: 1px solid #e3e2da; background: #fffdf9; }
+.chat-page-body .reigel-chat .chat-page-conversation .chat-bottom { padding: 0 24px 10px; }
+.reigel-chat .chat-next-actions.rc-dock { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0 8px; }
+.reigel-chat .chat-next-actions .rc-dock-action {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 54px;
+  padding: 7px 12px;
+  border-radius: 16px;
+  text-align: left;
+  text-decoration: none;
+  font-size: 15px;
+  transition: transform .2s var(--rc-ease), box-shadow .2s var(--rc-ease), background-color .2s, border-color .2s;
+}
+.reigel-chat .rc-dock-book { border: 1px solid var(--rc-orange); background: linear-gradient(135deg, var(--rc-orange) 0%, var(--rc-orange-2) 100%); color: var(--rc-navy); box-shadow: 0 8px 18px #e9610033; }
+.reigel-chat .rc-dock-human { border: 1.5px solid var(--rc-navy); background: #fff; color: var(--rc-navy); }
+.reigel-chat .rc-dock-action:enabled:hover { transform: translateY(-2px); }
+.reigel-chat .rc-dock-book:enabled:hover { box-shadow: 0 12px 24px #e9610047; }
+.reigel-chat .rc-dock-human:enabled:hover { background: var(--rc-tint); }
+.reigel-chat .rc-dock-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 12px; }
+.reigel-chat .rc-dock-book .rc-dock-icon { background: var(--rc-navy); color: var(--rc-amber); }
+.reigel-chat .rc-dock-human .rc-dock-icon { background: var(--rc-tint); color: var(--rc-blue); }
+.reigel-chat .rc-dock-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.reigel-chat .rc-dock-copy { display: grid; gap: 1px; min-width: 0; }
+.reigel-chat .rc-dock-copy strong { font-size: 15px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.reigel-chat .rc-dock-copy small { font-size: 13px; line-height: 1.3; color: inherit; }
+.reigel-chat .rc-dock-human .rc-dock-copy small { color: var(--rc-muted); }
+
+/* Confirmed appointment: the primary action shows the cita; the team is promoted. */
+.reigel-chat[data-appointment="confirmed"] .rc-dock-book { border: 1.5px solid #bfdccb; background: var(--rc-ok-bg); color: var(--rc-ok); box-shadow: none; }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-book .rc-dock-icon { background: #fff; color: var(--rc-ok); }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-book:enabled:hover { box-shadow: none; background: #e2f2e8; }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-human { border-color: var(--rc-navy); background: var(--rc-navy); color: #fff; box-shadow: 0 8px 18px #071d4333; }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-human .rc-dock-icon { background: #ffffff1f; color: var(--rc-amber); }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-human .rc-dock-copy small { color: #d6e0f3; }
+.reigel-chat[data-appointment="confirmed"] .rc-dock-human:enabled:hover { background: var(--rc-blue); }
+
+/* While booking: the steps own the space; the dock shrinks to the team link. */
+.reigel-chat[data-booking="open"] .chat-next-actions.rc-dock { grid-template-columns: 1fr; padding: 4px 0 2px; }
+.reigel-chat[data-booking="open"] .rc-dock-book { display: none; }
+.reigel-chat[data-booking="open"] .chat-next-actions .rc-dock-human { justify-content: center; min-height: 44px; padding: 2px 10px; border: 0; background: transparent; box-shadow: none; }
+.reigel-chat[data-booking="open"] .rc-dock-human .rc-dock-icon { width: 28px; height: 28px; background: transparent; }
+.reigel-chat[data-booking="open"] .rc-dock-human .rc-dock-copy small { display: none; }
+.reigel-chat[data-booking="open"] .rc-dock-human .rc-dock-copy strong { font-size: 14.5px; text-decoration: underline; text-underline-offset: 4px; }
+.reigel-chat[data-booking="open"] #chat-form.rc-composer { padding-block: 2px; }
+.reigel-chat[data-booking="open"] #chat-text { min-height: 44px; padding-block: 10px; }
+.reigel-chat[data-booking="open"] .chat-privacy { display: none; }
+
+/* Composer capsule */
+.reigel-chat #chat-form.rc-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 4px 4px 4px 18px;
+  border: 1.5px solid var(--rc-line-strong);
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 2px 10px #071d430a;
+  transition: border-color .2s, box-shadow .2s;
+}
+.reigel-chat #chat-form.rc-composer:focus-within { border-color: var(--rc-blue); box-shadow: 0 0 0 4px #1644942e; }
+.reigel-chat #chat-text {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  max-height: 140px;
+  padding: 11px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--rc-ink);
+  font-size: 16px;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: hidden;
+  box-shadow: none;
+}
+.reigel-chat #chat-text:focus { background: transparent; border: 0; outline: none; }
+.reigel-chat #chat-text::placeholder { color: #66748a; }
+/* An empty composer stays one line tall even when the hint is longer than the field. */
+.reigel-chat #chat-text:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Send button hover adapted from Uiverse / AqFox (tasty-robin-91), MIT.
+   The original scales every bare button; here only the composer's send
+   button grows, with a brand active color and no motion when reduced. */
+.reigel-chat #chat-send.rc-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  align-self: flex-end;
+  min-width: 46px;
+  max-width: none;
+  min-height: 46px;
+  padding: 0 18px 0 15px;
+  border: 0;
+  border-radius: 50px;
+  background: var(--rc-navy);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  transition: transform .5s var(--rc-ease), background-color .3s;
+}
+.reigel-chat #chat-send.rc-send:enabled:hover { transform: scale(1.08); background: var(--rc-blue); }
+.reigel-chat #chat-send.rc-send:enabled:active { transform: scale(.97); background: var(--rc-blue-2); }
+.reigel-chat #chat-send.rc-send:disabled { cursor: progress; opacity: .7; }
+.reigel-chat #chat-send svg { width: 20px; height: 20px; fill: none; stroke: var(--rc-amber); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Inline alerts: compact, iconified, still role="alert" */
+.reigel-chat .rc-alert { margin: 0; min-height: 0; font-size: 14px; line-height: 1.5; }
+.reigel-chat .rc-alert:not(:empty) {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  margin: 8px 0 0;
+  padding: 9px 13px;
+  border: 1px solid var(--rc-danger-line);
+  border-radius: 14px;
+  background: var(--rc-danger-bg);
+  color: var(--rc-danger);
+  animation: rc-rise .25s var(--rc-ease) both;
+}
+.reigel-chat .rc-alert:not(:empty)::before {
+  content: "!";
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--rc-danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+.reigel-chat .rc-alert[data-tone="info"]:not(:empty) { border-color: #c9d8ee; background: var(--rc-tint); color: var(--rc-blue); }
+.reigel-chat .rc-alert[data-tone="info"]:not(:empty)::before { content: "i"; background: var(--rc-blue); font-family: Georgia, serif; font-style: italic; }
+.reigel-chat .chat-privacy { margin-top: 7px; font-size: 13px; line-height: 1.4; color: var(--rc-muted); text-align: center; }
+
+/* Booking ------------------------------------------------------------------ */
+.reigel-chat .chat-booking {
+  margin-top: 16px;
+  padding: 18px 18px 0;
+  border: 1px solid var(--rc-line);
+  border-top: 0;
+  border-radius: 22px;
+  background: var(--rc-card);
+  box-shadow: inset 0 4px 0 var(--rc-orange-2), 0 16px 40px #071d4314;
+  scroll-margin-top: 8px;
+  animation: rc-rise .4s var(--rc-ease) both;
+}
+.reigel-chat .chat-booking-heading { align-items: flex-start; }
+.reigel-chat .chat-step { margin-bottom: 4px; font-family: Consolas, "Courier New", monospace; font-size: 13px; font-weight: 700; letter-spacing: .12em; color: var(--rc-orange-ink); }
+.reigel-chat .chat-booking h3 { font-size: 22px; font-weight: 700; letter-spacing: -.03em; color: var(--rc-navy); }
+.reigel-chat .chat-booking-heading .rc-icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--rc-line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--rc-muted);
+}
+.reigel-chat .chat-booking-heading .rc-icon-button:hover { background: var(--rc-tint); color: var(--rc-navy); }
+.reigel-chat #chat-booking-status:not(:empty) { margin-top: 6px; font-size: 14px; line-height: 1.5; color: var(--rc-muted); }
+.reigel-chat #chat-booking-status[data-tone="error"]:not(:empty) { color: var(--rc-danger); }
+
+/* Solar arc progress */
+.reigel-chat .rc-progress { margin: 10px auto 0; max-width: 340px; }
+.reigel-chat .rc-arc { display: block; width: 100%; height: auto; overflow: visible; }
+.reigel-chat .rc-arc-track { fill: none; stroke: #d6dfeb; stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; }
+.reigel-chat .rc-arc-fill { fill: none; stroke: var(--rc-orange-2); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 83.3; transition: stroke-dashoffset .7s var(--rc-ease); }
+.reigel-chat .rc-arc-sun { fill: var(--rc-orange-2); stroke: #fff; stroke-width: 3; filter: drop-shadow(0 0 6px #ff8a2b99); transition: cx .7s var(--rc-ease), cy .7s var(--rc-ease); }
+.reigel-chat .rc-progress-steps { display: grid; grid-template-columns: repeat(3, 1fr); margin: -4px 0 0; padding: 0; list-style: none; }
+.reigel-chat .rc-progress-steps li { display: grid; justify-items: center; gap: 3px; font-size: 13.5px; font-weight: 600; color: var(--rc-muted); text-align: center; }
+.reigel-chat .rc-progress-num {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--rc-line-strong);
+  border-radius: 50%;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rc-muted);
+}
+.reigel-chat .rc-progress-steps li[aria-current="step"] { color: var(--rc-navy); }
+.reigel-chat .rc-progress-steps li[aria-current="step"] .rc-progress-num { border-color: var(--rc-orange); background: var(--rc-orange-2); color: var(--rc-navy); }
+.reigel-chat .rc-progress-steps li.is-done { color: var(--rc-navy-2); }
+.reigel-chat .rc-progress-steps li.is-done .rc-progress-num { border-color: var(--rc-navy); background: var(--rc-navy); color: transparent; }
+.reigel-chat .rc-progress-steps li.is-done .rc-progress-num::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--rc-amber); }
+
+/* Steps */
+.reigel-chat .rc-step { min-width: 0; margin: 14px 0 0; padding: 0; border: 0; }
+.reigel-chat .rc-step-title { display: block; margin-bottom: 10px; padding: 0; font-size: 17px; font-weight: 700; letter-spacing: -.015em; color: var(--rc-navy); }
+.reigel-chat .rc-step-title:focus:not(:focus-visible) { outline: none; }
+.reigel-chat .chat-booking .form-grid { gap: 12px; margin-top: 0; }
+.reigel-chat .chat-booking label,
+.reigel-chat .chat-field-label { font-size: 14px; font-weight: 600; color: #26354f; }
+.reigel-chat .chat-booking input:not([type="checkbox"]):not([type="hidden"]),
+.reigel-chat .chat-booking select {
+  min-height: 48px;
+  padding: 10px 13px;
+  border: 1.5px solid #c9d4e3;
+  border-radius: 13px;
+  background: #fbfcfe;
+  font-size: 16px;
+  font-weight: 400;
+  transition: border-color .2s, box-shadow .2s, background-color .2s;
+}
+.reigel-chat .chat-booking input:not([type="checkbox"]):focus,
+.reigel-chat .chat-booking select:focus { border-color: var(--rc-blue); background: #fff; box-shadow: 0 0 0 4px #1644942b; }
+.reigel-chat .chat-booking [aria-invalid="true"]:not([type="checkbox"]) { border-color: var(--rc-danger) !important; box-shadow: 0 0 0 4px #9d1c2a1f; }
+.reigel-chat .chat-booking .checkbox.ui-consent > input[aria-invalid="true"] { border: 2px solid var(--rc-danger); box-shadow: 0 0 0 4px #9d1c2a1f; }
+.reigel-chat .chat-booking .field-help { margin-top: 10px; font-size: 13.5px; line-height: 1.5; color: var(--rc-muted); }
+.reigel-chat .calendar-zone:not(:empty) { margin-top: 6px; font-size: 13px; color: var(--rc-muted); }
+
+/* Slot pills adapted from Uiverse / andrew-demchenk0 (spicy-fish-10), MIT.
+   The original's dark neumorphic radio becomes a light brand tray; the active
+   state still swaps the inset shadows, but here on <button aria-pressed> with
+   an orange edge and a check so selection never depends on shadow alone. */
+.reigel-chat .chat-booking .slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: var(--rc-neo);
+  box-shadow: inset 0 0 0 1px #dfe5ee;
+}
+.reigel-chat .chat-booking .slot-button {
+  position: relative;
+  min-height: 46px;
+  padding: 8px 6px;
+  border: 1px solid #d4dce7;
+  border-radius: 12px;
+  background: var(--rc-neo);
+  color: var(--rc-navy);
+  font-size: 15px;
+  font-weight: 650;
+  box-shadow: inset -5px -5px 10px var(--rc-neo-dark), inset 5px 5px 10px #ffffff;
+  transition: box-shadow .25s var(--rc-ease), color .2s, border-color .2s;
+}
+.reigel-chat .chat-booking .slot-button:hover { border-color: var(--rc-blue); background: var(--rc-neo); color: var(--rc-blue); }
+.reigel-chat .chat-booking .slot-button.selected,
+.reigel-chat .chat-booking .slot-button[aria-pressed="true"] {
+  border: 2px solid var(--rc-orange);
+  background: #fff4e8;
+  color: var(--rc-orange-ink);
+  box-shadow: inset 5px 5px 10px #f1d3b6, inset -5px -5px 10px #ffffff;
+}
+.reigel-chat .chat-booking .slot-button[aria-pressed="true"]::before { content: "✓ "; }
+.reigel-chat .chat-booking .slot-empty,
+.reigel-chat .chat-booking .slots > .status-inline { padding: 10px 12px; border-radius: 12px; background: #fff; font-size: 14px; line-height: 1.5; color: var(--rc-muted); }
+.reigel-chat .chat-booking .slots > .form-error { padding: 10px 12px; border-radius: 12px; background: var(--rc-danger-bg); font-size: 14px; color: var(--rc-danger); }
+
+/* Summary */
+.reigel-chat .rc-summary { display: grid; margin: 0 0 14px; padding: 4px 16px; border: 1px solid var(--rc-line); border-radius: 16px; background: var(--rc-sand); }
+.reigel-chat .rc-summary > div { display: grid; grid-template-columns: minmax(96px, 34%) minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px dashed #dfd6c6; }
+.reigel-chat .rc-summary > div:last-child { border-bottom: 0; }
+.reigel-chat .rc-summary dt { font-size: 13.5px; font-weight: 600; color: var(--rc-muted); }
+.reigel-chat .rc-summary dd { margin: 0; font-size: 15px; font-weight: 600; color: var(--rc-navy); overflow-wrap: anywhere; }
+.reigel-chat .chat-booking .checkbox.ui-consent { margin: 0; font-size: 14px; line-height: 1.6; color: var(--rc-ink); }
+.reigel-chat #chat-book-error.rc-alert:not(:empty) { margin-top: 12px; }
+
+/* Step navigation, pinned to the bottom of the scroll area while the panel is long */
+.reigel-chat .rc-step-nav {
+  position: sticky;
+  bottom: -16px;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  margin: 14px -18px 0;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--rc-line);
+  border-radius: 0 0 22px 22px;
+  background: #fff;
+  box-shadow: 0 -12px 18px -14px #071d4340;
+}
+.reigel-chat .rc-step-back,
+.reigel-chat .rc-step-next {
+  min-height: 50px;
+  padding: 10px 18px;
+  border-radius: 15px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background-color .2s, border-color .2s, transform .2s var(--rc-ease);
+}
+.reigel-chat .rc-step-back { border: 1.5px solid var(--rc-line-strong); background: #fff; color: var(--rc-navy); }
+.reigel-chat .rc-step-back:hover { border-color: var(--rc-navy); background: var(--rc-tint); }
+.reigel-chat .rc-step-next { flex: 1; border: 0; background: var(--rc-navy); color: #fff; }
+.reigel-chat .rc-step-next:hover { background: var(--rc-blue); }
+.reigel-chat #chat-book-confirm {
+  flex: 1;
+  width: auto;
+  min-height: 50px;
+  margin: 0;
+  border: 0;
+  border-radius: 15px;
+  background: linear-gradient(135deg, var(--rc-orange) 0%, var(--rc-orange-2) 100%);
+  color: var(--rc-navy);
+  font-size: 15.5px;
+  font-weight: 700;
+  box-shadow: 0 10px 22px #e9610033;
+}
+.reigel-chat #chat-book-confirm:enabled:hover { background: linear-gradient(135deg, #d85a00 0%, var(--rc-orange) 100%); }
+
+/* Appointment: the arc completed, a full sun over the island horizon */
+.reigel-chat .chat-appointment {
+  margin-top: 18px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #f0d9c2;
+  border-left: 1px solid #f0d9c2;
+  border-radius: 22px;
+  background: #fff;
+  color: var(--rc-ink);
+  box-shadow: 0 18px 44px #071d4317;
+  animation: rc-rise .45s var(--rc-ease) both;
+}
+.reigel-chat .chat-appointment:focus { outline: none; }
+.reigel-chat .chat-appointment:focus-visible { outline: 3px solid var(--rc-focus); outline-offset: 3px; }
+.reigel-chat .rc-appointment-sky {
+  position: relative;
+  isolation: isolate;
+  padding: 16px 16px 0;
+  background: linear-gradient(180deg, var(--rc-navy) 0%, #143672 48%, #c9581a 88%, #ff8a2b 100%);
+}
+.reigel-chat .rc-appointment-sky::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: repeating-radial-gradient(circle at 50% 100%, #ffffff00 0 30px, #ffffff24 30px 31.5px, #ffffff00 31.5px 34px);
+  pointer-events: none;
+}
+.reigel-chat .rc-appointment-sun { display: block; width: min(320px, 92%); height: auto; margin: 0 auto; overflow: visible; }
+.reigel-chat .rc-sky-line { stroke: #ffe0bd; stroke-width: 2; stroke-linecap: round; opacity: .8; }
+.reigel-chat .rc-sky-arc { fill: none; stroke: var(--rc-amber); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 260; stroke-dashoffset: 0; animation: rc-arc-draw 1s var(--rc-ease) both; }
+.reigel-chat .rc-sun-halo { animation: rc-glow 3.2s ease-in-out .9s infinite; transform-box: fill-box; transform-origin: center; }
+.reigel-chat .rc-sun-rays { fill: none; stroke: #ffd29a; stroke-width: 3; stroke-linecap: round; animation: rc-fade .6s ease .7s both; }
+.reigel-chat .rc-sun-core { fill: var(--rc-amber); stroke: #fff1dd; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: rc-sunrise .9s var(--rc-ease) .15s both; }
+.reigel-chat .rc-appointment-body { padding: 16px 20px 20px; }
+.reigel-chat .chat-appointment .chat-step { color: var(--rc-ok); }
+.reigel-chat .chat-appointment.is-confirmed { text-align: center; }
+.reigel-chat .chat-appointment h3 { margin-bottom: 8px; font-size: 23px; font-weight: 700; letter-spacing: -.03em; color: var(--rc-navy); }
+.reigel-chat .chat-appointment p { font-size: 15.5px; line-height: 1.6; color: var(--rc-ink); }
+.reigel-chat .chat-appointment p:first-of-type::first-letter { text-transform: uppercase; }
+.reigel-chat .chat-appointment small { display: inline-block; margin-top: 10px; padding: 5px 12px; border-radius: 999px; background: var(--rc-tint); font-family: Consolas, "Courier New", monospace; font-size: 13px; color: var(--rc-navy-2); overflow-wrap: anywhere; }
+.reigel-chat .chat-appointment .field-help { margin-top: 10px; font-size: 14px; color: var(--rc-muted); }
+.reigel-chat .chat-appointment.cancelled { border-color: #f0cfb3; background: #fff4e8; }
+.reigel-chat .chat-appointment.cancelled .chat-step { color: var(--rc-orange-ink); }
+
+/* Motion ------------------------------------------------------------------- */
+@keyframes rc-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes rc-pulse { 50% { box-shadow: 0 0 0 6px #ffb36b00; } }
+@keyframes rc-arc-dot { 0%, 100% { transform: translateY(0); opacity: .55; } 40% { transform: translateY(-8px); opacity: 1; } }
+@keyframes rc-sunrise { from { transform: translateY(46px) scale(.55); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rc-arc-draw { from { stroke-dashoffset: 260; } to { stroke-dashoffset: 0; } }
+@keyframes rc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rc-glow { 50% { transform: scale(1.12); opacity: .8; } }
+
+/* Layout ------------------------------------------------------------------- */
+@media (max-height: 760px) {
+  .reigel-chat .rc-welcome-lead { display: none; }
+  .reigel-chat .rc-dock-copy small { display: none; }
+  .reigel-chat .chat-next-actions .rc-dock-action { min-height: 48px; }
+  .reigel-chat .rc-progress { max-width: 250px; margin-top: 4px; }
+  .reigel-chat .chat-booking h3 { font-size: 20px; }
+  .reigel-chat .rc-step { margin-top: 10px; }
+}
+@media (max-height: 700px) {
+  .reigel-chat .chat-booking .chat-booking-heading .chat-step { display: none; }
+  .reigel-chat .rc-progress { max-width: 210px; }
+  .reigel-chat .rc-progress-num { width: 26px; height: 26px; }
+}
+@media (max-width: 600px) {
+  dialog.reigel-chat:not(.chat-page-dialog) { inset: 0; width: 100%; max-width: 100%; height: 100%; max-height: 100%; border: 0; border-radius: 0; }
+  .chat-page-body .reigel-chat .chat-page-header { min-height: 56px; padding: 4px 12px; align-items: center; gap: 8px; }
+  .chat-page-body .reigel-chat .chat-page-header .wordmark { min-height: 44px; padding-top: 0; }
+  .chat-page-body .reigel-chat .chat-page-header .wordmark small { display: none; }
+  .chat-page-body .reigel-chat .chat-page-links { flex-direction: row; align-items: center; gap: 8px; }
+  .chat-page-body .reigel-chat .chat-page-links a { justify-content: flex-end; max-width: 94px; min-height: 44px; font-size: 13px; line-height: 1.2; text-align: right; white-space: normal; }
+  .chat-page-body .reigel-chat .chat-page-main { padding: 0; }
+  .chat-page-body .reigel-chat .chat-page-conversation { border: 0; border-radius: 0; box-shadow: none; }
+  .reigel-chat .chat-header,
+  .chat-page-body .reigel-chat .chat-page-conversation .chat-header { padding: 10px 12px 11px; gap: 10px; }
+  .reigel-chat .rc-logo { width: 42px; height: 42px; }
+  .reigel-chat .chat-header h2 { font-size: 18px; letter-spacing: .1em; }
+  .reigel-chat .chat-header p.rc-subtitle { display: none; }
+  .reigel-chat .chat-header::after { left: calc(82% - 26px); width: 52px; height: 52px; top: calc(112% - 26px); }
+  .reigel-chat .chat-scroll,
+  .chat-page-body .reigel-chat .chat-page-conversation .chat-scroll { padding: 12px 12px 10px; }
+  .reigel-chat .chat-bottom,
+  .chat-page-body .reigel-chat .chat-page-conversation .chat-bottom { padding: 0 12px max(8px, env(safe-area-inset-bottom)); }
+  .reigel-chat .chat-bubble { max-width: 92%; }
+  .reigel-chat .chat-bubble.assistant { margin-left: 38px; max-width: calc(100% - 38px); }
+  .reigel-chat .rc-bubble-avatar { left: -38px; width: 30px; height: 30px; }
+  .reigel-chat .chat-thinking { padding-left: 38px; }
+  .reigel-chat[data-chat-started="false"] .chat-suggestions { padding-left: 0; }
+  .reigel-chat .chat-bubble p { font-size: 15px; }
+  .reigel-chat .chat-next-actions.rc-dock { gap: 8px; padding: 8px 0 6px; }
+  .reigel-chat .chat-next-actions .rc-dock-action { min-height: 48px; padding: 5px 10px; gap: 9px; }
+  .reigel-chat .rc-dock-icon { width: 32px; height: 32px; border-radius: 10px; }
+  .reigel-chat .rc-dock-copy strong { font-size: 14.5px; }
+  .reigel-chat .rc-dock-copy small { display: none; }
+  .reigel-chat .rc-send-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .reigel-chat #chat-send.rc-send { width: 46px; padding: 0; }
+  .reigel-chat .chat-booking { padding: 16px 14px 0; }
+  .reigel-chat .rc-step-nav { margin-inline: -14px; padding: 10px 14px 12px; }
+  .reigel-chat .chat-booking .form-grid { grid-template-columns: 1fr; }
+  .reigel-chat .chat-privacy { margin-top: 5px; line-height: 1.35; }
+}
+@media (max-width: 480px) {
+  .reigel-chat .rc-welcome-lead { display: none; }
+  .reigel-chat .rc-welcome h3 { font-size: 22px; }
+  .reigel-chat .rc-intents { grid-template-columns: 1fr; gap: 8px; }
+  .reigel-chat .rc-intent { flex-direction: row; align-items: stretch; min-height: 64px; border-radius: 16px; }
+  .reigel-chat .rc-intent-photo { width: 92px; height: auto; min-height: 64px; }
+  .reigel-chat .rc-intent-photo::after { background: linear-gradient(90deg, #071d4300 50%, #071d4326 100%); }
+  .reigel-chat .rc-intent-copy { align-content: center; padding: 8px 44px 8px 12px; }
+  .reigel-chat .rc-intent-go { top: 50%; right: 12px; margin-top: -15px; background: var(--rc-tint); color: var(--rc-blue); box-shadow: none; }
+  .reigel-chat .rc-mode-detail { display: none; }
+}
+@media (max-width: 400px) {
+  .chat-page-body .reigel-chat .chat-page-header .sun-mark { display: none; }
+  .chat-page-body .reigel-chat .chat-page-links a { max-width: 86px; }
+  .reigel-chat .rc-kicker { letter-spacing: .05em; gap: 7px; }
+  .reigel-chat .rc-kicker::before { width: 16px; }
+  .reigel-chat .chat-next-actions .rc-dock-action { padding: 5px 8px; gap: 7px; }
+  .reigel-chat .rc-dock-icon { width: 28px; height: 28px; }
+  .reigel-chat .rc-dock-icon svg { width: 18px; height: 18px; }
+  .reigel-chat .rc-dock-copy strong { font-size: 14px; }
+  .reigel-chat .rc-intent-photo { width: 80px; }
+  .reigel-chat .rc-intent small { display: none; }
+  .reigel-chat .rc-summary > div { grid-template-columns: 1fr; gap: 2px; }
+  .reigel-chat .rc-step-back { padding-inline: 13px; }
+}
+
+/* Accessibility modes ------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .reigel-chat *,
+  .reigel-chat *::before,
+  .reigel-chat *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .reigel-chat #chat-send.rc-send:enabled:hover,
+  .reigel-chat #chat-send.rc-send:enabled:active,
+  .reigel-chat .rc-intent:enabled:is(:hover, :focus-visible),
+  .reigel-chat .rc-dock-action:enabled:hover,
+  .reigel-chat .chat-suggestions button:enabled:hover { transform: none; }
+  .reigel-chat .rc-intent:enabled:is(:hover, :focus-visible) img { transform: scale(var(--rc-zoom, 1)); }
+}
+@media (forced-colors: active) {
+  .reigel-chat .chat-header { border-bottom: 3px solid CanvasText; }
+  .reigel-chat .chat-header::before,
+  .reigel-chat .chat-header::after,
+  .reigel-chat .rc-appointment-sky::before,
+  .reigel-chat .rc-intent-photo::after { display: none; }
+  .reigel-chat :is(.rc-intent, .rc-dock-action, .chat-bubble, .chat-booking, .chat-appointment, .rc-alert:not(:empty), .chat-suggestions button, .chat-sources a, #chat-form.rc-composer, .slot-button, .rc-step-back, .rc-step-next, #chat-book-confirm, #chat-send) { border: 1px solid CanvasText; forced-color-adjust: auto; }
+  .reigel-chat[data-booking="open"] .chat-next-actions .rc-dock-human { border: 0; }
+  .reigel-chat .chat-booking .slot-button[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: 1px; }
+  .reigel-chat .rc-progress-steps li[aria-current="step"] .rc-progress-num { border-color: Highlight; background: Highlight; color: HighlightText; }
+  .reigel-chat .rc-arc-track { stroke: GrayText; }
+  .reigel-chat :is(.rc-arc-fill, .rc-sky-arc, .rc-sun-rays, .rc-sky-line) { stroke: Highlight; }
+  .reigel-chat :is(.rc-arc-sun, .rc-sun-core) { fill: Highlight; stroke: Canvas; filter: none; }
+  .reigel-chat .rc-sun-halo { display: none; }
+  .reigel-chat .rc-mode-dot,
+  .reigel-chat .rc-dots i,
+  .reigel-chat .chat-suggestions button::before,
+  .reigel-chat .chat-session-state::before { background: CanvasText; }
+  .reigel-chat .rc-alert:not(:empty)::before { background: CanvasText; color: Canvas; }
+}
