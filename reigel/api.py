@@ -16,13 +16,15 @@ from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .core import ROOT, DomainError, Store, calendar_file, site_origin, text
+from .ia_workspace import AIWorkspace, VISITOR_DAYS
 
 COOKIE = "powersolar_session"
 CHAT_COOKIE = "reigel_webchat"
+IA_COOKIE = "reigel_ia"
 
 
 def load_environment(path=None):
@@ -81,8 +83,19 @@ async def payload(request):
     return value
 
 
-def create_app(db_path=None):
-    load_environment()
+def sse(event, data):
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def create_app(db_path=None, *, load_env=None):
+    # The project .env holds the operating configuration and credentials. Only
+    # the default construction (main.py: no explicit database) reads it; an
+    # explicit path means a test, preview or tool with its own configuration.
+    # Pass load_env=True to opt in deliberately.
+    if load_env is None:
+        load_env = db_path is None
+    if load_env:
+        load_environment()
     production = os.environ.get("REIGEL_ENV", "local").lower() == "production"
     @asynccontextmanager
     async def lifespan(application):
@@ -112,6 +125,7 @@ def create_app(db_path=None):
     from .webchat import WebChat
     app.state.knowledge = KnowledgeBase(app.state.store)
     app.state.webchat = WebChat(app.state.store, app.state.knowledge)
+    app.state.ia = AIWorkspace(app.state.store)
     business = app.state.store.settings()
     environment_url = os.environ.get("SITE_URL", "").rstrip("/")
     if environment_url and environment_url != business.get("site_url"):
@@ -139,7 +153,7 @@ def create_app(db_path=None):
 
     @app.middleware("http")
     async def boundaries(request: Request, call_next):
-        frame_sources = "'self' https://docs.google.com" if request.url.path == "/" else "'self'"
+        frame_sources = "'self' https://docs.google.com" if request.url.path == "/contacto" else "'self'"
         headers = {
             "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "strict-origin-when-cross-origin",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
@@ -171,12 +185,18 @@ def create_app(db_path=None):
             maximum = 1024 * 1024 if request.url.path.startswith("/webhooks/") else 65536
             if size > maximum:
                 return JSONResponse({"detail": "La solicitud es demasiado grande."}, status_code=413, headers=headers)
-            if not request.url.path.startswith("/webhooks/") and len(await request.body()) > maximum:
-                return JSONResponse({"detail": "La solicitud es demasiado grande."}, status_code=413, headers=headers)
+            if not request.url.path.startswith("/webhooks/"):
+                body = bytearray()
+                async for chunk in request.stream():
+                    if len(body) + len(chunk) > maximum:
+                        return JSONResponse({"detail": "La solicitud es demasiado grande."}, status_code=413, headers=headers)
+                    body.extend(chunk)
+                # BaseHTTPMiddleware replays this bounded cache to the endpoint.
+                request._body = bytes(body)
         response = await call_next(request)
         for key, value in headers.items():
             response.headers[key] = value
-        if request.url.path.startswith("/api/") or request.url.path == "/app":
+        if request.url.path.startswith("/api/") or request.url.path in {"/app", "/ia"}:
             response.headers["Cache-Control"] = "no-store"
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
         return response
@@ -186,7 +206,12 @@ def create_app(db_path=None):
 
     def integrations():
         from .channels import integration_status
-        return integration_status()
+        values = integration_status()
+        if getattr(app.state, "synthetic_preview", False):
+            for item in values:
+                if item.get("id") not in {"web", "ai"}:
+                    item.update(configured=False, status="disabled_preview", detail="Deshabilitado en demostración sintética")
+        return values
 
     @app.get("/health")
     async def health():
@@ -229,12 +254,12 @@ def create_app(db_path=None):
         return response
 
     @app.get("/api/dashboard")
-    async def dashboard(user=Depends(actor)):
-        return app.state.store.dashboard(user)
+    async def dashboard(period: str = "all", start: str = "", end: str = "", user=Depends(actor)):
+        return app.state.store.operations_dashboard(user, period=period, start=start, end=end)
 
     @app.get("/api/leads")
-    async def leads(user=Depends(actor)):
-        return {"leads": app.state.store.list_leads(user)}
+    async def leads(q: str = "", stage: str = "", advisor_id: str = "", sort: str = "created_at", order: str = "desc", limit: int = 100, offset: int = 0, user=Depends(actor)):
+        return app.state.store.query_leads(user, q=q, stage=stage, advisor_id=advisor_id, sort=sort, order=order, limit=limit, offset=offset)
 
     @app.post("/api/leads", status_code=201)
     async def create_lead(request: Request, user=Depends(actor)):
@@ -242,11 +267,40 @@ def create_app(db_path=None):
 
     @app.get("/api/leads/{lead_id}")
     async def lead(lead_id: str, user=Depends(actor)):
-        return {"lead": app.state.store.get_lead(lead_id, user), "appointments": app.state.store.list_appointments(user, lead_id)}
+        return app.state.store.lead_detail(lead_id, user)
 
     @app.patch("/api/leads/{lead_id}")
     async def update_lead(lead_id: str, request: Request, user=Depends(actor)):
         return {"lead": app.state.store.update_lead(lead_id, await payload(request), user)}
+
+    @app.post("/api/leads/{lead_id}/activities", status_code=201)
+    async def create_activity(lead_id: str, request: Request, user=Depends(actor)):
+        return {"activity": app.state.store.create_activity(lead_id, await payload(request), user)}
+
+    @app.get("/api/tasks")
+    async def tasks(status: str = "", lead_id: str = "", owner_id: str = "", limit: int = 100, offset: int = 0, user=Depends(actor)):
+        return app.state.store.query_tasks(user, status=status, lead_id=lead_id, owner_id=owner_id, limit=limit, offset=offset)
+
+    @app.get("/api/tasks/{task_id}")
+    async def task(task_id: str, user=Depends(actor)):
+        with app.state.store.connect() as db:
+            return {"task": app.state.store._task(db, task_id, user)}
+
+    @app.post("/api/tasks", status_code=201)
+    async def create_task(request: Request, user=Depends(actor)):
+        return {"task": app.state.store.save_task(await payload(request), user)}
+
+    @app.patch("/api/tasks/{task_id}")
+    async def update_task(task_id: str, request: Request, user=Depends(actor)):
+        return {"task": app.state.store.save_task(await payload(request), user, task_id)}
+
+    @app.get("/api/notifications")
+    async def notifications(limit: int = 100, offset: int = 0, user=Depends(actor)):
+        return app.state.store.list_notifications(user, limit=limit, offset=offset)
+
+    @app.patch("/api/notifications/{notification_id}")
+    async def notification(notification_id: str, request: Request, user=Depends(actor)):
+        return {"notification": app.state.store.mark_notification(notification_id, await payload(request), user)}
 
     @app.get("/api/team")
     async def team(user=Depends(actor)):
@@ -281,10 +335,7 @@ def create_app(db_path=None):
 
     @app.patch("/api/appointments/{appointment_id}")
     async def cancel(appointment_id: str, request: Request, user=Depends(actor)):
-        data = await payload(request)
-        if data != {"status": "cancelled"}:
-            raise DomainError("Solo se permite cancelar la cita.", 422)
-        return {"appointment": app.state.store.cancel_appointment(appointment_id, user)}
+        return {"appointment": app.state.store.update_appointment(appointment_id, await payload(request), user)}
 
     @app.get("/api/appointments/{appointment_id}/ics")
     async def download_calendar(appointment_id: str, user=Depends(actor)):
@@ -338,7 +389,17 @@ def create_app(db_path=None):
     async def public_chat_message(request: Request):
         app.state.limiter.check(request, "chat_message", 60, 60)
         data = await payload(request)
-        return app.state.webchat.message(chat_token(request), data.get("text"), data.get("request_id"))
+        token = chat_token(request)
+        from . import ai_chat
+        brief = app.state.webchat.ai_brief(token, data.get("text"), data.get("request_id")) if ai_chat.enabled() else None
+        ai_reply = None
+        if brief:
+            app.state.limiter.check(request, "chat_ai", 20, 60)
+            ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"])
+        return app.state.webchat.message(
+            token, data.get("text"), data.get("request_id"),
+            ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None,
+        )
 
     @app.post("/api/public/chat/book")
     async def public_chat_book(request: Request):
@@ -349,6 +410,221 @@ def create_app(db_path=None):
     def public_chat_human(request: Request):
         app.state.limiter.check(request, "chat_human", 20, 3600)
         return app.state.webchat.human(chat_token(request))
+
+    def ia_owner(request, response=None):
+        try:
+            user = app.state.store.session_user(request.cookies.get(COOKIE))
+        except DomainError:
+            user = None
+        if user:
+            return app.state.ia.user_owner(user), user
+        existing = app.state.ia.visitor(request.cookies.get(IA_COOKIE))
+        if existing:
+            if response is not None:
+                renew_visitor(request, response)
+            return {"kind": "visitor", "id": existing}, None
+        if response is None:
+            raise DomainError("Abre la conversación para iniciar una sesión temporal.", 401)
+        key, token = app.state.ia.ensure_visitor()
+        set_visitor_cookie(response, token)
+        return {"kind": "visitor", "id": key}, None
+
+    def set_visitor_cookie(response, token):
+        response.set_cookie(
+            IA_COOKIE, token, max_age=VISITOR_DAYS * 86400, httponly=True,
+            secure=production, samesite="strict", path="/api/ia",
+        )
+
+    def renew_visitor(request, response):
+        # Retention is seven days from the last activity: opening /ia
+        # (bootstrap) or sending/regenerating a message. Reading history alone
+        # does not extend it. The database expiry and the browser cookie move
+        # together so neither outlives the other.
+        token = request.cookies.get(IA_COOKIE)
+        if app.state.ia.touch_visitor(token):
+            set_visitor_cookie(response, token)
+        return response
+
+    def ia_events(request, owner, conversation, incoming, history, assistant, regenerate=False):
+        async def events():
+            from . import ai_chat
+            # Output boundary: model text reaches the client, the database and
+            # later prompts only after the validator accepted it. `buffer` holds
+            # everything received; `emitted` marks the validated prefix already
+            # sent. Text past `emitted` is never exposed or persisted.
+            buffer = ""
+            emitted = 0
+            verified = ""
+            previous = assistant["content"] if regenerate else ""
+            saved = False
+            counter = 0
+
+            def persist(value, status):
+                nonlocal saved
+                saved = True
+                return app.state.ia.finish_assistant(assistant["id"], value, status)
+
+            def reject():
+                return persist(ai_chat.SAFE_REPLACEMENT, "rejected"), {
+                    "detail": "La respuesta se retiró por seguridad y se muestra un mensaje alternativo.",
+                }
+
+            def preserve_partial(keep_empty=False):
+                validated = buffer[:emitted].strip()
+                if validated:
+                    return persist(validated, "stopped")
+                if regenerate and previous:
+                    return persist(previous, "complete")
+                if keep_empty:
+                    # An explicit stop before the first token keeps the turn so
+                    # the visitor can regenerate it instead of retyping.
+                    return persist("", "stopped")
+                app.state.ia.discard_assistant(assistant["id"])
+                return None
+
+            try:
+                yield sse("meta", {
+                    "conversation": conversation,
+                    "assistant_id": assistant["id"],
+                    "regenerate": regenerate,
+                })
+                answer = app.state.knowledge.answer(incoming)
+                verified = answer.get("text", "") if isinstance(answer, dict) else ""
+                has_source = bool(str(verified).strip())
+                stream = ai_chat.stream_workspace(ai_chat.safe_history(history), incoming, verified)
+                try:
+                    async for piece in stream:
+                        counter += 1
+                        if counter % 8 == 0 and await request.is_disconnected():
+                            preserve_partial(keep_empty=True)
+                            return
+                        buffer += piece
+                        if len(buffer) > ai_chat.MAX_WORKSPACE_REPLY:
+                            break
+                        cut = ai_chat.sentence_boundary(buffer, emitted)
+                        if cut <= emitted:
+                            continue
+                        try:
+                            # Validate the whole prefix, not only the new
+                            # sentence, so context from earlier text counts.
+                            ai_chat.validate_workspace_reply(buffer[:cut], has_source)
+                        except ValueError:
+                            item, extra = reject()
+                            yield sse("replace", {"assistant": item, **extra})
+                            return
+                        yield sse("delta", {"text": buffer[emitted:cut]})
+                        emitted = cut
+                finally:
+                    await stream.aclose()
+                try:
+                    final = ai_chat.validate_workspace_reply(buffer, has_source)
+                except ValueError:
+                    item, extra = reject()
+                    yield sse("replace", {"assistant": item, **extra})
+                    return
+                if len(buffer) > emitted:
+                    yield sse("delta", {"text": buffer[emitted:]})
+                    emitted = len(buffer)
+                item = persist(final, "complete")
+                yield sse("done", {
+                    "assistant": item,
+                    "conversation": app.state.ia.conversation_summary(owner, conversation["id"]),
+                })
+            except asyncio.CancelledError:
+                if not saved:
+                    preserve_partial(keep_empty=True)
+                raise
+            except Exception as error:
+                if not saved:
+                    item = preserve_partial()
+                else:
+                    item = None
+                import httpx
+                detail = (
+                    "El modelo local tardó demasiado en responder. Inténtalo de nuevo."
+                    if isinstance(error, httpx.TimeoutException)
+                    else "No pudimos completar la respuesta con el modelo local. Revisa que Ollama esté en ejecución."
+                )
+                yield sse("error", {"detail": detail, "assistant": item})
+
+        return StreamingResponse(
+            events(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    @app.get("/api/ia/bootstrap")
+    async def ia_bootstrap(request: Request, response: Response):
+        from .ai_chat import status as chat_ai_status
+        app.state.limiter.check(request, "ia_bootstrap", 60, 60)
+        app.state.ia.purge_expired_visitors()
+        owner, user = ia_owner(request, response)
+        return {
+            "owner": owner["kind"],
+            "user": {"name": user["name"]} if user else None,
+            "retention_days": VISITOR_DAYS,
+            "conversations": app.state.ia.list(owner),
+            "model": await chat_ai_status(),
+        }
+
+    @app.get("/api/ia/status")
+    async def ia_status(request: Request):
+        # Lets public buttons decide between /ia and the deterministic chat
+        # without creating a visitor session or touching any conversation.
+        from .ai_chat import status as chat_ai_status
+        app.state.limiter.check(request, "ia_status", 60, 60)
+        model = await chat_ai_status()
+        return {"available": bool(model.get("enabled")) and model.get("status") == "available"}
+
+    @app.get("/api/ia/conversations")
+    def ia_conversations(request: Request):
+        app.state.limiter.check(request, "ia_read", 120, 60)
+        owner, _ = ia_owner(request)
+        return {"conversations": app.state.ia.list(owner)}
+
+    @app.post("/api/ia/conversations")
+    def ia_create(request: Request):
+        app.state.limiter.check(request, "ia_create", 30, 3600)
+        owner, _ = ia_owner(request)
+        return {"conversation": app.state.ia.create(owner)}
+
+    @app.get("/api/ia/conversations/{conversation_id}")
+    def ia_conversation(conversation_id: str, request: Request):
+        app.state.limiter.check(request, "ia_read", 120, 60)
+        owner, _ = ia_owner(request)
+        return app.state.ia.detail(owner, conversation_id)
+
+    @app.post("/api/ia/conversations/{conversation_id}/messages")
+    async def ia_message(conversation_id: str, request: Request):
+        from . import ai_chat
+        app.state.limiter.check(request, "ia_message", 30, 60)
+        app.state.limiter.check(request, "ia_generate", 10, 60)
+        data = await payload(request)
+        incoming = text(data.get("text"), "mensaje", limit=4000, required=True)
+        if not ai_chat.enabled():
+            raise DomainError("La IA local no está habilitada en este servidor.", 503)
+        owner, _ = ia_owner(request)
+        conversation, user_message, assistant = app.state.ia.begin_turn(owner, conversation_id, incoming)
+        # The model and the knowledge lookup receive the stored text, with
+        # contact data already hidden, never the raw request body.
+        incoming = user_message["content"]
+        history = app.state.ia.history(conversation["id"], exclude_id=user_message["id"])
+        streaming = ia_events(request, owner, conversation, incoming, history, assistant)
+        return renew_visitor(request, streaming) if owner["kind"] == "visitor" else streaming
+
+    @app.post("/api/ia/conversations/{conversation_id}/regenerate")
+    async def ia_regenerate(conversation_id: str, request: Request):
+        from . import ai_chat
+        app.state.limiter.check(request, "ia_regenerate", 10, 60)
+        data = await payload(request)
+        if not ai_chat.enabled():
+            raise DomainError("La IA local no está habilitada en este servidor.", 503)
+        owner, _ = ia_owner(request)
+        conversation, assistant, incoming, history = app.state.ia.prepare_regeneration(
+            owner, conversation_id, data.get("message_id")
+        )
+        streaming = ia_events(request, owner, conversation, incoming, history, assistant, regenerate=True)
+        return renew_visitor(request, streaming) if owner["kind"] == "visitor" else streaming
 
     @app.get("/api/knowledge")
     def knowledge(user=Depends(actor)):
@@ -363,7 +639,8 @@ def create_app(db_path=None):
     @app.get("/api/automation")
     async def automation(user=Depends(actor)):
         from .assistant import model_status
-        return {"engine": "motor_comercial_local", "chat": "active", "paid_apis": "blocked", "local_model": await model_status(), "knowledge": app.state.knowledge.status(), "booking": {"timezone": app.state.store.settings()["timezone"], "public_advisors": sum(u["active"] and u["public_booking"] for u in app.state.store.list_users())}, "notice": "Chat y agenda propios. La actualización requiere Internet y el servidor encendido. Las ventas se concretan con una propuesta aceptada por el cliente."}
+        from .ai_chat import status as chat_ai_status
+        return {"engine": "motor_comercial_local", "chat": "active", "paid_apis": "blocked", "local_model": await model_status(), "chat_ai": await chat_ai_status(), "knowledge": app.state.knowledge.status(), "booking": {"timezone": app.state.store.settings()["timezone"], "public_advisors": sum(u["active"] and u["public_booking"] for u in app.state.store.list_users())}, "notice": "Chat y agenda propios. La actualización requiere Internet y el servidor encendido. Las ventas se concretan con una propuesta aceptada por el cliente."}
 
     @app.get("/api/conversations")
     async def conversations(user=Depends(actor)):
@@ -406,6 +683,8 @@ def create_app(db_path=None):
             # Persisted locally; the visitor receives it by polling their own cookie-bound chat.
             result = {"status": "sent"}
         else:
+            if getattr(app.state, "synthetic_preview", False):
+                raise DomainError("Los envíos externos están deshabilitados en la demostración sintética.", 503)
             result = await send_message(current["channel"], current["external_id"], value)
         message = app.state.store.record_outbound(conversation_id, value, result, user)
         if result["status"] != "sent":
@@ -442,6 +721,12 @@ def create_app(db_path=None):
 
     from .channels import register_routes
     register_routes(app)
+    from .energy import register_routes as register_energy_routes
+    register_energy_routes(app, actor, payload)
+    from .privacy import register_routes as register_privacy_routes
+    register_privacy_routes(app, actor, payload)
+    from .advisor_tools import register_routes as register_advisor_tools
+    register_advisor_tools(app, actor, payload)
     from . import seo
     seo.register_routes(app)
 
@@ -449,9 +734,18 @@ def create_app(db_path=None):
     async def workspace():
         return FileResponse(ROOT / "frontend" / "index.html")
 
+    @app.get("/ia", include_in_schema=False)
+    async def ai_workspace_page():
+        return FileResponse(ROOT / "frontend" / "ia.html", headers={"X-Robots-Tag": "noindex, nofollow"})
+
     @app.get("/", include_in_schema=False)
-    async def landing():
-        return seo.landing_response(app.state.store)
+    async def public_chat_page():
+        # The root is the public conversation visitors reach first.
+        return FileResponse(ROOT / "frontend" / "ia.html", headers={"X-Robots-Tag": "noindex, nofollow"})
+
+    @app.get("/chat", include_in_schema=False)
+    async def legacy_chat_page():
+        return FileResponse(ROOT / "frontend" / "chat.html", headers={"X-Robots-Tag": "noindex, nofollow"})
 
     app.mount("/static", StaticFiles(directory=ROOT / "frontend"), name="static")
     return app

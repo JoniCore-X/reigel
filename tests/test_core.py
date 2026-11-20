@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from html.parser import HTMLParser
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from reigel.core import DomainError, Store, calendar_file, stamp, uid
 
 @pytest.fixture
 def system(tmp_path, monkeypatch):
+    monkeypatch.setattr("reigel.api.load_environment", lambda: None)
     monkeypatch.setenv("REIGEL_ENV", "local")
     monkeypatch.delenv("SITE_URL", raising=False)
     app = create_app(tmp_path / "test.sqlite3")
@@ -38,53 +40,90 @@ def next_slot(store, advisor):
 def test_public_header_keeps_existing_booking_chat_and_private_app(system):
     app, *_ = system
     with TestClient(app) as client:
-        landing = client.get("/")
+        landing = client.get("/captacion")
         assert landing.status_code == 200
         assert 'id="public-menu-toggle"' in landing.text
-        assert 'href="#proceso"' in landing.text
-        assert 'href="#preguntas"' in landing.text
-        assert 'href="#evaluacion"' in landing.text
-        assert 'class="team-badge"' in landing.text
-        assert "<span>Team <strong>Caguas</strong></span>" in landing.text
-        assert 'class="hero-intents ps2-panel"' in landing.text
-        assert 'class="public-hero ps2-layout"' in landing.text
-        assert 'class="hero-grid ps2-inner"' in landing.text
-        assert 'class="public-hero-copy ps2-copy"' in landing.text
-        assert 'class="hero-intents ps2-panel"' in landing.text
-        assert 'class="intent-options ps2-options"' in landing.text
-        assert landing.text.count("intent-option ps2-option") == 4
-        assert landing.text.index("public-intents.css") < landing.text.index("public-layout-refinement.css")
+        for path in ("/captacion", "/empresa", "/equipo", "/soluciones", "/proceso", "/contacto", "/preguntas", "/app"):
+            assert f'href="{path}"' in landing.text
         assert 'data-open-chat' in landing.text
         assert 'id="reigel-chat"' in landing.text
-        assert 'id="evaluacion"' in landing.text
+        assert 'id="chat-form"' in landing.text
+        assert 'id="chat-book-form"' in landing.text
+        assert 'href="/contacto#privacidad"' in landing.text
         assert '/static/js/header-menu.js' in landing.text
-        header_css = client.get("/static/css/public-header.css")
-        assert header_css.status_code == 200
-        assert ".public-header::before" in header_css.text
-        assert "repeating-linear-gradient" in header_css.text
-        assert "--psh-navy: #041631" in header_css.text
-        assert "rgba(255, 255, 255, 0.1)" in header_css.text
-        assert "@media (max-width: 1240px)" in header_css.text
-        assert ".public-header .sun-mark::before" in header_css.text
-        refinement_css = client.get("/static/css/public-layout-refinement.css")
-        assert refinement_css.status_code == 200
-        assert "--ps-container: 1280px" in refinement_css.text
-        assert ".ps2-layout .ps2-inner" in refinement_css.text
-        assert ".ps2-layout .ps2-panel .ps2-panel-title" in refinement_css.text
-        assert "@media (max-width: 430px)" in refinement_css.text
-        assert "@media (prefers-reduced-motion: reduce)" in refinement_css.text
         header_script = client.get("/static/js/header-menu.js")
         assert header_script.status_code == 200
         assert "aria-expanded" in header_script.text
         assert "Escape" in header_script.text
-        assert "min-width: 1241px" in header_script.text
-        intent_script = client.get("/static/js/public-intents.js")
-        assert intent_script.status_code == 200
-        assert "IntersectionObserver" in intent_script.text
+        assert "setBackgroundInert" in header_script.text
+        assert "restoreFocus" in header_script.text
+        assert "event.shiftKey" in header_script.text
+        assert client.get("/static/css/corporate.css").status_code == 200
 
         workspace = client.get("/app")
         assert workspace.status_code == 200
         assert 'id="login-screen"' in workspace.text
+
+
+def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system):
+    app, store, admin, _ = system
+    store.update_settings({"site_url": "https://powersolar.example"}, admin)
+    with TestClient(app) as client:
+        page = client.get("/")
+        assert page.status_code == 200
+        assert page.headers["x-robots-tag"] == "noindex, nofollow"
+        assert '<meta name="robots" content="noindex,nofollow">' in page.text
+        assert 'id="ia-shell"' in page.text
+        assert 'id="ia-thread"' in page.text
+        assert 'id="ia-form"' in page.text
+        assert 'src="/static/js/ia.js?v=9"' in page.text
+        assert 'src="/static/assets/power-solar/reigel-logo.png"' in page.text
+        assert 'id="ia-plus"' in page.text
+        assert 'data-ia-menu="new"' in page.text
+        assert 'data-ia-menu="copy"' in page.text
+        assert "Aún no disponible" in page.text
+        assert 'href="/captacion"' in page.text
+        assert 'id="reigel-chat"' not in page.text
+
+        chat = client.get("/chat")
+        assert chat.status_code == 200
+        assert chat.headers["x-robots-tag"] == "noindex, nofollow"
+        assert '<meta name="robots" content="noindex,nofollow">' in chat.text
+        assert 'id="reigel-chat"' in chat.text
+        assert 'id="chat-messages"' in chat.text
+        assert 'id="chat-welcome"' not in chat.text
+        assert 'class="chat-page-intro"' not in chat.text
+        assert 'class="chat-page-aside"' not in chat.text
+        assert 'id="chat-form"' in chat.text
+        assert "El historial de esta conversación se guarda para el equipo" in chat.text
+        assert 'id="chat-session-state" hidden' in chat.text
+        assert 'src="/static/js/chat.js?v=6"' in chat.text
+        assert 'href="/captacion"' in chat.text
+        assert 'href="/app"' in chat.text
+        chat_script = client.get("/static/js/chat.js")
+        assert chat_script.status_code == 200
+        assert "if (panel.dataset.chatPage === 'true') open();" in chat_script.text
+        assert "call('/api/public/chat')" in chat_script.text
+        assert "typeof data.conversation_id === 'string'" in chat_script.text
+        assert "No customer data goes to localStorage" in chat_script.text
+        chat_styles = client.get("/static/css/public-chat.css")
+        assert chat_styles.status_code == 200
+        assert "dialog.reigel-chat.chat-page-dialog" in chat_styles.text
+        assert "@media(max-width:600px)" in chat_styles.text
+        assert ".chat-page-conversation{height:100%;min-height:0" in chat_styles.text
+        assert ".chat-page-main{width:100%;padding:0}" in chat_styles.text
+
+        marketing = client.get("/captacion")
+        assert marketing.status_code == 200
+        assert '<link rel="canonical" href="https://powersolar.example/captacion">' in marketing.text
+        assert '<meta property="og:url" content="https://powersolar.example/captacion">' in marketing.text
+        assert marketing.headers["link"] == "<https://powersolar.example/captacion>; rel=\"canonical\""
+        assert client.get("/sitemap.xml").text.count("https://powersolar.example/captacion") == 1
+        assert "https://powersolar.example/</loc>" not in client.get("/sitemap.xml").text
+
+        workspace = client.get("/app")
+        assert 'href="/captacion" class="text-link">← Ver página de captación' in workspace.text
+        assert 'class="capture-link" href="/captacion"' in workspace.text
 
 
 def test_public_intent_selector_prefills_chat_without_sending_or_collecting_contact_data(system):
@@ -96,20 +135,32 @@ def test_public_intent_selector_prefills_chat_without_sending_or_collecting_cont
         "No sé qué necesito y quisiera orientación sobre las opciones para mi hogar.",
     )
     with TestClient(app) as client:
-        landing = client.get("/")
-        assert landing.status_code == 200
-        selector = landing.text.split('<section class="hero-intents ps2-panel"', 1)[1].split("</section>", 1)[0]
-        assert "¿Qué te gustaría mejorar?" in selector
-        assert selector.count('class="intent-option ps2-option"') == 4
-        assert selector.count("data-open-chat") == 4
-        assert "data-chat-prompt" not in selector
-        assert "<input" not in selector
-        assert "name=" not in selector
-        for prompt in expected_prompts:
-            assert f'data-chat-prefill="{prompt}"' in selector
+        solutions = client.get("/soluciones")
+        assert solutions.status_code == 200
 
-        assert 'src="/static/js/chat.js?v=2"' in landing.text
-        assert client.get("/static/css/public-intents.css").status_code == 200
+        class PrefillButtons(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.buttons = []
+
+            def handle_starttag(self, tag, attrs):
+                attributes = dict(attrs)
+                if "data-chat-prefill" in attributes:
+                    assert tag == "button"
+                    self.buttons.append(attributes)
+
+        selector = PrefillButtons()
+        selector.feed(solutions.text)
+        assert len(selector.buttons) == 4
+        assert {button["data-chat-prefill"] for button in selector.buttons} == set(expected_prompts)
+        for button in selector.buttons:
+            assert button.get("type") == "button"
+            assert "data-open-chat" in button
+            assert button.get("aria-controls") == "reigel-chat"
+            assert "data-chat-prompt" not in button
+            assert "name" not in button
+
+        assert '/static/js/chat.js' in solutions.text
         chat_script = client.get("/static/js/chat.js")
         assert chat_script.status_code == 200
         assert "const prompt = event?.currentTarget?.dataset.chatPrefill;" in chat_script.text
@@ -129,6 +180,37 @@ def test_password_hashed_session_cookie_and_logout(system):
         assert client.get("/api/auth/me").json()["user"]["id"] == admin["id"]
         assert client.post("/api/auth/logout").status_code == 200
         assert client.get("/api/auth/me").status_code == 401
+
+
+def test_google_form_frame_permission_is_limited_to_contact_page(tmp_path, monkeypatch):
+    monkeypatch.setattr("reigel.api.load_environment", lambda: None)
+    monkeypatch.setenv("REIGEL_ENV", "local")
+    monkeypatch.delenv("SITE_URL", raising=False)
+    app = create_app(tmp_path / "frame-policy.sqlite3")
+    with TestClient(app) as client:
+        for path, expected_status in (("/contacto", 200), ("/contacto?utm_source=test", 200),
+                                      ("/captacion", 200), ("/empresa", 200), ("/equipo", 200),
+                                      ("/soluciones", 200), ("/proceso", 200), ("/preguntas", 200), ("/", 200),
+                                      ("/app", 200), ("/health", 200), ("/api/auth/me", 401)):
+            response = client.get(path)
+            assert response.status_code == expected_status, path
+            directives = {
+                parts[0]: parts[1:]
+                for directive in response.headers["content-security-policy"].split(";")
+                if (parts := directive.split())
+            }
+            expected_frames = ["'self'", "https://docs.google.com"] if path.startswith("/contacto") else ["'self'"]
+            assert directives["frame-src"] == expected_frames, path
+            assert directives["default-src"] == ["'self'"]
+            assert directives["script-src"] == ["'self'"]
+            assert directives["connect-src"] == ["'self'"]
+            assert directives["form-action"] == ["'self'"]
+            assert directives["object-src"] == ["'none'"]
+            assert directives["frame-ancestors"] == ["'none'"]
+            assert response.headers["x-frame-options"] == "DENY"
+            assert response.headers["x-content-type-options"] == "nosniff"
+            assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+            assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=()"
 
 
 def test_cross_origin_and_host_are_rejected(system):

@@ -1,0 +1,74 @@
+# R.E.I.G.E.L. — Team Caguas
+
+Trabajar sobre este checkout existente. Responder con hechos comprobados, señalar
+contradicciones y distinguir pruebas locales de publicación o entrega externa.
+
+- Python/FastAPI, SQLite/WAL, HTML/CSS/JavaScript sin compilación obligatoria.
+- `reigel/core.py`: autenticación, permisos y reservas transaccionales.
+- `reigel/operations.py`: migraciones aditivas, CRM, actividades, tareas, avisos e indicadores.
+- `reigel/api.py`: composición HTTP; reutilizar `actor`, `payload` y `DomainError`.
+- `conversation.py` y `webchat.py`: decisiones deterministas, sesiones y reservas públicas.
+- Ollama local tiene tres rutas; no todas pasan por revisión humana:
+  - `assistant.py`: borradores para revisión en `/api/assistant/draft`. También
+    genera la respuesta que `channels.py` envía sin revisión previa cuando el
+    equipo activa el modo `ai` en una conversación de un canal permitido (Meta
+    bloqueado; Telegram solo si se configura).
+  - `ai_chat.reply`: en `/chat`, sustituye la respuesta de respaldo de mensajes
+    no clasificados ni técnicos y se publica al visitante tras validarse.
+  - `ai_chat.stream_workspace` + `ia_workspace.py`: `/` y `/ia`, respuesta
+    directa por SSE, emitida por frases ya validadas; historial propio (`ai_*`),
+    separado del buzón comercial.
+  Los validadores son de patrones (sin cifras, precios, promesas ni contactos),
+  no una revisión semántica.
+- `knowledge.py`: evidencia con fuentes y vencimiento; un fallo no renueva su vigencia.
+- `energy.py`: aritmética con parámetros explícitos, sin tarifas ni ahorros inventados.
+- `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.
+- `advisor_tools.py`: preparación autorizada y práctica comercial expresamente simulada.
+- `frontend/index.html` y `frontend/js/app.js`: espacio privado `/app`.
+- `/` y `/ia`: conversación generativa; no reserva, no deriva a humanos, no
+  registra bajas ni solicitudes de privacidad, y lo remite a `/chat` («Citas y
+  equipo»). `/chat`: chat de coordinación con reserva, atención humana, baja y
+  privacidad. `/captacion`: landing existente. Conservar sus enlaces configurados.
+
+## Datos y seguridad
+
+Preservar cambios locales sin commit. No leer, imprimir ni copiar `.env`, tokens,
+credenciales, bases comerciales o datos de clientes para desarrollar. La base activa
+pertenece a `%LOCALAPPDATA%/PowerSolar`, fuera de OneDrive. No abrir `main.py` como
+aplicación para pruebas: `create_app(ruta_temporal)` aísla datos, no lee `.env`
+y evita el refresco periódico externo. Solo `create_app()` sin ruta (main.py) o
+`load_env=True` cargan `.env`. Las variables del proceso sí se leen: fijar
+explícitamente `REIGEL_ENV`, `SITE_URL` y lo que necesite cada prueba.
+No migrar la base comercial durante una tarea de desarrollo.
+
+Todo acceso privado se autoriza en servidor. Asesor: solamente registros asignados;
+administrador: permisos globales. Las reasignaciones deben revocar visibilidad
+anterior, incluidos tareas, conversaciones y avisos. SQL parametrizado; escapar
+texto en HTML. Conservar cookies HttpOnly/SameSite, controles de origen, límites de
+solicitud y auditoría. Zona comercial: `America/Puerto_Rico`; persistir instantes UTC.
+
+No enviar mensajes, ejecutar campañas, descargar modelos, activar servicios de pago,
+publicar, hacer commits o push sin autorización explícita. El modelo no ejecuta SQL,
+reservas ni herramientas. No prometer precios, ahorro, garantías o financiación.
+Una baja comercial y una solicitud de eliminación son operaciones distintas.
+
+## Verificación
+
+Usar el entorno virtual existente:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+Get-ChildItem frontend/js -Filter *.js | ForEach-Object { node --check $_.FullName }
+node --test tests/frontend_operations.test.cjs tests/frontend_ia.test.cjs
+```
+
+Para una demostración con cuentas ficticias y una base temporal nueva:
+
+```powershell
+.\scripts\start.ps1 -Preview
+```
+
+Abrir `http://127.0.0.1:8877/app`. El script imprime únicamente credenciales
+del entorno sintético. No demuestra que la base comercial esté migrada,
+que exista hosting ni que funcionen canales externos. Registrar el alcance y
+limitaciones en `docs/TEAM_CAGUAS_IMPLEMENTATION.md`.

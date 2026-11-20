@@ -1,7 +1,10 @@
-param([switch]$Background, [int]$Port = 8765)
+param([switch]$Background, [int]$Port = 8765, [switch]$Preview)
 $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectDir
+# Local Ollama is optional. Without the service, the deterministic chat keeps working.
+if (-not $env:REIGEL_CHAT_AI) { $env:REIGEL_CHAT_AI = 'ollama' }
+if ($Preview -and -not $PSBoundParameters.ContainsKey('Port')) { $Port = 8877 }
 if ($Port -lt 1024 -or $Port -gt 65535) { throw 'Puerto fuera de rango.' }
 try {
     $runningHealth = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 2
@@ -10,12 +13,14 @@ try {
         return
     }
 } catch { }
-$pythonExe = (Get-Command python -ErrorAction Stop).Source
+$projectPython = Join-Path $projectDir '.venv\Scripts\python.exe'
+$pythonExe = if (Test-Path -LiteralPath $projectPython) { $projectPython } else { (Get-Command python -ErrorAction Stop).Source }
 & $pythonExe -c 'import fastapi, uvicorn, httpx, tzdata'
 if ($LASTEXITCODE -ne 0) { throw 'Instala las dependencias: python -m pip install -r requirements.txt' }
 $launchArgs = @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', "$Port", '--no-access-log')
+if ($Preview) { $launchArgs = @('scripts/preview_team_caguas.py', '--port', "$Port") }
 if ($Background) {
-    $runtimeDir = Join-Path $env:LOCALAPPDATA 'PowerSolar'
+    $runtimeDir = if ($Preview) { Join-Path $env:TEMP 'reigel-preview-logs' } else { Join-Path $env:LOCALAPPDATA 'PowerSolar' }
     New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
     $serverProcess = Start-Process -FilePath $pythonExe -ArgumentList $launchArgs -WorkingDirectory $projectDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDir 'server.log') -RedirectStandardError (Join-Path $runtimeDir 'server-error.log')
     $serverReady = $false

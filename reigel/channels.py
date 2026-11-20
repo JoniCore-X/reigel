@@ -48,7 +48,7 @@ def integration_status() -> list[dict]:
             result.append({"id": channel, "name": name, "status": "blocked_cost_policy", "configured": False, "missing": [], "webhook": webhook, "detail": "Envíos bloqueados: no se garantiza gratuidad total de este servicio externo."})
             continue
         if channel == "ai":
-            result.append({"id": "ai", "name": name, "status": "local_check_required", "configured": assistant.configured(), "missing": [], "webhook": None, "detail": "Solo Ollama en esta computadora. Disponibilidad real en Automatización; los borradores requieren revisión."})
+            result.append({"id": "ai", "name": name, "status": "local_check_required", "configured": assistant.configured(), "missing": [], "webhook": None, "detail": "Solo Ollama en esta computadora. Disponibilidad real en Automatización. Los borradores requieren revisión; en modo IA de un canal permitido la respuesta se envía sin revisión previa."})
             continue
         missing = [key for key in keys if not os.getenv(key, "").strip()]
         result.append({"id": channel, "name": name, "status": "not_configured" if missing else "configured_unverified",

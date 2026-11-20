@@ -5,7 +5,7 @@
   const panel = document.querySelector('#reigel-chat');
   if (!panel) return;
   const find = selector => panel.querySelector(selector);
-  const chat = {loaded:false,busy:false,mode:'ai',optedOut:false,appointment:null,config:null,poll:null,pending:null,bookingRequest:null,slotRequest:0,returnFocus:null};
+  const chat = {loaded:false,busy:false,mode:'ai',optedOut:false,appointment:null,config:null,poll:null,pending:null,bookingRequest:null,slotRequest:0,returnFocus:null,iaProbe:null};
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const requestId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const zone = () => chat.config?.business?.timezone || 'America/Puerto_Rico';
@@ -46,8 +46,10 @@
   function render(data) {
     const log = find('#chat-messages');
     const scroll = find('.chat-scroll');
+    const sessionState = find('#chat-session-state');
     const nearEnd = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 90;
     const messages = Array.isArray(data.messages) ? data.messages : [];
+    if (sessionState && typeof data.conversation_id === 'string' && data.conversation_id.trim()) sessionState.hidden = false;
     if (messages.length) {
       const signature = JSON.stringify(messages.map(message => [message.id,message.text,message.direction]));
       if (signature !== log.dataset.signature) {
@@ -122,6 +124,7 @@
   function closed() {
     clearInterval(chat.poll);
     document.querySelectorAll('[data-open-chat]').forEach(button => button.setAttribute('aria-expanded','false'));
+    if (panel.dataset.chatPage === 'true') { location.assign('/captacion'); return; }
     chat.returnFocus?.focus();
   }
 
@@ -156,7 +159,7 @@
 
   async function openBooking(focus = true) {
     if (chat.optedOut) return;
-    if (chat.appointment && chat.appointment.status !== 'cancelled') { find('#chat-appointment').scrollIntoView({block:'nearest'}); return; }
+    if (chat.appointment?.status === 'confirmed') { find('#chat-appointment').scrollIntoView({block:'nearest'}); return; }
     const section = find('#chat-booking');
     section.hidden = false;
     if (focus) section.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth',block:'nearest'});
@@ -197,13 +200,43 @@
     if (!appointment.start_at || !appointment.id) return;
     chat.appointment = appointment;
     const cancelled = appointment.status === 'cancelled';
+    const confirmed = appointment.status === 'confirmed';
+    const presentation = {
+      confirmed: ['CITA CONFIRMADA','Tu próximo paso ya tiene fecha.','Guarda esta confirmación. Si necesitas un cambio, solicita atención del equipo.'],
+      cancelled: ['CITA CANCELADA','Este horario ya no está reservado.','Puedes consultar otro horario o solicitar atención del equipo.'],
+      completed: ['CITA REALIZADA','El equipo registró esta cita como realizada.','Puedes coordinar otra evaluación o solicitar atención del equipo.'],
+      no_show: ['NO ASISTIÓ','El equipo registró que no asististe a esta cita.','Puedes consultar otro horario o pedir al equipo que revise este registro.']
+    }[appointment.status] || ['ESTADO POR VERIFICAR','Consulta el estado de esta cita con el equipo.','Solicita atención del equipo antes de asumir que existe una reserva activa.'];
     find('#chat-appointment').hidden = false;
     find('#chat-appointment').classList.toggle('cancelled',cancelled);
-    find('#chat-appointment').innerHTML = `<span class="chat-step">${cancelled?'CITA CANCELADA':'CITA CONFIRMADA'}</span><h3>${cancelled?'Este horario ya no está reservado.':'Tu próximo paso ya tiene fecha.'}</h3><p>${safe(dateLabel(appointment.start_at))}<br>${safe(appointment.advisor_name || 'Equipo de Power Solar')}</p><small>${safe(zone())} · Referencia ${safe(appointment.id)}</small><p class="field-help">${cancelled?'Puedes consultar otro horario o solicitar atención del equipo.':'Guarda esta confirmación. Si necesitas un cambio, solicita atención del equipo.'}</p>`;
-    if (!cancelled) find('#chat-booking').hidden = true;
+    find('#chat-appointment').innerHTML = `<span class="chat-step">${safe(presentation[0])}</span><h3>${safe(presentation[1])}</h3><p>${safe(dateLabel(appointment.start_at))}<br>${safe(appointment.advisor_name || 'Equipo de Power Solar')}</p><small>${safe(zone())} · Referencia ${safe(appointment.id)}</small><p class="field-help">${safe(presentation[2])}</p>`;
+    if (confirmed) find('#chat-booking').hidden = true;
   }
 
-  document.querySelectorAll('[data-open-chat]').forEach(button => button.addEventListener('click',open));
+  // General conversation buttons go to /ia only when its model can answer
+  // now. Disabled or unreachable Ollama, a server error, a timeout, or an older
+  // process without /api/ia/status (404) keep the deterministic chat, which
+  // answers without the model and offers booking and human attention.
+  function iaAvailable() {
+    if (!chat.iaProbe) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      chat.iaProbe = fetch('/api/ia/status',{credentials:'same-origin',cache:'no-store',signal:controller.signal})
+        .then(response => (response.ok ? response.json() : null))
+        .then(data => data?.available === true)
+        .catch(() => false)
+        .finally(() => clearTimeout(timer));
+    }
+    return chat.iaProbe;
+  }
+
+  // The public conversation now lives in the full-screen /ia workspace. The
+  // legacy dialog on / stays available for existing links and deep entry.
+  document.querySelectorAll('[data-open-chat]').forEach(button => button.addEventListener('click',async () => {
+    const prompt = button.dataset.chatPrefill;
+    if (await iaAvailable()) location.assign(prompt ? `/ia?q=${encodeURIComponent(prompt)}` : '/ia');
+    else open({currentTarget:button});
+  }));
   find('#chat-close').addEventListener('click',() => panel.close());
   panel.addEventListener('close',closed);
   find('#chat-form').addEventListener('submit',event => { event.preventDefault(); send(find('#chat-text').value); });
@@ -248,4 +281,5 @@
       if (error.status === 409) { chat.bookingRequest = null; await slots(); }
     } finally { button.disabled = false; button.textContent = 'Confirmar mi cita ↗'; }
   });
+  if (panel.dataset.chatPage === 'true') open();
 })();

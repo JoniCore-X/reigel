@@ -12,7 +12,9 @@ import secrets
 import unicodedata
 from datetime import UTC, datetime, timedelta
 
+from .conversation import IntentDecision, classify_message
 from .core import DomainError, stamp, text, uid, zone
+from . import privacy
 
 
 WELCOME = (
@@ -57,11 +59,17 @@ def digest(value):
 
 
 class WebChat:
+    # The local model may only replace the deterministic fallback for messages
+    # the classifier cannot place. Booking, consent, opt-out and verified
+    # commercial answers never depend on model output.
+    AI_FALLBACK_INTENTS = frozenset({"unsupported_or_ambiguous"})
+
     def __init__(self, store, knowledge):
         self.store = store
         self.knowledge = knowledge
         with store.connect() as db:
             db.executescript(SCHEMA)
+        privacy.initialize(store)
 
     @staticmethod
     def _token_hash(token):
@@ -88,6 +96,7 @@ class WebChat:
             "engine": "motor_comercial_local", "knowledge": self.knowledge.public_status(),
             "reply": reply, "actions": actions or [], "sources": json.loads(session["sources_json"]),
             "profile": {key: profile[key] for key in ("priority", "municipality", "monthly_bill") if key in profile},
+            "privacy_requests": privacy.public_requests(db, session["conversation_id"]),
         }
         if session["appointment_id"]:
             appointment = db.execute("""SELECT a.id,a.start_at,a.end_at,a.status,u.name advisor_name
@@ -133,6 +142,41 @@ class WebChat:
             return bool(row is not None and not row["opted_out"])
 
     @staticmethod
+    def _ai_fingerprint(db, session):
+        count = db.execute("SELECT count(*) FROM messages WHERE conversation_id=?", (session["conversation_id"],)).fetchone()[0]
+        return digest(f"{session['conversation_id']}|{count}|{session['profile_json']}")
+
+    def ai_brief(self, token, message_text, request_id):
+        """Return context for an optional model reply without writing state."""
+        incoming = text(message_text, "mensaje", limit=2000, required=True)
+        with self.store.connect() as db:
+            session = self._session(db, token)
+            _, _, previous = self._request(db, session, request_id, "message", {"text": incoming})
+            if previous is not None or session["opted_out"]:
+                return None
+            conversation = db.execute("SELECT * FROM conversations WHERE id=?", (session["conversation_id"],)).fetchone()
+            if not conversation or conversation["mode"] != "ai":
+                return None
+            profile = json.loads(session["profile_json"])
+            if "monthly_bill" in profile and "bill_period" not in profile:
+                profile["bill_amount"] = profile["monthly_bill"]
+                profile["bill_period"] = "monthly"
+            clean = self._safe_customer_text(incoming)
+            if classify_message(normalized(clean), context=profile).intent not in self.AI_FALLBACK_INTENTS:
+                return None
+            rows = db.execute("""SELECT direction,text FROM messages WHERE conversation_id=?
+                AND (direction='inbound' OR (direction='outbound' AND status='sent'))
+                ORDER BY created_at DESC,rowid DESC LIMIT 12""", (session["conversation_id"],)).fetchall()
+            verified = self.knowledge.answer(clean)
+            return {
+                "incoming": clean,
+                "history": [dict(row) for row in reversed(rows)],
+                "profile": profile,
+                "verified": verified.get("text", "") if isinstance(verified, dict) else "",
+                "fingerprint": self._ai_fingerprint(db, session),
+            }
+
+    @staticmethod
     def _request(db, session, request_id, kind, payload):
         request_id = text(request_id, "referencia de solicitud", limit=100, required=True)
         if not re.fullmatch(r"[A-Za-z0-9_.:-]{8,100}", request_id):
@@ -156,7 +200,7 @@ class WebChat:
         value = re.sub(r"(?<!\w)\+?(?:\d[ ()-]*){7,16}(?!\w)", "[número omitido; usa el formulario de cita]", value)
         return value
 
-    def message(self, token, message_text, request_id):
+    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None):
         incoming = text(message_text, "mensaje", limit=2000, required=True)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -166,17 +210,22 @@ class WebChat:
                 # A retry must not resurrect an old appointment, mode or opt-out
                 # snapshot after staff or the visitor changed the conversation.
                 return self._view(db, session)
+            if ai_reply and ai_fingerprint != self._ai_fingerprint(db, session):
+                # State changed while the optional model was drafting; ignore it.
+                ai_reply = None
             incoming = self._safe_customer_text(incoming)
             self._append(db, session["conversation_id"], "inbound", incoming)
             conversation = db.execute("SELECT * FROM conversations WHERE id=?", (session["conversation_id"],)).fetchone()
             value = normalized(incoming)
             profile = json.loads(session["profile_json"])
+            if "monthly_bill" in profile and "bill_period" not in profile:
+                # Profiles created before bill-period confirmation already used
+                # the explicitly monthly question and retain that meaning.
+                profile["bill_amount"] = profile["monthly_bill"]
+                profile["bill_period"] = "monthly"
+            decision = classify_message(value, context=profile)
             reply, actions, sources = "", [], []
             command = re.sub(r"[.!¡¿?]", "", value).strip()
-            optout = command in {"stop", "/stop", "baja", "detener", "parar", "salir", "unsubscribe", "cancelar mensajes"} or bool(re.search(
-                r"\b(darme de baja|darme la baja|dejen? de (?:escribir|contactar)|no me (?:contact\w*|escrib\w*|llam\w*)|"
-                r"no (?:quiero|deseo) (?:recibir )?(?:mas )?mensajes|no mas mensajes|elimin[ae] (?:mis )?datos)\b", value))
-            human = bool(re.search(r"\b(humano|humana|una persona|un representante|hablar con (?:un |una )?asesor|quiero (?:un |una )?asesor)\b", value))
             if value == "/start":
                 # Only an explicit command received through this visitor's bearer
                 # session reopens assistance. Staff mode changes never lift a stop.
@@ -184,7 +233,18 @@ class WebChat:
                 db.execute("UPDATE conversations SET mode='ai',updated_at=? WHERE id=?", (stamp(), session["conversation_id"]))
                 reply = "Has reanudado la asistencia automática de R.E.I.G.E.L. en este chat. Puedes volver a detenerla escribiendo /stop o pedir atención humana. " + self._next_question(profile)
                 actions = ["book", "human"]
-            elif optout:
+            elif decision.intent == "privacy_request":
+                kind = decision.entities["request_kind"]
+                registered, created = privacy.create_session_request(db, session, kind, incoming, self.store)
+                db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
+                labels = {"access": "acceso a tus datos", "correction": "corrección de tus datos", "deletion": "eliminación de tus datos"}
+                reply = f"Tu solicitud de {labels[kind]} {'quedó registrada' if created else 'ya está registrada y pendiente de revisión'} con referencia {registered['id']}. "
+                reply += "El equipo debe verificar tu identidad y revisar el alcance y la conservación aplicable. No se han eliminado, modificado ni entregado datos automáticamente. No compartas documentos de identidad por este chat."
+                if kind == "deletion":
+                    db.execute("UPDATE web_chat_sessions SET opted_out=1 WHERE token_hash=?", (session["token_hash"],))
+                    reply += " Además, la asistencia comercial en este chat queda detenida; esa baja es independiente de la solicitud de eliminación."
+                actions = ["human"]
+            elif decision.intent == "opt_out":
                 db.execute("UPDATE web_chat_sessions SET opted_out=1 WHERE token_hash=?", (session["token_hash"],))
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
                 reply = "He detenido la asistencia comercial automática en este chat. No enviaré más respuestas de venta. Si necesitas ayuda, puedes solicitar atención humana."
@@ -193,15 +253,19 @@ class WebChat:
                 # Opting out is persistent; a sales phrase cannot silently undo it.
                 reply = ""
                 actions = ["human"]
-            elif human:
+            elif decision.intent == "human":
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
                 reply = "Tu solicitud de atención humana quedó registrada en esta conversación. El equipo podrá responder aquí cuando esté disponible; no puedo prometer un tiempo de respuesta."
             elif conversation["mode"] == "human":
                 # The advisor owns the floor; store inbound without an automated sales reply.
                 reply = ""
             else:
-                self._qualify(profile, value)
-                reply, actions, sources = self._answer(value, profile, session, db)
+                updated_facts = []
+                if decision.intent != "contradiction":
+                    updated_facts = self._qualify(profile, value, decision)
+                reply, actions, sources = self._answer(
+                    value, profile, session, db, decision, updated_facts, ai_reply=ai_reply
+                )
             db.execute("UPDATE web_chat_sessions SET profile_json=?,sources_json=? WHERE token_hash=?", (json.dumps(profile, ensure_ascii=False), json.dumps(sources, ensure_ascii=False), session["token_hash"]))
             if reply:
                 self._append(db, session["conversation_id"], "outbound", reply)
@@ -211,26 +275,97 @@ class WebChat:
             return result
 
     @staticmethod
-    def _qualify(profile, value):
+    def _qualify(profile, value, decision: IntentDecision | None = None):
+        original = dict(profile)
+        decision = decision or classify_message(value, context=profile)
         if profile.get("last_question") == "monthly_bill" and re.search(r"\b(omitir|omito|prefiero no|no compartir)\b", value):
-            profile["monthly_bill"] = None
+            profile.pop("monthly_bill", None)
+            profile.pop("bill_amount", None)
+            profile["bill_period"] = "declined"
+        elif profile.get("last_question") == "bill_period":
+            if decision.intent == "bill_confirmation":
+                if "bill_amount" in profile:
+                    profile["monthly_bill"] = profile["bill_amount"]
+                profile["bill_period"] = "monthly"
+            elif re.search(r"\b(?:anual|por ano|cada ano)\b", value):
+                profile.pop("monthly_bill", None)
+                profile["bill_period"] = "annual"
+            elif decision.intent == "bill_uncertain":
+                profile.pop("monthly_bill", None)
+                profile.pop("bill_amount", None)
+                profile["bill_period"] = "declined"
         if re.search(r"\b(ambas|ambos|las dos|todo)\b", value):
             profile["priority"] = "factura y respaldo"
+        elif re.search(r"\b(?:no quiero|no necesito|sin)\s+(?:el )?(?:respaldo|bateria)\b", value) and re.search(r"\b(factura|ahorro|ahorrar|consumo)\b", value):
+            profile["priority"] = "factura"
         elif re.search(r"\b(apagon|apagones|respaldo|bateria|baterias)\b", value):
             profile["priority"] = "respaldo"
         elif re.search(r"\b(factura|ahorro|ahorrar|consumo)\b", value):
             profile["priority"] = "factura"
-        for municipality in sorted(MUNICIPALITIES, key=len, reverse=True):
-            if re.search(r"\b" + re.escape(normalized(municipality)) + r"\b", value):
-                profile["municipality"] = municipality
-                break
-        bill = re.search(r"(?:factura(?: es| de)?|pago|mensual(?:es)?|\$)\s*\$?\s*(\d{1,5}(?:[.,]\d{1,2})?)\b", value)
-        if not bill and profile.get("last_question") == "monthly_bill":
-            bill = re.fullmatch(r"\s*\$?(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:dolares|al mes|mensuales)?\s*", value)
-        if bill:
-            amount = float(bill.group(1).replace(",", "."))
+        municipality_matches = []
+        for municipality in MUNICIPALITIES:
+            match = re.search(r"\b" + re.escape(normalized(municipality)) + r"\b", value)
+            if match:
+                municipality_matches.append((match.start(), municipality))
+        if municipality_matches:
+            # A correction or explicit contrast is resolved by the final place
+            # mentioned, not whichever municipality sorts first.
+            if decision.intent == "correction" or re.search(r"\b(?:no|pero|sino)\b", value):
+                profile["municipality"] = max(municipality_matches)[1]
+            else:
+                profile["municipality"] = min(municipality_matches)[1]
+
+        bill_matches = list(re.finditer(
+            r"(?:factura(?:\s+(?:es\s+de|de|es))?|pago|mensual(?:es)?(?:\s+(?:es|de))?|al mes|\$)\s*\$?\s*(\d{1,5}(?:[.,]\d{1,2})?)\b|"
+            r"(?<!\w)\$?(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:dolares|al mes|mensual(?:es)?)\b",
+            value,
+        ))
+        if decision.intent == "bill_answer" and "bill_amount" in decision.entities:
+            amount = decision.entities["bill_amount"]
+            profile["bill_amount"] = amount
+            profile["monthly_bill"] = amount
+            profile["bill_period"] = "monthly"
+        elif not bill_matches and profile.get("last_question") == "monthly_bill":
+            bill_matches = list(re.finditer(r"\$?(\d{1,5}(?:[.,]\d{1,2})?)", value))
+            if len(bill_matches) != 1 or not re.fullmatch(
+                r"\s*(?:\$?\s*\d{1,5}(?:[.,]\d{1,2})?\s*(?:dolares|al mes|mensuales)?|si|mensual|al mes)\s*",
+                value,
+            ):
+                bill_matches = []
+        if bill_matches:
+            selected = bill_matches[-1] if decision.intent == "correction" else bill_matches[0]
+            amount_text = selected.group(1) or selected.group(2)
+            amount = float(amount_text.replace(",", "."))
             if 0 <= amount <= 100000:
-                profile["monthly_bill"] = amount
+                profile["bill_amount"] = amount
+                if re.search(r"\b(?:mensual(?:es)?|al mes|por mes|cada mes)\b", value) or profile.get("last_question") == "monthly_bill":
+                    profile["monthly_bill"] = amount
+                    profile["bill_period"] = "monthly"
+                else:
+                    profile.pop("monthly_bill", None)
+                    profile["bill_period"] = "unknown"
+                    profile["last_question"] = "bill_period"
+        loads = [
+            label
+            for pattern, label in (
+                (r"\b(?:nevera|refrigerador)\b", "nevera"),
+                (r"\b(?:abanicos?|ventiladores?)\b", "abanicos"),
+                (r"\b(?:luces|iluminacion)\b", "luces"),
+                (r"\b(?:bomba(?: de agua)?)\b", "bomba"),
+                (r"\b(?:aire acondicionado|ac)\b", "aire acondicionado"),
+                (r"\b(?:equipo medico|equipo medico)\b", "equipo medico"),
+                (r"\b(?:router|internet|wifi)\b", "internet"),
+                (r"\b(?:televisor|television|tv)\b", "television"),
+            )
+            if re.search(pattern, value)
+        ]
+        if loads:
+            profile["backup_loads"] = loads
+        return [
+            key
+            for key in ("priority", "municipality", "bill_amount", "monthly_bill", "bill_period", "backup_loads")
+            if profile.get(key) != original.get(key)
+        ]
 
     @staticmethod
     def _next_question(profile):
@@ -238,54 +373,155 @@ class WebChat:
             field, question = "priority", "¿Tu prioridad es la factura, el respaldo durante apagones o ambas cosas?"
         elif "municipality" not in profile:
             field, question = "municipality", "¿En qué municipio está tu propiedad?"
+        elif profile.get("bill_period") == "unknown":
+            field, question = "bill_period", "¿Ese importe corresponde a tu factura mensual?"
         elif "monthly_bill" not in profile:
-            field, question = "monthly_bill", "¿Cuánto pagas aproximadamente al mes de luz? Puedes omitirlo si prefieres."
+            if profile.get("bill_period") in {"annual", "declined"}:
+                field, question = "booking", "Podemos continuar sin ese dato y revisar tu caso en una evaluación. ¿Deseas consultar los horarios disponibles?"
+            else:
+                field, question = "monthly_bill", "¿Cuánto pagas aproximadamente al mes de luz? Puedes omitirlo si prefieres."
         else:
             field, question = "booking", "Podemos revisar tu caso en una evaluación. ¿Deseas consultar los horarios disponibles?"
         profile["last_question"] = field
         return question
 
-    def _answer(self, value, profile, session, db):
+    def _answer(
+        self,
+        value,
+        profile,
+        session,
+        db,
+        decision: IntentDecision | None = None,
+        updated_facts: list[str] | None = None,
+        ai_reply: str | None = None,
+    ):
+        decision = decision or classify_message(value, context=profile)
         actions, sources = ["book", "human"], []
-        if re.search(r"\b(ignora|instrucciones|system prompt|sql|contraseña|contrasena|tarjeta|bancaria)\b", value):
+        if decision.intent == "safety":
             return "Puedo ayudarte con orientación solar y la agenda. No compartas contraseñas, tarjetas, cuentas ni documentos aquí. Para una evaluación, utiliza el formulario seguro de reserva.", actions, sources
-        if re.search(r"\b(cancelar|cancela|cambiar|reprogramar)\b.*\b(cita|reserva|horario)\b", value):
+        if decision.intent == "appointment_change":
             return "El cambio o la cancelación necesita revisión del equipo. Pide atención humana en este chat para gestionarlo; tu cita sigue igual hasta que se registre el cambio.", ["human"], sources
-        if re.search(r"\b(agend|reserv|coordinar|horarios?|cita|evaluacion)\w*\b", value):
+        if decision.intent == "booking":
             available = db.execute("SELECT 1 FROM users WHERE active=1 AND public_booking=1 LIMIT 1").fetchone()
             if available:
                 return "Consulta un día y un horario en la agenda de abajo. Después completa tus datos y autoriza el contacto. La cita sólo estará confirmada cuando aparezca su referencia; esta conversación por sí sola no reserva un espacio.", ["book"], sources
             return "El equipo todavía no ha publicado horarios de atención. Puedes solicitar atención humana aquí o dejar tu solicitud de contacto en la página. Aún no hay una cita reservada.", ["human"], sources
-        if re.search(r"\b(caro|costoso|presupuesto|no puedo pagar)\b", value):
+        if decision.intent == "technical_question":
+            answer = self.knowledge.answer_technical(value)
+            if answer and answer["status"] == "verified":
+                return answer["text"], actions, answer["sources"]
+            if answer:
+                return answer["text"], ["human"], answer["sources"]
+            return "No encontré una respuesta técnica clara en las fuentes verificadas disponibles. ¿Qué equipo o concepto específico quieres consultar?", ["human"], sources
+        if decision.intent == "contradiction":
+            profile["last_question"] = "monthly_bill"
+            return "Mencionaste más de un importe y no quiero asumir cuál corresponde a tu factura. ¿Cuánto pagas aproximadamente al mes? Puedes omitir el dato.", ["book", "human"], sources
+        if decision.intent == "correction":
+            if updated_facts:
+                reply = "Gracias por la corrección. Actualicé ese dato para esta conversación y no asumiré resultados de ahorro."
+            else:
+                return "Quiero actualizarlo correctamente. ¿Qué dato o importe debo corregir?", actions, sources
+        elif decision.intent == "bill_confirmation":
+            amount = profile.get("monthly_bill")
+            if amount is not None:
+                reply = f"Perfecto, tomaré ${amount:g} como tu factura mensual para esta conversación."
+            else:
+                reply = "Gracias por confirmarlo."
+        elif decision.intent == "bill_answer":
+            amount = profile.get("monthly_bill")
+            reply = (
+                f"Gracias, anoto ${amount:g} como importe mensual para esta conversación."
+                if amount is not None
+                else "No pude registrar ese importe con certeza. Puedes escribirlo de nuevo o continuar sin ese dato."
+            )
+        elif decision.intent == "bill_uncertain":
+            reply = "No pasa nada; podemos continuar sin ese dato. No hace falta que compartas la factura ni documentos por el chat."
+        elif decision.intent == "decline":
+            return "Entendido. No insistiré ni iniciaré una reserva. Si más adelante quieres orientación, puedes volver a escribir.", [], sources
+        elif decision.intent == "budget_objection":
             reply = "Es razonable cuidar tu presupuesto. Una comparación útil mira el costo total, las condiciones y lo que el sistema cubriría en tu hogar. Podemos evaluar tu caso antes de hablar de una propuesta; no necesitas decidir hoy."
-        elif re.search(r"\b(desconfio|confio|estafa|engan|riesgo|segur|no creo|dudas)\w*\b", value):
+        elif decision.intent == "trust_objection":
             reply = "Pide una propuesta por escrito y revisa equipos, alcance, garantías y condiciones antes de comprometerte. Tus preguntas merecen respuestas concretas. Podemos comenzar por la duda que más te preocupa y, si hace falta, pasarla a una persona del equipo."
-        elif re.search(r"\b(pensarlo|no estoy listo|despues|luego|otro momento)\b", value):
+        elif decision.intent == "defer":
             return "Tómate el tiempo que necesites. Si te ayuda a comparar opciones, podemos aclarar una duda concreta o consultar una evaluación cuando tú lo decidas. No hay una reserva ni una compra por conversar aquí.", actions, sources
-        elif re.search(r"\b(precio|precios|oferta|promocion|descuento|financi|credito|incentivo|garantia|ahorro|ahorrar|gratis|costo|cuesta)\w*\b", value):
+        elif decision.intent in {"commercial_terms", "financing", "guaranteed_savings"}:
             reply = "No tengo una propuesta vigente y validada para tu hogar, así que no puedo prometer precios, aprobación, ahorros, incentivos ni condiciones de garantía. Lo útil es revisar tu consumo y tus prioridades para pedir una propuesta por escrito y comparar sus condiciones."
-        elif re.search(r"\b(apagon|apagones|bateria|baterias|respaldo)\b", value):
-            reply = "Si buscas respaldo durante apagones, hay que evaluar batería, diseño y las cargas que quieres mantener encendidas. Los paneles conectados a la red, por sí solos, no garantizan respaldo. ¿Qué equipos te importa mantener funcionando?"
-            profile["last_question"] = "loads"
-            return reply, actions, sources
-        elif re.search(r"\b(ya tengo|tengo placas|tengo sistema|servicio tecnico|averia|reparacion)\b", value):
+        elif decision.intent == "maintenance":
+            technical = self.knowledge.answer_technical(value)
+            if technical:
+                return technical["text"], ["human"], technical["sources"]
+            return "Para mantenimiento o una avería, el equipo necesita revisar tu caso. Describe el problema sin compartir números de cuenta ni documentos. Este chat no diagnostica fallas eléctricas ni confirma una visita técnica.", ["human"], sources
+        elif decision.intent == "existing_system":
             return "Para un sistema existente o una avería, el equipo necesita revisar tu caso. Pide atención humana y describe el problema sin compartir números de cuenta ni documentos. Este chat no diagnostica fallas eléctricas ni confirma una visita técnica.", ["human"], sources
-        else:
+        elif decision.intent == "backup":
+            technical = self.knowledge.answer_technical(value)
+            if technical:
+                if technical["status"] == "verified":
+                    return technical["text"], actions, technical["sources"]
+                return technical["text"], ["human"], technical["sources"]
+            if profile.get("backup_loads"):
+                return "Gracias por indicar esas cargas. La capacidad y la autonomía dependen del diseño y requieren evaluación técnica; este chat no puede calcularlas con certeza. Si quieres, podemos pasar la consulta al equipo.", ["book", "human"], sources
             answer = self.knowledge.answer(value)
             if answer and isinstance(answer.get("text"), str):
                 reply, sources = answer["text"], answer.get("sources", [])
-            elif re.search(r"\b(power solar|empresa|tiendas?|localiza|telefono|direccion|actualizada|actualizado)\b", value):
-                return "No tengo información vigente verificada para responder esa pregunta sobre Power Solar. Puedo solicitar que el equipo la confirme; prefiero no darte direcciones, ofertas o condiciones sin comprobarlas.", ["human"], sources
-            elif re.search(r"\b(hola|buenas|saludos|buenos dias|buenas tardes)\b", value):
-                reply = "Hola. Soy R.E.I.G.E.L., asistente virtual de Power Solar. Vamos a empezar por lo que necesita tu hogar."
-            elif profile.get("last_question") == "loads":
-                reply = "Esas prioridades ayudarán al equipo a evaluar el respaldo. La capacidad y la autonomía necesitan una revisión técnica; no las puedo calcular sólo con este chat."
+                reply += " ¿Qué equipos te importa mantener funcionando?"
+            else:
+                reply = "Si buscas respaldo durante apagones, hay que evaluar batería, diseño y las cargas que quieres mantener encendidas. Los paneles conectados a la red, por sí solos, no garantizan respaldo. ¿Qué equipos te importa mantener funcionando?"
+            profile["last_question"] = "loads"
+            return reply, actions, sources
+        elif decision.intent == "consumption":
+            technical = self.knowledge.answer_technical(value)
+            if technical:
+                if technical["status"] == "verified":
+                    return technical["text"], actions, technical["sources"]
+                return technical["text"], ["human"], technical["sources"]
+            reply = "No hace falta que conozcas los kWh ahora. Una factura reciente puede ayudar al equipo a evaluar el consumo, pero no la compartas por este chat. Si sabes el importe mensual aproximado, puedes indicarlo; también puedes omitirlo."
+            profile["last_question"] = "monthly_bill"
+            return reply, actions, sources
+        elif decision.intent == "company_information":
+            answer = self.knowledge.answer(value)
+            if answer and isinstance(answer.get("text"), str):
+                reply, sources = answer["text"], answer.get("sources", [])
+            else:
+                return "No tengo información vigente verificada para responder esa pregunta específica sobre Power Solar. Puedo pedir al equipo que la confirme; prefiero no inventar direcciones, ofertas ni condiciones.", ["human"], sources
+        elif decision.intent == "greeting":
+            reply = "Hola. Soy R.E.I.G.E.L., asistente virtual de Power Solar. ¿Qué te interesa revisar hoy: tu factura, respaldo durante apagones o una pregunta sobre el proceso?"
+            return reply, actions, sources
+        elif decision.intent == "contextual_follow_up":
+            if "municipality" in (updated_facts or []):
+                reply = (
+                    f"Gracias, tomo {profile['municipality']} como referencia para esta conversación. "
+                    "La viabilidad y la propuesta se determinan durante la evaluación."
+                )
+                return reply + " " + self._next_question(profile), actions, sources
+            if profile.get("last_question") == "loads":
+                self._qualify(profile, value, decision)
+                if profile.get("backup_loads"):
+                    return "Gracias, tomo esas cargas como referencia. La autonomía y la capacidad dependen del diseño y requieren evaluación técnica.", actions, sources
+                return "No entendí con certeza qué equipos quieres mantener encendidos. ¿Puedes mencionarlos o prefieres pasar la consulta al equipo?", actions, sources
+            if profile.get("last_question") == "bill_period":
+                return "No quiero asumir la frecuencia de ese importe. ¿Corresponde a un mes, a un año o prefieres omitir ese dato?", actions, sources
+            return "No entendí con certeza tu respuesta. ¿Puedes aclararla con otras palabras o prefieres continuar sin ese dato?", actions, sources
+        elif profile.get("bill_period") == "unknown":
+            amount = profile.get("bill_amount")
+            return f"Anoto ${amount:g} como importe indicado, sin asumir la frecuencia. ¿Corresponde a tu factura mensual?" if amount is not None else "¿Ese importe corresponde a tu factura mensual?", actions, sources
+        else:
+            if ai_reply:
+                reply = ai_reply if "?" in ai_reply else ai_reply + " " + self._next_question(profile)
+                return reply, actions, sources
+            if decision.intent == "company_information":
+                answer = None
+            else:
+                answer = self.knowledge.answer(value)
+            if answer and isinstance(answer.get("text"), str):
+                reply, sources = answer["text"], answer.get("sources", [])
             elif "municipality" in profile and re.search(r"\b" + re.escape(normalized(profile["municipality"])) + r"\b", value):
                 reply = f"Gracias. Tomo {profile['municipality']} como referencia para esta conversación. La viabilidad y la propuesta se determinan durante la evaluación."
             elif "monthly_bill" in profile or "priority" in profile:
                 reply = "Con ese contexto podemos enfocar mejor la evaluación. El siguiente paso es revisar datos de tu hogar antes de prometer resultados."
             else:
-                reply = "Mi función es orientarte sobre la evaluación solar y ayudarte con una cita. Podemos revisar tu factura, tu necesidad de respaldo o una duda sobre el proceso."
+                reply = "No entendí con certeza qué necesitas. Puedo orientarte sobre factura eléctrica, respaldo, sistemas solares o coordinar una evaluación; también puedo pedir ayuda al equipo."
+                return reply, actions, sources
         return reply + " " + self._next_question(profile), actions, sources
 
     def human(self, token):

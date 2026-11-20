@@ -105,6 +105,141 @@ ANSWERS = {
     "locations": "Power Solar tiene una página corporativa para localizar tiendas. Consulta allí la ubicación y confirma el horario antes de ir; esta página no permite verificar automáticamente una dirección o disponibilidad concreta. También puedes coordinar una evaluación con el equipo desde aquí.",
 }
 
+TECHNICAL_REVIEWED_AT = "2026-11-05T00:00:00+00:00"
+TECHNICAL_VALIDITY_DAYS = 180
+TECHNICAL_SOURCES = {
+    "doe_inverters": {
+        "title": "Solar Integration: Inverters and Grid Services Basics",
+        "url": "https://www.energy.gov/cmei/systems/solar-integration-inverters-and-grid-services-basics",
+        "organization": "U.S. Department of Energy",
+    },
+    "eia_measurement": {
+        "title": "Measuring Electricity",
+        "url": "https://www.eia.gov/energyexplained/electricity/measuring-electricity.php",
+        "organization": "U.S. Energy Information Administration",
+    },
+}
+
+TECHNICAL_TOPICS = {
+    "pv_operation": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "Los paneles fotovoltaicos producen electricidad en corriente continua (CC). "
+            "El inversor la convierte en corriente alterna (CA), que puede utilizar el hogar "
+            "y la red. Esto explica el proceso general, no estima la producción de una propiedad."
+        ),
+    },
+    "inverter": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "El inversor convierte la electricidad de corriente continua de los paneles "
+            "en corriente alterna. Según el sistema, también puede supervisar la instalación "
+            "y coordinarse con almacenamiento."
+        ),
+    },
+    "microinverter": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "Un microinversor se instala asociado a cada panel. El Departamento de Energía "
+            "explica que una sombra o problema en un panel no reduce del mismo modo la energía "
+            "que se puede obtener de los demás; el costo y la conveniencia dependen del diseño."
+        ),
+    },
+    "power_energy": {
+        "status": "verified",
+        "source_ids": ("eia_measurement",),
+        "answer": (
+            "kW mide potencia: cuánta energía se produce o consume en un momento. "
+            "kWh mide energía acumulada durante un periodo. Por ejemplo, usar una carga "
+            "de 1 kW durante una hora equivale a 1 kWh; no son unidades intercambiables."
+        ),
+    },
+    "grid_outage": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "En general, un inversor conectado a la red se desconecta cuando la red presenta "
+            "una interrupción o una condición fuera de sus límites; por eso no se debe asumir "
+            "que los paneles mantendrán la casa energizada durante un apagón. El respaldo requiere "
+            "un sistema diseñado para operar sin la red, con inversor y controles compatibles; "
+            "una batería por sí sola no confirma que toda la vivienda tenga respaldo."
+        ),
+    },
+    "grid_connected_system": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "Un inversor que sigue la red utiliza la señal eléctrica de la red para sincronizar "
+            "su funcionamiento. Los equipos y protecciones concretos dependen del diseño; una "
+            "instalación conectada a la red no implica automáticamente respaldo durante apagones."
+        ),
+    },
+    "generation_storage": {
+        "status": "verified",
+        "source_ids": ("doe_inverters",),
+        "answer": (
+            "Los paneles generan electricidad cuando hay recurso solar; una batería almacena "
+            "energía para usarla después. La batería no crea la energía ni garantiza por sí sola "
+            "respaldo: el funcionamiento depende de que el sistema esté diseñado para trabajar "
+            "sin la red y de las cargas conectadas."
+        ),
+    },
+    "residential_consumption": {
+        "status": "verified",
+        "source_ids": ("eia_measurement",),
+        "answer": (
+            "El consumo eléctrico acumulado se expresa normalmente en kWh y lo registra el medidor. "
+            "Ese dato describe energía usada durante un periodo; no basta por sí solo para interpretar "
+            "todos los cargos de una factura ni para dimensionar un sistema."
+        ),
+    },
+    "solar_production": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "hybrid_system": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "efficiency": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "net_metering_puerto_rico": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "luma_billing": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "preliminary_sizing": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "maintenance": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "electrical_safety": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+    "component_lifespan": {
+        "status": "pending_review",
+        "source_ids": (),
+    },
+}
+
+_TECHNICAL_UNSUPPORTED_COMMERCIAL = re.compile(
+    r"\b(?:precio\w*|cuanto cuesta|cuanto sale|oferta\w*|promocion\w*|"
+    r"descuento\w*|incentivo\w*|garantia\w*|ahorr\w*|financi\w*|"
+    r"credito|interes|pagar con tarjeta|costo\w*)\b"
+)
+
 
 class KnowledgeBase:
     def __init__(self, store):
@@ -269,7 +404,6 @@ class KnowledgeBase:
         if not isinstance(query, str) or len(query) > 4000:
             return None
         clean = normalize(query)
-        # These terms need an operator-validated proposal, never website inference.
         if re.search(r"\b(precio|precios|cuesta|costo|costos|oferta|ofertas|promocion|financi\w*|garantia|garantias|ahorr\w*|incentiv\w*|credito|interes|descuento|pago|pagos)\b", clean):
             return None
         if any(term in clean for term in ("tienda", "ubicacion", "direccion", "localizacion", "sucursal", "horario de tienda")):
@@ -288,6 +422,114 @@ class KnowledgeBase:
             if self._fresh(row) and topic in json.loads(row["facts"]):
                 return {"text": ANSWERS[topic], "sources": [{"title": row["title"], "url": row["url"], "checked_at": row["success_at"], "verification_method": row["verification_method"]}], "stale": False}
         return None
+
+    @staticmethod
+    def _technical_topic(clean):
+        if re.search(r"\b(?:medicion neta|net metering|neteo)\b", clean):
+            return "net_metering_puerto_rico"
+        if "luma" in clean and re.search(r"\b(?:factura|recibo|cargo|tarifa|kwh|medidor)\b", clean):
+            return "luma_billing"
+        if re.search(r"\b(?:dimension\w*|tamano del sistema|cuantos paneles|cuanta produccion|"
+                     r"cuantos kwh|produccion mensual|produccion anual)\b", clean):
+            return "preliminary_sizing"
+        if re.search(r"\b(?:vida util|cuanto dura|duracion de|anos dura|degradacion)\b", clean):
+            return "component_lifespan"
+        if re.search(r"\b(?:mantenimiento|limpieza de paneles|mantenimiento preventivo)\b", clean):
+            return "maintenance"
+        if re.search(r"\b(?:seguridad electrica|riesgo electrico|instalar.*(?:cable|inversor|panel)|"
+                     r"trabajar con electricidad)\b", clean):
+            return "electrical_safety"
+        if re.search(r"\b(?:eficiencia|rendimiento del sistema|perdidas del sistema)\b", clean):
+            return "efficiency"
+        if re.search(r"\b(?:hibrid\w*|sistema mixto)\b", clean):
+            return "hybrid_system"
+        if re.search(r"\b(?:apagon|apagones|corte de luz|se va la luz|interrupcion electrica)\b", clean):
+            return "grid_outage"
+        if re.search(r"\bmicroinversor(?:es)?\b", clean):
+            return "microinverter"
+        if re.search(r"\binversor(?:es)?\b|\binverter\b", clean):
+            return "inverter"
+        if re.search(r"\b(?:kw\s*(?:y|vs\.?|versus)\s*kwh|kwh\s*(?:y|vs\.?|versus)\s*kw|"
+                     r"diferencia.*\bkw\b|\bkw\b.*\bkwh\b|\bkwh\b.*\bkw\b|"
+                     r"(?:que es|significa)\s*(?:un\s*)?kwh)\b", clean):
+            return "power_energy"
+        if re.search(r"\b(?:bateria|baterias|almacenamiento)\b", clean) and re.search(
+            r"\b(?:panel|placa|produccion|generacion|diferencia|compar\w*)\b", clean
+        ):
+            return "generation_storage"
+        if re.search(r"\b(?:bateria|baterias|almacenamiento)\b", clean):
+            return "generation_storage"
+        if re.search(r"\b(?:consumo electrico|consumo residencial|consumo de energia|"
+                     r"medidor electrico|kwh consumidos)\b", clean):
+            return "residential_consumption"
+        if re.search(r"\b(?:produccion solar|produccion fotovoltaica|generacion fotovoltaica|cuanto produce|"
+                     r"cuanta energia produce|produccion de los paneles)\b", clean):
+            return "solar_production"
+        if re.search(r"\b(?:conectado a la red|conectado a red|sistema interconectado|on.?grid)\b", clean):
+            return "grid_connected_system"
+        if re.search(r"\b(?:paneles solares|placas solares|sistema fotovoltaico|"
+                     r"energia fotovoltaica|produccion fotovoltaica|como funcionan los paneles|"
+                     r"como funcionan las placas|como funciona la energia solar)\b", clean) or re.search(
+            r"\b(?:panel(?:es)?|placas?)\b.*\b(?:generan|producen|corriente)\b", clean
+        ):
+            return "pv_operation"
+        return None
+
+    def answer_technical(self, query, *, current=None):
+        """Retrieve only curated general facts with reviewed, unexpired citations."""
+        if not isinstance(query, str) or not query.strip() or len(query) > 4000:
+            return None
+        clean = normalize(query)
+        if _TECHNICAL_UNSUPPORTED_COMMERCIAL.search(clean) or re.search(
+            r"\b(?:ignora|ignorar|instrucciones|system prompt|revela el prompt)\b", clean
+        ):
+            return None
+        topic_id = self._technical_topic(clean)
+        if topic_id is None:
+            return None
+        topic = TECHNICAL_TOPICS[topic_id]
+        if topic["status"] != "verified":
+            return {
+                "status": "insufficient",
+                "topic": topic_id,
+                "text": (
+                    "No tengo una fuente técnica vigente y verificada para responder ese tema "
+                    "con seguridad. Prefiero no estimar ni asumir; el equipo puede confirmarlo "
+                    "con una referencia autorizada."
+                ),
+                "sources": [],
+            }
+        now = current or datetime.now(UTC)
+        sources = []
+        for source_id in topic["source_ids"]:
+            source = TECHNICAL_SOURCES[source_id]
+            reviewed = datetime.fromisoformat(TECHNICAL_REVIEWED_AT)
+            valid_until = reviewed + timedelta(days=TECHNICAL_VALIDITY_DAYS)
+            if now >= valid_until:
+                return {
+                    "status": "insufficient",
+                    "topic": topic_id,
+                    "text": (
+                        "La referencia técnica disponible necesita una revisión antes de "
+                        "usarse. No voy a presentar información posiblemente desactualizada."
+                    ),
+                    "sources": [],
+                }
+            sources.append({
+                "title": source["title"],
+                "url": source["url"],
+                "organization": source["organization"],
+                "checked_at": TECHNICAL_REVIEWED_AT,
+                "valid_until": valid_until.isoformat(),
+                "verification_method": "curated_official_reference",
+            })
+        answer = topic["answer"]
+        if re.search(r"\b(?:power solar|ustedes|su sistema|incluye|instalan|ofrecen)\b", clean):
+            answer += (
+                " Esta es una explicación técnica general y no confirma equipos, servicios "
+                "ni prestaciones específicos de Power Solar."
+            )
+        return {"status": "verified", "topic": topic_id, "text": answer, "sources": sources}
 
     async def run(self, stop: asyncio.Event):
         """Optional in-process worker; refreshes only while the app is running."""

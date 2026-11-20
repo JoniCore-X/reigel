@@ -3,111 +3,132 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#1F4298">
-  <meta name="description" content="Explora opciones de energía solar para tu hogar en Puerto Rico con Power Solar. Comparte tus necesidades y agenda una evaluación con nuestro equipo.">
+  <meta name="theme-color" content="#071d43">
+  <meta name="description" content="{{page_description}}">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_PR">
-  <meta property="og:site_name" content="Power Solar">
-  <meta property="og:title" content="Tu próximo paso hacia la energía solar · Power Solar">
-  <meta property="og:description" content="Comprende tus opciones de energía solar y reserva una evaluación en el horario que te funcione. Power Solar, Puerto Rico.">
+  <meta property="og:site_name" content="Power Solar · Team Caguas">
+  <meta property="og:title" content="{{page_title}}">
+  <meta property="og:description" content="{{page_description}}">
   <meta name="twitter:card" content="summary">
-  <title>Power Solar | Evaluación solar y citas en Puerto Rico</title>
+  <title>{{page_title}}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
+  <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/brand-image.css?v=2">
-  <link rel="stylesheet" href="/static/css/google-form.css">
+  <link rel="stylesheet" href="/static/css/google-form.css?v=3">
   <link rel="stylesheet" href="/static/css/public-header.css?v=2">
   <link rel="stylesheet" href="/static/css/public-intents.css">
-  <link rel="stylesheet" href="/static/css/public-layout-refinement.css?v=1">
-  <script src="/static/js/chat.js?v=2" defer></script>
-  <script src="/static/js/header-menu.js" defer></script>
+  <link rel="stylesheet" href="/static/css/power-solar-identity.css?v=2">
+  <link rel="stylesheet" href="/static/css/corporate.css?v=4">
+  <link rel="stylesheet" href="/static/css/uiverse-components.css?v=4">
+  <link rel="stylesheet" href="/static/css/pricing.css?v=2">
+  <link rel="stylesheet" href="/static/css/site-loader.css?v=7">
+  <script src="/static/js/site-loader.js?v=5"></script>
+  <script src="/static/js/chat.js?v=6" defer></script>
+  <script src="/static/js/header-menu.js?v=2" defer></script>
   <script src="/static/js/public-intents.js" defer></script>
+  <script src="/static/js/corporate.js?v=1" defer></script>
+  <script src="/static/js/pricing.js?v=1" defer></script>
 </head>
-<body class="public-body">
+<body class="public-body corporate-body">
+  <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
+    <div class="ps-stage" aria-hidden="true">
+      <div class="ps-aura"></div>
+      <div class="ps-rays"></div>
+      <div class="ps-rays ps-rays--far"></div>
+      <div class="ps-gyro">
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
+      </div>
+      <div class="ps-corona"></div>
+      <div class="ps-dust"></div>
+      <div class="ps-dust ps-dust--reverse"></div>
+      <div class="ps-flare"></div>
+      <div class="ps-flare ps-flare--b"></div>
+      <div class="ps-core"></div>
+    </div>
+    <div class="ps-error" hidden>
+      <p class="ps-error-text" role="alert"></p>
+      <div class="ps-error-actions">
+        <button class="ps-retry" type="button">Reintentar</button>
+        <button class="ps-continue" type="button">Continuar al sitio</button>
+      </div>
+    </div>
+    <p class="ps-sr-only">Cargando Power Solar. La página estará lista en un momento.</p>
+  </div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
   <header class="public-container public-header">
-    <a href="/" class="wordmark" aria-label="Power Solar, inicio"><span class="wordmark-copy"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>ENERGÍA QUE NOS MUEVE</small></span><svg class="sun-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9"/><path d="M24 2v7m0 30v7M2 24h7m30 0h7M8.4 8.4l5 5m21.2 21.2 5 5m0-31.2-5 5M13.4 34.6l-5 5"/></svg></a>
-    <button class="menu-toggle" id="public-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="public-nav" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
+    <a href="/captacion" class="wordmark brand-lockup" aria-label="Power Solar, Team Caguas, inicio"><img class="brand-symbol" src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="brand-wordmark"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>TEAM CAGUAS · PUERTO RICO</small></span></a>
+    <button class="menu-toggle" id="public-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="public-nav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <nav class="public-nav" id="public-nav" aria-label="Navegación principal">
-      <span class="team-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg><span>Team <strong>Caguas</strong></span></span>
-      <a href="#proceso">Cómo funciona</a>
-      <button class="nav-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">R.E.I.G.E.L.</button>
-      <a href="#preguntas">Preguntas frecuentes</a>
-      <a class="button primary" href="#evaluacion">Coordina tu evaluación <span aria-hidden="true">↗</span></a>
+      <div class="mobile-menu-dialog" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title" tabindex="-1">
+        <div class="mobile-menu-head">
+          <a class="mobile-menu-brand" href="/captacion" aria-label="Power Solar, Team Caguas, inicio"><img src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="mobile-menu-team"><small>POWER SOLAR</small><strong>TEAM CAGUAS</strong></span></a>
+          <button class="mobile-menu-close" type="button" data-close-menu aria-label="Cerrar menú" aria-controls="public-nav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="mobile-menu-heading"><span aria-hidden="true"></span><p id="mobile-menu-title">CONOCE POWER SOLAR</p></div>
+        <div class="mobile-menu-links">
+          <a class="mobile-menu-link" href="/captacion" data-site-page="inicio"><span class="mobile-menu-copy"><strong>Inicio</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/empresa" data-site-page="empresa"><span class="mobile-menu-copy"><strong>Empresa</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/equipo" data-site-page="equipo"><span class="mobile-menu-copy"><strong>Equipo</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/precios" data-site-page="precios"><span class="mobile-menu-copy"><strong>Planes</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/soluciones" data-site-page="soluciones"><span class="mobile-menu-copy"><strong>Soluciones</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/proceso" data-site-page="proceso"><span class="mobile-menu-copy"><strong>Evaluación</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/contacto" data-site-page="contacto"><span class="mobile-menu-copy"><strong>Contacto</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/preguntas" data-site-page="preguntas"><span class="mobile-menu-copy"><strong>Preguntas</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+        </div>
+        <button class="mobile-menu-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="mobile-menu-chat-mark" aria-hidden="true">R.</span><span class="mobile-menu-chat-copy"><strong>R.E.I.G.E.L.</strong><small>Asistente virtual</small><span>Conversa sobre tus preguntas.</span></span><span class="mobile-menu-chat-arrow" aria-hidden="true">↗</span></button>
+        <p class="mobile-menu-note">Orientación y evaluación para tu hogar.</p>
+      </div>
+      <a href="/captacion" data-site-page="inicio">Inicio</a>
+      <a href="/empresa" data-site-page="empresa">Empresa</a>
+      <a href="/equipo" data-site-page="equipo">Equipo</a>
+      <a href="/precios" data-site-page="precios">Planes</a>
+      <a href="/soluciones" data-site-page="soluciones">Soluciones</a>
+      <a href="/proceso" data-site-page="proceso">Evaluación</a>
+      <a href="/contacto" data-site-page="contacto">Contacto</a>
+      <a href="/preguntas" data-site-page="preguntas">Preguntas</a>
+      <button class="nav-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">R.E.I.G.E.L. <span aria-hidden="true">↗</span></button>
     </nav>
   </header>
+  <div class="mobile-menu-backdrop" id="public-menu-backdrop" hidden aria-hidden="true"></div>
   <main id="main">
-    <section class="public-hero ps2-layout" aria-labelledby="hero-title">
-      <div class="public-container">
-        <div class="hero-grid ps2-inner">
-          <div class="public-hero-copy ps2-copy">
-            <p class="eyebrow light-text ps2-eyebrow">PUERTO RICO / ENERGÍA CON PERSPECTIVA</p>
-            <h1 class="ps2-title" id="hero-title">Tu hogar merece<br>más opciones.</h1>
-            <p class="ps2-description">Explora alternativas de energía para tu hogar con orientación profesional, a tu ritmo y desde lo que más te importa.</p>
-            <div class="actions ps2-actions">
-              <button class="button orange" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">Conversa con R.E.I.G.E.L. <span aria-hidden="true">↗</span></button>
-              <a class="hero-secondary" href="#evaluacion">Coordina una evaluación</a>
-            </div>
-            <small class="ps2-disclaimer">Cada opción requiere conocer las necesidades y condiciones de tu hogar.</small>
-          </div>
-          <section class="hero-intents ps2-panel" aria-labelledby="intent-title">
-            <div class="hero-intents-heading">
-              <p class="eyebrow ps2-panel-eyebrow">EMPECEMOS POR LO QUE TE IMPORTA</p>
-              <h2 class="ps2-panel-title" id="intent-title">¿Qué te gustaría mejorar?</h2>
-              <p class="ps2-panel-description">Elige un tema para preparar una pregunta. Tú decides si la envías.</p>
-            </div>
-            <div class="intent-options ps2-options">
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero entender cómo evaluar el consumo y los costos de energía de mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">01</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Reducir costos de energía</strong><small class="ps2-option-text">Entender el consumo y los costos de tu hogar.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero explorar qué tendría que evaluar para tener respaldo durante apagones." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">02</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Tener respaldo durante apagones</strong><small class="ps2-option-text">Conversar sobre prioridades y necesidades.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero orientación para explorar sistemas solares para mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">03</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Explorar sistemas solares</strong><small class="ps2-option-text">Conocer posibilidades y preguntas para una evaluación.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="No sé qué necesito y quisiera orientación sobre las opciones para mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">04</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">No sé qué necesito</strong><small class="ps2-option-text">Recibir orientación para dar el primer paso.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-            </div>
-          </section>
-        </div>
-        <ol class="hero-footnote ps2-steps" aria-label="Un camino hacia la evaluación">
-          <li><b>01</b> Tu necesidad</li>
-          <li><b>02</b> Orientación clara</li>
-          <li><b>03</b> Evaluación profesional</li>
-        </ol>
+<!--corporate:content:start-->
+    <section class="corp-home corp-container" aria-labelledby="home-title">
+      <div class="corp-home-copy">
+        <p class="corp-eyebrow">POWER SOLAR · TEAM CAGUAS</p>
+        <h1 id="home-title">Energía solar.<br>Información para decidir.</h1>
+        <p class="corp-lead">Conoce las opciones de energía para tu hogar en Puerto Rico y los aspectos que conviene evaluar antes de tomar una decisión.</p>
+        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/empresa">Conoce nuestro enfoque <span aria-hidden="true">→</span></a></div>
+      </div>
+      <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico.jpg" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
+    </section>
+    <section class="corp-directory corp-container" aria-labelledby="directory-title">
+      <div class="corp-section-label"><p class="corp-eyebrow">NUESTRO SITIO</p><h2 id="directory-title">Encuentra la información<br>que necesitas.</h2></div>
+      <div class="corp-directory-list">
+        <a class="corp-directory-item ui-corner-card" href="/empresa"><span class="corp-index" aria-hidden="true">01</span><span><strong>Empresa</strong><small>El equipo y nuestra forma de orientar.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/equipo"><span class="corp-index" aria-hidden="true">02</span><span><strong>Equipo</strong><small>Team Caguas y su contacto directo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/soluciones"><span class="corp-index" aria-hidden="true">03</span><span><strong>Soluciones</strong><small>Energía solar, consumo y respaldo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/proceso" id="proceso"><span class="corp-index" aria-hidden="true">04</span><span><strong>Evaluación</strong><small>El proceso y la información que conviene preparar.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/contacto#evaluacion" id="evaluacion"><span class="corp-index" aria-hidden="true">05</span><span><strong>Contacto</strong><small>Comparte tu interés o conversa con el equipo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/preguntas" id="preguntas"><span class="corp-index" aria-hidden="true">06</span><span><strong>Preguntas frecuentes</strong><small>Respaldo, evaluación y próximos pasos.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
       </div>
     </section>
-    <section class="public-section public-container" id="proceso" aria-labelledby="process-title"><header class="public-section-heading"><div><p class="eyebrow">UN PRIMER PASO SENCILLO</p><h2 id="process-title">Menos dudas.<br>Más información para decidir.</h2></div><p>La mejor conversación empieza por entender tu hogar. Así coordinas con el equipo de Power Solar.</p></header><div class="process-list"><article class="process-item"><span class="process-number">01 /</span><h3>Cuéntanos qué necesitas.</h3><p>Comparte tu municipio, cómo prefieres que te contactemos y, si lo deseas, una idea de tu factura mensual.</p></article><article class="process-item"><span class="process-number">02 /</span><h3>Elige un espacio para hablar.</h3><p>Completa el formulario con tus datos y el equipo podrá orientarte sobre una evaluación. También puedes coordinar una cita desde el chat.</p></article><article class="process-item"><span class="process-number">03 /</span><h3>Explora con más contexto.</h3><p>Conversa sobre consumo, espacio, respaldo y las condiciones que necesitas entender antes de dar el siguiente paso.</p></article></div></section>
-    <section class="evaluation-section" aria-labelledby="evaluation-title"><div class="public-container evaluation-layout"><div><p class="eyebrow">TU SITUACIÓN PRIMERO</p><h2 id="evaluation-title">Una buena decisión<br>necesita buenas preguntas.</h2><p>La energía solar tiene que evaluarse con datos de tu hogar. Nuestro primer paso es escucharte y coordinar una revisión de lo que necesitas.</p></div><ul class="evaluation-checks"><li>Tu consumo y tus prioridades de energía.</li><li>Las condiciones y el espacio de tu propiedad.</li><li>Lo que buscas en producción y respaldo.</li><li>El alcance, los costos y las condiciones de una propuesta.</li></ul></div></section>
-    <section class="public-section public-container" id="evaluacion" aria-labelledby="booking-title">
-      <div class="booking-layout">
-        <div class="booking-copy">
-          <p class="eyebrow">COMIENZA LA CONVERSACIÓN</p>
-          <h2 id="booking-title">Tu próximo paso,<br>en tu horario.</h2>
-          <p>Completa el formulario para compartir tu interés y las necesidades de tu hogar. Si prefieres coordinar una cita directamente, puedes hacerlo desde el chat de R.E.I.G.E.L.</p>
-          <div class="booking-note"><strong>Sin decisiones a ciegas.</strong>La evaluación ayuda a entender tus opciones. No implica aprobación de financiación, instalación ni una garantía de ahorro.</div>
-        </div>
-        <div class="booking-form google-form-card">
-          <h3>Formulario de evaluación</h3>
-          <iframe class="google-form-embed" src="https://docs.google.com/forms/d/e/1FAIpQLScbCm-67NFR1qFYLfD9oR-nMkCGsGionTB5iG9uR0JKWdZHMQ/viewform?embedded=true" title="Formulario de evaluación de Power Solar" loading="lazy">Cargando formulario…</iframe>
-        </div>
-      </div>
-    </section>
-    <section class="public-section public-container faq-section" id="preguntas" aria-labelledby="faq-title"><div class="public-faq"><div><p class="eyebrow">ANTES DE EMPEZAR</p><h2 id="faq-title">Tus preguntas<br>tienen espacio aquí.</h2></div><div class="faq-list"><details><summary>¿Pueden decirme cuánto voy a ahorrar?</summary><p>Para estimarlo hay que revisar tu consumo, la producción esperada, las tarifas y las condiciones de la propuesta. El resultado cambia según cada hogar; no prometemos una cifra de ahorro antes de la evaluación.</p></details><details><summary>¿La energía solar me dará respaldo en un apagón?</summary><p>El respaldo depende del diseño, de la batería, de las cargas que deseas mantener y de la instalación. Un sistema conectado a la red no implica respaldo por sí solo. Confirma estas características en la propuesta que evalúes.</p></details><details><summary>¿Qué pasa después de dejar mis datos?</summary><p>El equipo registra tu solicitud y puede contactarte por los medios que compartas. Si reservas un horario disponible, verás la confirmación de tu cita al terminar. Si solo solicitas contacto, aún no tienes una cita confirmada.</p></details><details><summary>¿Qué debo preparar para la evaluación?</summary><p>Ten una idea de tu consumo, las características de la propiedad y tus prioridades. El equipo puede orientarte sobre los datos necesarios. No necesitas subir una factura ni documentos personales en este formulario.</p></details><details><summary>¿La evaluación me obliga a contratar?</summary><p>Completar este formulario permite conversar sobre tus opciones y coordinar una evaluación. Cualquier contratación o financiación requiere una propuesta y condiciones que debes revisar por separado.</p></details></div></div></section>
-    <section class="public-container privacy-note" id="privacidad" aria-labelledby="privacy-title"><strong id="privacy-title">Tus datos, con un propósito claro.</strong><p>El formulario de esta página se ofrece mediante Google Forms. La información que envíes se transmite al titular del formulario para atender tu solicitud; revisa los avisos de privacidad que aparecen en el formulario y en Google. Las conversaciones y citas que inicies por el chat de Power Solar se guardan en el sistema del equipo y pueden ser consultadas por el administrador y el asesor responsable para dar seguimiento. No incluyas documentos, cuentas ni información sensible. Puedes solicitar que se detenga el contacto y pedir la revisión o eliminación de tus datos al equipo que te atienda.</p></section>
+    <div class="corp-container corp-home-note"><p>Cada hogar requiere una evaluación de sus condiciones, consumo y prioridades. Los resultados y las condiciones de una propuesta se revisan por separado.</p><a href="/contacto#privacidad" id="privacidad">Privacidad y uso de datos</a></div>
+<!--corporate:content:end-->
   </main>
-  <footer class="public-footer"><div class="public-container"><a href="/" class="wordmark light"><span class="sun-mark" aria-hidden="true"></span><span>POWER<span class="wordmark-solar">SOLAR</span></span></a><p>PUERTO RICO · UNA CONVERSACIÓN PUEDE SER EL COMIENZO.</p><div class="public-footer-links"><a href="#privacidad">Privacidad</a><a href="/app">Acceso del equipo ↗</a></div></div></footer>
+  <footer class="public-footer corp-footer">
+    <div class="corp-container corp-footer-top"><a href="/captacion" class="wordmark light brand-lockup" aria-label="Power Solar, inicio"><img class="brand-symbol" src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="brand-wordmark"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>TEAM CAGUAS · PUERTO RICO</small></span></a><p>Orientación sobre energía solar<br>para hogares en Puerto Rico.</p><nav aria-label="Información y acceso"><a href="/equipo">Equipo</a><a href="/precios">Planes R.E.I.G.E.L.</a><a href="/preguntas">Preguntas frecuentes</a><a href="/contacto#privacidad">Privacidad</a><a href="/app">Acceso del equipo <span aria-hidden="true">↗</span></a></nav></div>
+    <div class="corp-container corp-footer-bottom"><span>POWER SOLAR · TEAM CAGUAS</span><a href="/">Abrir el chat de R.E.I.G.E.L. <span aria-hidden="true">↗</span></a></div>
+  </footer>
   <button class="chat-launcher" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="chat-launcher-symbol" aria-hidden="true">↗</span><span><strong>Habla con R.E.I.G.E.L.</strong><small>Tus preguntas. Tu evaluación.</small></span></button>
   <dialog class="reigel-chat" id="reigel-chat" aria-labelledby="chat-title">
     <header class="chat-header"><div class="chat-identity"><span class="chat-emblem" aria-hidden="true">R.</span><div><h2 id="chat-title">R.E.I.G.E.L.</h2><p id="chat-mode">Asistente virtual de Power Solar</p></div></div><button class="icon-button" id="chat-close" type="button" aria-label="Cerrar conversación">×</button></header>
@@ -123,10 +144,10 @@
       <section class="chat-booking" id="chat-booking" aria-labelledby="chat-booking-title" hidden>
         <div class="chat-booking-heading"><div><span class="chat-step">TU PRÓXIMO PASO</span><h3 id="chat-booking-title">Hagamos espacio para ti.</h3></div><button class="icon-button" id="chat-booking-close" aria-label="Cerrar formulario de reserva" type="button">×</button></div>
         <p class="field-help" id="chat-booking-status" role="status"></p>
-        <form id="chat-book-form"><div class="form-grid"><label>Asesor<select id="chat-advisor" name="advisor_id" required><option value="">Selecciona un asesor</option></select></label><label>Fecha<input type="date" id="chat-date" required></label><div class="span-2"><span class="chat-field-label">Horarios disponibles</span><input type="hidden" name="start_at" id="chat-start"><div class="slots" id="chat-slots" role="group" aria-label="Horarios disponibles"><p class="slot-empty">Selecciona un asesor y una fecha.</p></div><p class="calendar-zone" id="chat-zone"></p></div><label class="span-2">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label><label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email"></label><label>Teléfono<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+1 787…"></label><label>Municipio<input name="municipality" maxlength="100" autocomplete="address-level2"></label><label>Factura mensual aproximada (USD)<input name="monthly_bill" type="number" min="0" max="100000" step="0.01" placeholder="Opcional"></label></div><p class="field-help">Incluye al menos un correo o teléfono. No compartas documentos, cuentas ni información bancaria.</p><label class="checkbox"><input name="consent" type="checkbox" required><span>Autorizo a Power Solar a guardar estos datos, contactarme y coordinar esta evaluación. <a href="#privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.</span></label><p class="form-error" id="chat-book-error" role="alert"></p><button class="button primary full" id="chat-book-confirm" type="submit">Confirmar mi cita ↗</button></form>
+        <form id="chat-book-form"><div class="form-grid"><label>Asesor<select id="chat-advisor" name="advisor_id" required><option value="">Selecciona un asesor</option></select></label><label>Fecha<input type="date" id="chat-date" required></label><div class="span-2"><span class="chat-field-label">Horarios disponibles</span><input type="hidden" name="start_at" id="chat-start"><div class="slots" id="chat-slots" role="group" aria-label="Horarios disponibles"><p class="slot-empty">Selecciona un asesor y una fecha.</p></div><p class="calendar-zone" id="chat-zone"></p></div><label class="span-2">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label><label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email"></label><label>Teléfono<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+1 787…"></label><label>Municipio<input name="municipality" maxlength="100" autocomplete="address-level2"></label><label>Factura mensual aproximada (USD)<input name="monthly_bill" type="number" min="0" max="100000" step="0.01" placeholder="Opcional"></label></div><p class="field-help">Incluye al menos un correo o teléfono. No compartas documentos, cuentas ni información bancaria.</p><label class="checkbox ui-consent"><input name="consent" type="checkbox" required><span class="ui-consent-mark" aria-hidden="true">✓</span><span class="ui-consent-copy">Autorizo a Power Solar a guardar estos datos, contactarme y coordinar esta evaluación. <a href="/contacto#privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.</span></label><p class="form-error" id="chat-book-error" role="alert"></p><button class="button primary full ui-action" id="chat-book-confirm" type="submit">Confirmar mi cita ↗</button></form>
       </section>
     </div>
-    <div class="chat-bottom"><div class="chat-next-actions"><button type="button" data-chat-book>Coordinar evaluación ↗</button><button type="button" data-chat-human>Hablar con el equipo</button></div><form id="chat-form"><label class="sr-only" for="chat-text">Tu mensaje</label><textarea id="chat-text" maxlength="4000" required rows="2" placeholder="¿Qué te gustaría resolver en tu hogar?"></textarea><button id="chat-send" type="submit" class="button primary">Enviar ↗</button></form><p id="chat-status" class="form-error" role="alert"></p><p class="chat-privacy">Conversación guardada en el sistema del equipo. Evita compartir datos sensibles.</p></div>
+    <div class="chat-bottom"><div class="chat-next-actions"><button type="button" data-chat-book>Coordinar evaluación ↗</button><button type="button" data-chat-human>Hablar con el equipo</button></div><form id="chat-form"><label class="sr-only" for="chat-text">Tu mensaje</label><textarea id="chat-text" maxlength="4000" required rows="2" placeholder="¿Qué te gustaría resolver en tu hogar?"></textarea><button id="chat-send" type="submit" class="button primary ui-action">Enviar ↗</button></form><p id="chat-status" class="form-error" role="alert"></p><p class="chat-privacy">El historial de esta conversación se guarda para el equipo de Power Solar. Evita compartir información sensible.</p></div>
   </dialog>
 </body>
 </html>

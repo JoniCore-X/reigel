@@ -4,6 +4,25 @@
    GOOGLE FORMS · ENTERPRISE DESIGN SYSTEM
    ===================================================== */
 
+/* El formulario largo ocupa una sola columna, sin un lateral vacío. */
+#evaluacion .booking-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+#evaluacion .booking-copy {
+  position: static;
+  min-width: 0;
+}
+
+#evaluacion .booking-note {
+  max-width: none;
+  margin-top: 24px;
+}
+
 .google-form-card {
   --form-navy: #061b3c;
   --form-blue: #16458f;
@@ -13,17 +32,17 @@
 
   --form-border: #dce5f2;
   --form-radius: 22px;
-  --form-height: 2682px;
+  --form-height: clamp(480px, 80vh, 760px);
 
   position: relative;
   isolation: isolate;
 
   width: 100%;
-  max-width: 980px;
+  max-width: 780px;
   min-width: 0;
 
   margin-inline: auto;
-  padding: clamp(22px, 3vw, 40px);
+  padding: clamp(16px, 2vw, 24px);
 
   background:
     linear-gradient(
@@ -144,10 +163,36 @@
    GOOGLE FORM EMBED
    =========================================== */
 
+.google-form-access {
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.google-form-access a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--form-blue);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.google-form-access a:hover {
+  color: var(--form-navy);
+}
+
+.google-form-access a:focus-visible {
+  outline: 3px solid var(--form-orange);
+  outline-offset: 3px;
+}
+
 .google-form-embed {
   display: block;
 
   width: 100%;
+  min-width: 0;
   max-width: 100%;
   height: var(--form-height);
 
@@ -186,7 +231,7 @@
 
   .google-form-card {
     width: 100%;
-    max-width: 100%;
+    max-width: 780px;
 
     padding: 24px;
     border-radius: 18px;
@@ -209,14 +254,16 @@
 
 @media (max-width: 600px) {
 
-  .google-form-card {
-    --form-height: 3200px;
+  #evaluacion .booking-layout {
+    gap: 22px;
+  }
 
+  .google-form-card {
     width: 100%;
     max-width: 100%;
 
     margin-inline: auto;
-    padding: 16px;
+    padding: 12px;
 
     border-radius: 16px;
 

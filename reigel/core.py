@@ -16,7 +16,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-STAGES = ("nuevo", "contactado", "calificado", "cita", "ganado", "perdido")
+STAGES = ("nuevo", "contacto_pendiente", "contactado", "calificado", "cita", "cita_realizada",
+          "propuesta_preparacion", "propuesta_presentada", "negociacion", "ganado", "perdido")
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -154,14 +155,23 @@ CREATE TABLE IF NOT EXISTS audit_events (
 """
 
 
-class Store:
+from .operations import OperationsMixin, migrate_operations
+
+
+def default_db_path(db_path=None) -> str:
+    """Resolve the database path without opening or creating anything."""
+    runtime = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share")) / "PowerSolar"
+    return str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
+
+
+class Store(OperationsMixin):
     def __init__(self, db_path=None):
-        runtime = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share")) / "PowerSolar"
-        self.path = str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
+        self.path = default_db_path(db_path)
         Path(self.path).resolve().parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(SCHEMA)
+            migrate_operations(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",
@@ -393,6 +403,7 @@ class Store:
 
     def create_lead(self, data, actor=None):
         normalized = self.normalize_lead(data, public=actor is None)
+        metadata = self._lead_metadata(data) if actor else {}
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             advisor_id = data.get("advisor_id")
@@ -410,6 +421,8 @@ class Store:
                                         WHERE u.active=1 AND u.public_booking=1 GROUP BY u.id ORDER BY n,u.created_at LIMIT 1""").fetchone()
                 advisor_id = candidate["id"] if candidate else None
             lead_id = self._insert_lead(db, normalized, advisor_id)
+            for key, value in metadata.items():
+                db.execute(f"UPDATE leads SET {key}=? WHERE id=?", (value, lead_id))
             self.audit(db, actor, "lead.create", lead_id)
             return self._lead(db, lead_id, actor, public=actor is None)
 
@@ -444,36 +457,7 @@ class Store:
             return [{**dict(r), "consent": bool(r["consent"])} for r in rows]
 
     def update_lead(self, lead_id, data, actor):
-        if not isinstance(data, dict) or set(data) - {"stage", "advisor_id", "notes", "consent"}:
-            raise DomainError("Campos del contacto no válidos.", 422)
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            self._lead(db, lead_id, actor)
-            values = {}
-            if "stage" in data:
-                if not isinstance(data["stage"], str) or data["stage"] not in STAGES:
-                    raise DomainError("Etapa no válida.", 422)
-                values["stage"] = data["stage"]
-            if "advisor_id" in data:
-                self.require_admin(actor)
-                selected_advisor = text(data["advisor_id"], "asesor", limit=100) or None
-                if selected_advisor and not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (selected_advisor,)).fetchone():
-                    raise DomainError("Asesor no disponible.", 422)
-                values["advisor_id"] = selected_advisor
-                db.execute("UPDATE conversations SET advisor_id=? WHERE lead_id=?", (values["advisor_id"], lead_id))
-            if "notes" in data:
-                values["notes"] = text(data["notes"], "notas", limit=5000)
-            if "consent" in data:
-                if type(data["consent"]) is not bool:
-                    raise DomainError("Consentimiento no válido.", 422)
-                values["consent"] = int(data["consent"])
-                if not data["consent"]:
-                    db.execute("UPDATE conversations SET mode='human' WHERE lead_id=?", (lead_id,))
-            values["updated_at"] = stamp()
-            for key, value in values.items():
-                db.execute(f"UPDATE leads SET {key}=? WHERE id=?", (value, lead_id))
-            self.audit(db, actor, "lead.update", lead_id)
-            return self._lead(db, lead_id, actor)
+        return self.edit_lead(lead_id, data, actor)
 
     def _advisor(self, db, advisor_id, public):
         row = db.execute("SELECT * FROM users WHERE id=? AND active=1", (advisor_id,)).fetchone()
@@ -519,6 +503,8 @@ class Store:
                             JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id WHERE a.id=?""", (appointment_id,)).fetchone()
         if not row or (actor and actor["role"] != "admin" and row["advisor_id"] != actor["id"]):
             raise DomainError("Cita no encontrada.", 404)
+        if actor and actor["role"] != "admin":
+            self._lead(db, row["lead_id"], actor)
         return dict(row)
 
     def book(self, data, source="web", actor=None):
@@ -551,6 +537,7 @@ class Store:
                     raise DomainError("El contacto debe autorizar la gestión de su cita.", 422)
                 if actor["role"] != "admin" and lead["advisor_id"] != advisor_id:
                     raise DomainError("No puedes reservar para otro asesor.", 403)
+                self._transfer_lead(db, lead, advisor_id, actor)
                 duplicate = db.execute("SELECT 1 FROM appointments WHERE lead_id=? AND status='confirmed' AND start_at<? AND end_at>?", (lead_id, finish, begin)).fetchone()
             else:
                 # Match identities only for overlap protection, without exposing/reusing private CRM data.
@@ -565,6 +552,7 @@ class Store:
                 lead_id = self._insert_lead(db, public_data, advisor_id)
             appointment_id = uid()
             db.execute("INSERT INTO appointments VALUES(?,?,?,?,?,?,?,?)", (appointment_id, lead_id, advisor_id, begin, finish, "confirmed", source, stamp()))
+            db.execute("UPDATE tasks SET owner_id=?,updated_at=? WHERE lead_id=? AND status='pending'", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE leads SET stage='cita',advisor_id=?,updated_at=? WHERE id=?", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE conversations SET advisor_id=? WHERE lead_id=?", (advisor_id, lead_id))
             self.audit(db, actor, "appointment.book", appointment_id)
@@ -575,39 +563,27 @@ class Store:
 
     def list_appointments(self, actor, lead_id=None):
         clause, args = self._scope(actor, "a")
+        if actor["role"] != "admin":
+            clause += " AND l.advisor_id=?"
+            args += (actor["id"],)
         if lead_id:
             clause += " AND a.lead_id=?"
             args += (lead_id,)
         with self.connect() as db:
-            return [dict(r) for r in db.execute(f"""SELECT a.*,l.name lead_name,u.name advisor_name FROM appointments a
-                        JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id WHERE {clause} ORDER BY a.start_at DESC LIMIT 1000""", args)]
+            return [dict(r) for r in db.execute(f"""SELECT a.*,l.name lead_name,u.name advisor_name,coalesce(r.hours,24) reminder_hours FROM appointments a
+                        JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id
+                        LEFT JOIN appointment_reminders r ON r.appointment_id=a.id
+                        WHERE {clause} ORDER BY a.start_at DESC LIMIT 1000""", args)]
 
     def cancel_appointment(self, appointment_id, actor):
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            self._appointment(db, appointment_id, actor)
-            db.execute("UPDATE appointments SET status='cancelled' WHERE id=?", (appointment_id,))
-            self.audit(db, actor, "appointment.cancel", appointment_id)
-            return self._appointment(db, appointment_id, actor)
+        return self.update_appointment(appointment_id, {"status": "cancelled"}, actor)
 
     def get_appointment(self, appointment_id, actor):
         with self.connect() as db:
             return self._appointment(db, appointment_id, actor)
 
     def dashboard(self, actor):
-        clause, args = self._scope(actor)
-        with self.connect() as db:
-            counts = {r["stage"]: r["n"] for r in db.execute(f"SELECT stage,count(*) n FROM leads WHERE {clause} GROUP BY stage", args)}
-            lead_count = sum(counts.values())
-            appointments = db.execute(f"SELECT count(*) FROM appointments WHERE {clause} AND status='confirmed' AND end_at>?", (*args, stamp())).fetchone()[0]
-            conversations = db.execute(f"SELECT count(*) FROM conversations WHERE {clause}", args).fetchone()[0]
-        return {
-            "metrics": {"leads": lead_count, "appointments": appointments, "conversations": conversations,
-                        "conversion_rate": round(counts.get("ganado", 0) * 100 / lead_count, 1) if lead_count else 0},
-            "stages": [{"stage": stage, "count": counts.get(stage, 0)} for stage in STAGES],
-            "recent_leads": self.list_leads(actor)[:5],
-            "upcoming_appointments": sorted((a for a in self.list_appointments(actor) if a["status"] == "confirmed" and a["end_at"] > stamp()), key=lambda a: a["start_at"])[:5],
-        }
+        return self.operations_dashboard(actor)
 
     def conversation(self, conversation_id, actor):
         with self.connect() as db:
@@ -657,7 +633,10 @@ class Store:
             if advisor_id and not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (advisor_id,)).fetchone():
                 raise DomainError("Asesor no disponible.", 422)
             if lead_id:
+                self._transfer_lead(db, linked, advisor_id, actor)
                 db.execute("UPDATE leads SET advisor_id=?,updated_at=? WHERE id=?", (advisor_id, stamp(), lead_id))
+                if linked["advisor_id"] != advisor_id:
+                    db.execute("INSERT INTO lead_history VALUES(?,?,?,?,?,?,?)", (uid(), lead_id, actor["id"], "advisor_id", linked["advisor_id"], advisor_id, stamp()))
                 db.execute("UPDATE conversations SET advisor_id=?,mode='human',updated_at=? WHERE lead_id=?", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE conversations SET advisor_id=?,lead_id=?,mode='human',updated_at=? WHERE id=?", (advisor_id, lead_id, stamp(), conversation_id))
             self.audit(db, actor, "conversation.assign", conversation_id)

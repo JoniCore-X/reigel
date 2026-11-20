@@ -1,5 +1,7 @@
 # Power Solar implementation contract
 
+> **Documento histórico (contrato inicial).** No describe la versión actual: `/` es la conversación con IA, la landing está en `/captacion`, el chat con reservas en `/chat`, la base vive en `%LOCALAPPDATA%\PowerSolar` (no en `data/`) y el pipeline tiene once etapas. Para el estado actual, ver `README.md`, `AGENTS.md` y `docs/TEAM_CAGUAS_IMPLEMENTATION.md`.
+
 Build a real local-first Python FastAPI + SQLite app, vanilla HTML/CSS/JS. No simulated metrics/messages, no automatic Git commits. Public landing `/`, private app `/app`, static resources `/static/`. All dates API ISO 8601 with offset; business timezone `America/Puerto_Rico` configurable. Multiuser admin/advisor roles. Secrets environment only, SQLite in ignored `data/`.
 
 ## Core ownership and API
