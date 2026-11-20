@@ -577,10 +577,23 @@ def create_app(db_path=None, *, load_env=None):
         return {"available": bool(model.get("enabled")) and model.get("status") == "available"}
 
     @app.get("/api/ia/conversations")
-    def ia_conversations(request: Request):
+    def ia_conversations(request: Request, q: str = ""):
         app.state.limiter.check(request, "ia_read", 120, 60)
         owner, _ = ia_owner(request)
-        return {"conversations": app.state.ia.list(owner)}
+        return {"conversations": app.state.ia.list(owner, q)}
+
+    @app.patch("/api/ia/conversations/{conversation_id}")
+    async def ia_rename(conversation_id: str, request: Request):
+        app.state.limiter.check(request, "ia_manage", 60, 60)
+        data = await payload(request)
+        owner, _ = ia_owner(request)
+        return {"conversation": app.state.ia.rename(owner, conversation_id, data.get("title"))}
+
+    @app.delete("/api/ia/conversations/{conversation_id}")
+    def ia_delete(conversation_id: str, request: Request):
+        app.state.limiter.check(request, "ia_manage", 60, 60)
+        owner, _ = ia_owner(request)
+        return app.state.ia.delete(owner, conversation_id)
 
     @app.post("/api/ia/conversations")
     def ia_create(request: Request):

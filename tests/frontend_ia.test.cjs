@@ -46,6 +46,12 @@ class Node {
   set textContent(value) { this.children.forEach(child => { child.parent = null; }); this.children = []; this._text = String(value); }
   get textContent() { return this._text + this.children.map(child => child.textContent).join(''); }
   append(...nodes) { nodes.forEach(node => { node.remove(); node.parent = this; this.children.push(node); }); }
+  insertBefore(node, reference) {
+    node.remove();
+    const index = this.children.indexOf(reference);
+    node.parent = this;
+    this.children.splice(index < 0 ? this.children.length : index, 0, node);
+  }
   replaceChildren(...nodes) { this.children.forEach(child => { child.parent = null; }); this.children = []; this._text = ''; this.append(...nodes); }
   remove() { if (this.parent) { this.parent.children = this.parent.children.filter(child => child !== this); this.parent = null; } }
   contains(node) { return node === this || this.children.some(child => child.contains(node)); }
@@ -78,7 +84,7 @@ const messages = (id, reply) => [
 function harness(conversations) {
   const ids = ['ia-thread', 'ia-empty', 'ia-scroll', 'ia-form', 'ia-text', 'ia-send', 'ia-send-label', 'ia-notice',
     'ia-counter', 'ia-history', 'ia-menu', 'ia-collapse', 'ia-scrim', 'ia-sidebar', 'ia-history-empty', 'ia-owner',
-    'ia-retention', 'ia-back', 'ia-actions-menu', 'ia-plus', 'ia-actions-copy', 'ia-actions-stop', 'ia-new'];
+    'ia-retention', 'ia-back', 'ia-actions-menu', 'ia-plus', 'ia-actions-copy', 'ia-actions-stop', 'ia-new', 'ia-search'];
   const elements = Object.fromEntries(ids.map(id => [id, new Node('div', id)]));
   elements['ia-thread'].append(elements['ia-empty']);
   elements['ia-actions-menu'].hidden = true;
@@ -112,9 +118,10 @@ function harness(conversations) {
     model: { enabled: true, status: 'available', model: 'sintetico' },
   }));
   const run = () => vm.runInContext(source, context);
-  const historyButton = id => elements['ia-history'].children.find(button => button.dataset.id === id);
+  const historyRow = id => elements['ia-history'].children.find(row => row.dataset.id === id);
+  const historyButton = id => historyRow(id)?.querySelector('.ia-history-open');
   const threadText = () => elements['ia-thread'].textContent;
-  return { elements, routes, copied, run, historyButton, threadText };
+  return { elements, routes, copied, run, historyRow, historyButton, threadText };
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -139,6 +146,50 @@ test('a slow response for an earlier selection never replaces the latest one', a
   assert.match(setup.threadText(), /Respuesta B/, 'the late response for A replaced the selected conversation B');
   assert.doesNotMatch(setup.threadText(), /Respuesta A/);
   assert.equal(setup.historyButton('b').getAttribute('aria-current'), 'true');
+});
+
+const actionNamed = (row, label) => row.querySelector('.ia-history-actions')?.children.find(button => button.textContent === label);
+
+test('a conversation can be renamed from its history menu', async () => {
+  const setup = harness([conversation('a', 'Título viejo')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Título viejo'), messages: messages('a', 'Respuesta A') }));
+  const sent = [];
+  setup.routes.set('PATCH /api/ia/conversations/a', async options => {
+    sent.push(JSON.parse(options.body));
+    return json({ conversation: conversation('a', 'Respaldo en casa') });
+  });
+  setup.run();
+  await settle(); await settle();
+  const row = setup.historyRow('a');
+  row.querySelector('.ia-history-more').dispatch('click');
+  actionNamed(row, 'Renombrar').dispatch('click');
+  const field = row.querySelector('.ia-history-rename');
+  assert.ok(field, 'rename field not shown');
+  field.value = 'Respaldo en casa';
+  field.dispatch('keydown', { key: 'Enter' });
+  await settle(); await settle();
+  assert.deepEqual(sent, [{ title: 'Respaldo en casa' }]);
+  assert.match(setup.historyButton('a').textContent, /Respaldo en casa/);
+});
+
+test('deleting asks for confirmation and clears the open conversation', async () => {
+  const setup = harness([conversation('a', 'Para borrar'), conversation('b', 'Se queda')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Para borrar'), messages: messages('a', 'Respuesta A') }));
+  let deletes = 0;
+  setup.routes.set('DELETE /api/ia/conversations/a', async () => { deletes += 1; return json({ deleted: 'a' }); });
+  setup.run();
+  await settle(); await settle();
+  assert.match(setup.threadText(), /Respuesta A/);
+  const row = setup.historyRow('a');
+  row.querySelector('.ia-history-more').dispatch('click');
+  actionNamed(row, 'Eliminar').dispatch('click');
+  assert.equal(deletes, 0, 'deleted without confirmation');
+  actionNamed(row, 'Eliminar definitivamente').dispatch('click');
+  await settle(); await settle();
+  assert.equal(deletes, 1);
+  assert.equal(setup.historyRow('a'), undefined);
+  assert.ok(setup.historyRow('b'));
+  assert.doesNotMatch(setup.threadText(), /Respuesta A/);
 });
 
 test('switching conversation during a reply never moves that reply into the new one', async () => {

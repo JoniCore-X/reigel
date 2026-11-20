@@ -141,28 +141,152 @@
   gap: 3px;
 }
 
-.ia-history button {
+.ia-history-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-radius: 12px;
+  transition: background .15s;
+}
+
+.ia-history-item:hover,
+.ia-history-item:focus-within {
+  background: rgba(255, 255, 255, .08);
+}
+
+.ia-history-item:has(.ia-history-open[aria-current="true"]) {
+  background: linear-gradient(90deg, rgba(255, 138, 43, .2), rgba(255, 255, 255, .1) 42%);
+  box-shadow: inset 3px 0 0 #ff8a2b;
+}
+
+.ia-history-open {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  width: 100%;
-  padding: 10px 12px;
+  min-width: 0;
+  padding: 10px 6px 10px 12px;
   text-align: left;
   color: #dbe4fb;
   background: transparent;
   border: 0;
-  border-radius: 10px;
-  transition: background .15s, color .15s;
+  border-radius: 12px;
 }
 
-.ia-history button:hover {
-  background: rgba(255, 255, 255, .08);
-}
-
-.ia-history button[aria-current="true"] {
+.ia-history-open[aria-current="true"] {
   color: #fff;
-  background: rgba(255, 255, 255, .16);
-  box-shadow: inset 3px 0 0 #ff8a2b;
+}
+
+.ia-history-more {
+  width: 30px;
+  height: 30px;
+  margin-right: 6px;
+  font-size: 16px;
+  line-height: 1;
+  color: #c7d4f4;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  opacity: .55;
+  transition: opacity .15s, background .15s;
+}
+
+.ia-history-item:hover .ia-history-more,
+.ia-history-more:focus-visible,
+.ia-history-more[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.ia-history-more:hover,
+.ia-history-more[aria-expanded="true"] {
+  background: rgba(255, 255, 255, .14);
+}
+
+.ia-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 6px;
+  padding: 0 10px 10px 12px;
+}
+
+.ia-history-actions[hidden] {
+  display: none;
+}
+
+.ia-history-action {
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+}
+
+.ia-history-action:hover {
+  background: rgba(255, 255, 255, .2);
+}
+
+.ia-history-action.is-danger {
+  color: #ffd9cf;
+  border-color: rgba(255, 140, 120, .55);
+}
+
+.ia-history-action.is-danger:hover {
+  color: #fff;
+  background: #b4352a;
+}
+
+.ia-history-rename {
+  grid-column: 1;
+  width: calc(100% - 8px);
+  margin: 6px 0 6px 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid #ffb36b;
+  border-radius: 10px;
+}
+
+.ia-search {
+  position: relative;
+  margin: 0 14px 14px;
+  color: #aebfe8;
+}
+
+.ia-search svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.ia-search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px 0 36px;
+  font: inherit;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 13, 47, .28);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+
+.ia-search input::placeholder {
+  color: #9fb4e6;
+}
+
+.ia-search input:focus {
+  background: rgba(0, 13, 47, .42);
+  border-color: #ffb36b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 138, 43, .25);
 }
 
 .ia-history strong {
@@ -349,7 +473,7 @@
 }
 
 .ia-empty {
-  max-width: 580px;
+  max-width: 680px;
   margin: auto 0;
   padding: 26px 0 40px;
 }
@@ -384,6 +508,85 @@
 .ia-empty > p {
   max-width: 48ch;
   margin-top: 12px;
+  color: var(--muted);
+}
+
+/* Official Power Solar system illustrations as conversation starters. */
+.ia-system {
+  margin-top: 26px;
+}
+
+.ia-system h3 {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: var(--ink);
+}
+
+.ia-system-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ia-system-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 10px 14px 10px 10px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(23, 35, 61, .05);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  isolation: isolate;
+}
+
+/* Hover glow adapted from the card pattern in frontend/css/uiverse-components.css. */
+.ia-system-card::before {
+  position: absolute;
+  inset: -40% auto auto -30%;
+  z-index: -1;
+  width: 140px;
+  height: 140px;
+  content: "";
+  background: radial-gradient(circle, rgba(255, 138, 43, .28), transparent 65%);
+  opacity: 0;
+  transition: opacity .2s ease, transform .3s ease;
+}
+
+.ia-system-card:hover,
+.ia-system-card:focus-visible {
+  border-color: #b9c8ea;
+  box-shadow: 0 14px 30px rgba(22, 49, 113, .14);
+  transform: translateY(-2px);
+}
+
+.ia-system-card:hover::before,
+.ia-system-card:focus-visible::before {
+  opacity: 1;
+  transform: translate(18px, 12px);
+}
+
+.ia-system-card img {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+  box-shadow: 0 6px 14px rgba(22, 49, 113, .18);
+}
+
+.ia-system-source {
+  margin-top: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -873,6 +1076,23 @@
   }
 }
 
+@media (max-width: 640px) {
+  .ia-system-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ia-system-card {
+    min-height: 64px;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .ia-system-card img {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* With "Citas y equipo" in the bar, the wordmark text no longer fits; the
    logo stays and the page keeps its screen-reader h1. */
 @media (max-width: 360px) {
@@ -882,6 +1102,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ia-system-card,
+  .ia-system-card::before,
   .ia-sidebar,
   .ia-msg,
   .ia-typing i,

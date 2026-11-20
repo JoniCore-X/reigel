@@ -21,6 +21,7 @@
     // Incremented whenever the visible conversation changes. A response or a
     // reply that belongs to an earlier view only updates the history list.
     view: 0,
+    search: '',
   };
   const nextView = () => ++state.view;
 
@@ -135,26 +136,149 @@
     state.conversations.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
   }
 
+  function smallButton(label, className, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  // One history row: open the conversation, or manage it (rename / delete).
+  function historyItem(item) {
+    const row = document.createElement('div');
+    row.className = 'ia-history-item';
+    row.dataset.id = item.id;
+    const label = item.title || 'Nueva conversación';
+
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'ia-history-open';
+    open.setAttribute('aria-current', String(item.id === state.activeId));
+    const title = document.createElement('strong');
+    title.textContent = label;
+    const date = document.createElement('small');
+    date.textContent = dateLabel(item.updated_at);
+    open.append(title, date);
+    open.addEventListener('click', () => {
+      if (state.streaming) state.controller?.abort();
+      selectConversation(item.id);
+      if (isMobile()) setSidebar(false);
+    });
+
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'ia-history-more';
+    more.textContent = '⋯';
+    more.setAttribute('aria-label', `Opciones de «${label}»`);
+    more.setAttribute('aria-expanded', 'false');
+
+    const actions = document.createElement('div');
+    actions.className = 'ia-history-actions';
+    actions.hidden = true;
+    const showActions = (...buttons) => {
+      actions.replaceChildren(...buttons);
+      actions.hidden = false;
+      more.setAttribute('aria-expanded', 'true');
+      buttons[0]?.focus();
+    };
+    const closeActions = () => {
+      actions.hidden = true;
+      actions.replaceChildren();
+      more.setAttribute('aria-expanded', 'false');
+    };
+    const menuButtons = () => [
+      smallButton('Renombrar', 'ia-history-action', () => startRename(row, item, closeActions)),
+      smallButton('Eliminar', 'ia-history-action is-danger', () => showActions(
+        smallButton('Eliminar definitivamente', 'ia-history-action is-danger', () => removeConversation(item)),
+        smallButton('Cancelar', 'ia-history-action', () => { closeActions(); more.focus(); }),
+      )),
+    ];
+    more.addEventListener('click', () => (actions.hidden ? showActions(...menuButtons()) : closeActions()));
+    row.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !actions.hidden) { closeActions(); more.focus(); }
+    });
+    row.append(open, more, actions);
+    return row;
+  }
+
+  function startRename(row, item, done) {
+    done();
+    const open = row.querySelector('.ia-history-open');
+    const field = document.createElement('input');
+    field.type = 'text';
+    field.className = 'ia-history-rename';
+    field.maxLength = 80;
+    field.value = item.title || '';
+    field.setAttribute('aria-label', 'Nuevo título de la conversación');
+    open.hidden = true;
+    row.insertBefore(field, open);
+    field.focus();
+    field.select?.();
+    let finished = false;
+    const finish = async save => {
+      if (finished) return;
+      finished = true;
+      const value = field.value.trim();
+      if (save && value && value !== item.title) {
+        try {
+          const data = await request(`/api/ia/conversations/${encodeURIComponent(item.id)}`, { method: 'PATCH', body: { title: value } });
+          upsertConversation(data.conversation);
+        } catch (error) {
+          showNotice(error.message);
+        }
+      }
+      renderHistory();
+    };
+    field.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); finish(true); }
+      else if (event.key === 'Escape') { event.preventDefault(); finish(false); }
+    });
+    field.addEventListener('blur', () => finish(true));
+  }
+
+  async function removeConversation(item) {
+    try {
+      await request(`/api/ia/conversations/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+    } catch (error) {
+      showNotice(error.message);
+      return;
+    }
+    state.conversations = state.conversations.filter(entry => entry.id !== item.id);
+    if (item.id === state.activeId) {
+      nextView();
+      state.activeId = null;
+      state.messages = [];
+      renderMessages();
+    }
+    renderHistory();
+    showNotice('Conversación eliminada.');
+  }
+
   function renderHistory() {
     historyList.replaceChildren();
-    state.conversations.forEach(item => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.dataset.id = item.id;
-      button.setAttribute('aria-current', String(item.id === state.activeId));
-      const title = document.createElement('strong');
-      title.textContent = item.title || 'Nueva conversación';
-      const date = document.createElement('small');
-      date.textContent = dateLabel(item.updated_at);
-      button.append(title, date);
-      button.addEventListener('click', () => {
-        if (state.streaming) state.controller?.abort();
-        selectConversation(item.id);
-        if (isMobile()) setSidebar(false);
-      });
-      historyList.append(button);
-    });
-    find('ia-history-empty').hidden = state.conversations.length > 0;
+    state.conversations.forEach(item => historyList.append(historyItem(item)));
+    const emptyNote = find('ia-history-empty');
+    emptyNote.hidden = state.conversations.length > 0;
+    emptyNote.textContent = state.search ? 'Sin resultados para esta búsqueda.' : 'Aún no hay conversaciones guardadas.';
+  }
+
+  // Search titles and messages on the server; the newest answer wins.
+  let searchTimer = null;
+  let searchSeq = 0;
+  async function runSearch(value) {
+    const seq = ++searchSeq;
+    state.search = value.trim();
+    try {
+      const query = state.search ? `?q=${encodeURIComponent(state.search)}` : '';
+      const data = await request(`/api/ia/conversations${query}`);
+      if (seq !== searchSeq) return;
+      state.conversations = Array.isArray(data.conversations) ? data.conversations : [];
+      renderHistory();
+    } catch (error) {
+      if (seq === searchSeq) showNotice(error.message);
+    }
   }
 
   function stateNote(message) {
@@ -542,6 +666,11 @@
 
   function bindEvents() {
     find('ia-new').addEventListener('click', newConversation);
+    find('ia-search').addEventListener('input', event => {
+      clearTimeout(searchTimer);
+      const value = event.target.value;
+      searchTimer = setTimeout(() => runSearch(value), 250);
+    });
     form.addEventListener('submit', event => {
       event.preventDefault();
       if (state.streaming) state.controller?.abort();

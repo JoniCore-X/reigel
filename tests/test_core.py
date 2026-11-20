@@ -76,7 +76,7 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         assert 'id="ia-shell"' in page.text
         assert 'id="ia-thread"' in page.text
         assert 'id="ia-form"' in page.text
-        assert 'src="/static/js/ia.js?v=9"' in page.text
+        assert 'src="/static/js/ia.js?v=10"' in page.text
         assert 'src="/static/assets/power-solar/reigel-logo.png"' in page.text
         assert 'id="ia-plus"' in page.text
         assert 'data-ia-menu="new"' in page.text

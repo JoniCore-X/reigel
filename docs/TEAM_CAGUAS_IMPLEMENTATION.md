@@ -1438,3 +1438,48 @@ Límites: la consulta llama a Ollama (`/api/tags`, 3 s) en el primer clic, así
 que con Ollama colgado el botón puede tardar hasta 4 s. Un modelo que se cae
 después de la consulta sigue llevando a `/ia`, que lo informa y ofrece «Citas y
 equipo». No se probó con Ollama real.
+
+## Rediseño fase 1: gestión de conversaciones y contenido oficial, 19 de noviembre de 2026
+
+Autorización del titular: control completo del repositorio, funciones
+avanzadas, diseño en toda la app, Uiverse.io y material oficial de Power
+Solar. Plan por fases en `docs/HOJA_DE_RUTA.md`. Trabajo en la rama
+`rediseno-reigel`; el commit `a66a51d` es el punto de control previo.
+
+Backend (`ia_workspace.py`, `api.py`):
+
+- `PATCH /api/ia/conversations/{id}` renombra (1–80 caracteres; oculta
+  contactos en el título). `DELETE` elimina la conversación y sus mensajes;
+  responde 409 si hay una respuesta generándose (marcador `streaming` de menos
+  de 10 minutos). `GET /api/ia/conversations?q=` busca en títulos y mensajes
+  del dueño, con `LIKE` escapado. Todo con alcance de dueño (404 para otros),
+  cuota `ia_manage` de 60 por minuto y control de origen de escritura.
+
+Frontend (`ia.html`, `ia.js?v=10`, `ia.css?v=13`):
+
+- Buscador en el historial (250 ms, gana la última respuesta), menú «⋯» por
+  conversación con Renombrar (campo en línea: Enter guarda, Escape cancela) y
+  Eliminar → «Eliminar definitivamente» / Cancelar. Eliminar la conversación
+  abierta limpia la vista.
+- Bienvenida con las seis ilustraciones oficiales del sistema residencial como
+  tarjetas que llevan una pregunta sin cifras al campo. Se sustituyó la
+  sugerencia «kW frente a kWh con un ejemplo», que la política de cantidades
+  habría retirado.
+
+Sitio (`pages/contacto.html`, `corporate.css?v=5`): sección «Centros de
+servicio» con el mapa oficial y la lista equivalente en texto de las 13
+ubicaciones que muestra, con fuente, fecha y aviso de confirmar horario.
+
+Material oficial: nueve PNG descargados de powersolarpr.com (verificados por
+cabecera) y registrados en `SOURCES.md`. No se tomaron fotos de clientes ni de
+representantes con nombre, ni precios, promociones o cifras de esas páginas.
+
+Pruebas: 7 de backend en `tests/test_ia.py`; 2 nuevas de `ia.js` en
+`tests/frontend_ia.test.cjs` (renombrar, eliminar con confirmación);
+`tests/test_official_content.py` (lista de centros, imágenes locales,
+preguntas sin cifras, fuentes registradas). Navegador: `/ia` a 1280 y 375 px y
+`/contacto` a 1280 y 375 px, sin desborde.
+
+Límites: la búsqueda usa `LIKE`, sin acentos insensibles ni ranking. Eliminar
+es definitivo y no pasa por el flujo de privacidad comercial (son
+conversaciones de `/ia` del propio dueño). No se probó con lector de pantalla.

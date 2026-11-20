@@ -432,6 +432,91 @@ def test_stream_without_done_signal_is_reported_as_truncated(configured, monkeyp
         collect(ai_chat.stream_workspace([], "Hola"))
 
 
+# --- Conversation management: rename, delete and search, always owner-scoped ---
+
+def conversation_with(client, monkeypatch, question, reply="Respuesta breve."):
+    conversation = client.post("/api/ia/conversations", json={}).json()["conversation"]
+    mock_stream(monkeypatch, [reply])
+    send(client, conversation["id"], question)
+    return conversation["id"]
+
+
+def test_owner_can_rename_a_conversation(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation_id = conversation_with(client, monkeypatch, "Pregunta sobre baterías")
+    response = client.patch(f"/api/ia/conversations/{conversation_id}", json={"title": "  Respaldo   para mi casa  "})
+    assert response.status_code == 200
+    assert response.json()["conversation"]["title"] == "Respaldo para mi casa"
+    listing = client.get("/api/ia/conversations").json()["conversations"]
+    assert listing[0]["title"] == "Respaldo para mi casa"
+    assert client.patch(f"/api/ia/conversations/{conversation_id}", json={"title": "   "}).status_code == 422
+    assert client.patch(f"/api/ia/conversations/{conversation_id}", json={"title": "x" * 81}).status_code == 422
+
+
+def test_renamed_title_hides_contact_data(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation_id = conversation_with(client, monkeypatch, "Hola")
+    title = client.patch(f"/api/ia/conversations/{conversation_id}", json={"title": "Llamar al 787 555 0100"}).json()["conversation"]["title"]
+    assert "555" not in title and "[teléfono omitido]" in title
+
+
+def test_owner_can_delete_a_conversation_and_its_messages(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    keep = conversation_with(client, monkeypatch, "Conservar esta")
+    remove = conversation_with(client, monkeypatch, "Eliminar esta")
+    response = client.delete(f"/api/ia/conversations/{remove}")
+    assert response.status_code == 200 and response.json() == {"deleted": remove}
+    assert client.get(f"/api/ia/conversations/{remove}").status_code == 404
+    assert [item["id"] for item in client.get("/api/ia/conversations").json()["conversations"]] == [keep]
+    with client.app.state.store.connect() as db:
+        assert db.execute("SELECT count(*) FROM ai_messages WHERE conversation_id=?", (remove,)).fetchone()[0] == 0
+    assert client.delete(f"/api/ia/conversations/{remove}").status_code == 404
+
+
+def test_delete_is_refused_while_a_reply_is_streaming(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation_id = conversation_with(client, monkeypatch, "Hola")
+    with client.app.state.store.connect() as db:
+        from reigel.core import stamp
+        db.execute(
+            "INSERT INTO ai_messages VALUES(?,?,?,?,?,?)",
+            ("live-stream", conversation_id, "assistant", "", "streaming", stamp()),
+        )
+    assert client.delete(f"/api/ia/conversations/{conversation_id}").status_code == 409
+
+
+def test_other_owners_cannot_rename_or_delete(client, app, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation_id = conversation_with(client, monkeypatch, "Privada")
+    other = TestClient(client.app)
+    other.get("/api/ia/bootstrap")
+    assert other.patch(f"/api/ia/conversations/{conversation_id}", json={"title": "Ajena"}).status_code == 404
+    assert other.delete(f"/api/ia/conversations/{conversation_id}").status_code == 404
+    assert client.get(f"/api/ia/conversations/{conversation_id}").status_code == 200
+
+
+def test_cross_origin_delete_is_rejected(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation_id = conversation_with(client, monkeypatch, "Hola")
+    response = client.delete(f"/api/ia/conversations/{conversation_id}", headers={"Origin": "https://ajeno.example"})
+    assert response.status_code in {400, 403}
+    assert client.get(f"/api/ia/conversations/{conversation_id}").status_code == 200
+
+
+def test_search_matches_titles_and_messages_of_the_owner_only(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    battery = conversation_with(client, monkeypatch, "¿Cómo funciona la batería?")
+    meter = conversation_with(client, monkeypatch, "Medición neta", reply="La medición neta registra la energía.")
+    found = lambda q: [item["id"] for item in client.get("/api/ia/conversations", params={"q": q}).json()["conversations"]]
+    assert found("batería") == [battery]
+    assert found("registra la energía") == [meter]
+    assert found("100%") == [] and found("_") == []
+    assert set(found("")) == {battery, meter}
+    other = TestClient(client.app)
+    other.get("/api/ia/bootstrap")
+    assert other.get("/api/ia/conversations", params={"q": "batería"}).json()["conversations"] == []
+
+
 # --- Public buttons ask whether /ia can answer before sending visitors there ---
 
 @pytest.mark.parametrize("model, expected", [

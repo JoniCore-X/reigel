@@ -186,7 +186,18 @@ class AIWorkspace:
             "created_at": row["created_at"],
         }
 
-    def list(self, owner):
+    def list(self, owner, query=None):
+        """Owner's active conversations, newest first. ``query`` matches the
+        title or any stored message (contact data is already hidden there)."""
+        search = " ".join(str(query or "").split())[:80]
+        clause, params = "", []
+        if search:
+            pattern = "%" + search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            clause = (
+                " AND (c.title LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM ai_messages s"
+                " WHERE s.conversation_id=c.id AND s.content LIKE ? ESCAPE '\\'))"
+            )
+            params = [pattern, pattern]
         with self.store.connect() as db:
             rows = db.execute(
                 """SELECT c.*,
@@ -194,11 +205,45 @@ class AIWorkspace:
                     COALESCE((SELECT substr(m.content,1,140) FROM ai_messages m
                         WHERE m.conversation_id=c.id ORDER BY m.rowid DESC LIMIT 1),'') AS preview
                 FROM ai_conversations c
-                WHERE c.owner_kind=? AND c.owner_id=? AND c.status='active'
+                WHERE c.owner_kind=? AND c.owner_id=? AND c.status='active'""" + clause + """
                 ORDER BY c.updated_at DESC,c.rowid DESC LIMIT ?""",
-                (owner["kind"], owner["id"], MAX_CONVERSATIONS),
+                (owner["kind"], owner["id"], *params, MAX_CONVERSATIONS),
             ).fetchall()
         return [_summary(row) for row in rows]
+
+    def rename(self, owner, conversation_id, value):
+        title = " ".join(hide_contacts(text(value, "título", limit=80, required=True)).split())[:80]
+        if not title:
+            raise DomainError("Escribe un título para la conversación.", 422)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            conversation = self._conversation(db, owner, conversation_id)
+            db.execute(
+                "UPDATE ai_conversations SET title=?,updated_at=? WHERE id=?",
+                (title, stamp(), conversation["id"]),
+            )
+            updated = self._conversation(db, owner, conversation["id"])
+        return _summary(updated)
+
+    def delete(self, owner, conversation_id):
+        """Permanently delete one of the owner's conversations and its messages.
+
+        Refused while a reply is still being generated, so the stream never
+        writes into a conversation that no longer exists.
+        """
+        cutoff = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            conversation = self._conversation(db, owner, conversation_id)
+            busy = db.execute(
+                "SELECT 1 FROM ai_messages WHERE conversation_id=? AND status='streaming' AND created_at>?",
+                (conversation["id"], cutoff),
+            ).fetchone()
+            if busy:
+                raise DomainError("Espera a que termine la respuesta para eliminar la conversación.", 409)
+            db.execute("DELETE FROM ai_messages WHERE conversation_id=?", (conversation["id"],))
+            db.execute("DELETE FROM ai_conversations WHERE id=?", (conversation["id"],))
+        return {"deleted": conversation["id"]}
 
     def create(self, owner):
         with self.store.connect() as db:

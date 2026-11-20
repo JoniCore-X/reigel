@@ -11,8 +11,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
   <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/ia.css?v=12">
-  <script src="/static/js/ia.js?v=9" defer></script>
+  <link rel="stylesheet" href="/static/css/ia.css?v=13">
+  <script src="/static/js/ia.js?v=10" defer></script>
 </head>
 <body class="ia-body">
   <a class="skip-link" href="#ia-text">Saltar al campo de mensaje</a>
@@ -26,6 +26,11 @@
         </button>
       </div>
       <button class="ia-new" id="ia-new" type="button"><span aria-hidden="true">+</span> Nueva conversación</button>
+      <div class="ia-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <label class="ia-sr-only" for="ia-search">Buscar en tus conversaciones</label>
+        <input id="ia-search" type="search" placeholder="Buscar conversaciones" maxlength="80" autocomplete="off">
+      </div>
       <div class="ia-history-wrap">
         <p class="ia-history-label" id="ia-history-label">Historial</p>
         <nav class="ia-history" id="ia-history" aria-labelledby="ia-history-label"></nav>
@@ -58,10 +63,22 @@
             <h2>¿Qué quieres resolver hoy?</h2>
             <p>Pregunta sobre energía solar, el proceso de evaluación o Power Solar. R.E.I.G.E.L. responde con el modelo local del equipo.</p>
             <p class="ia-empty-note">Para reservar una evaluación, hablar con una persona, dejar de recibir mensajes o hacer una solicitud sobre tus datos, usa <a href="/chat">Citas y equipo</a>: esta conversación no registra esas solicitudes. No escribas tu correo ni tu teléfono aquí: se ocultan al guardar la conversación.</p>
+            <section class="ia-system" aria-labelledby="ia-system-title">
+              <h3 id="ia-system-title">Cómo funciona un sistema solar con batería</h3>
+              <div class="ia-system-grid">
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo convierten las placas solares la luz del sol en electricidad?"><img src="/static/assets/power-solar/sistema/placas.png" alt="" width="56" height="56"><span>Placas solares</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Qué hace un microinversor en un sistema solar?"><img src="/static/assets/power-solar/sistema/microinversores.png" alt="" width="56" height="56"><span>Microinversores</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Para qué sirve la batería durante un apagón?"><img src="/static/assets/power-solar/sistema/bateria.png" alt="" width="56" height="56"><span>Batería</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Qué es la medición neta en términos generales?"><img src="/static/assets/power-solar/sistema/medicion-neta.png" alt="" width="56" height="56"><span>Medición neta</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo se conecta un sistema solar a la red eléctrica?"><img src="/static/assets/power-solar/sistema/red-electrica.png" alt="" width="56" height="56"><span>Red eléctrica</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo decido qué equipos de mi casa conviene respaldar?"><img src="/static/assets/power-solar/sistema/electrodomesticos.png" alt="" width="56" height="56"><span>Tus equipos</span></button>
+              </div>
+              <p class="ia-system-source">Ilustraciones: Power Solar, powersolarpr.com. Toca un tema para llevar la pregunta al campo de mensaje.</p>
+            </section>
             <div class="ia-prompts">
               <button type="button" data-ia-prompt="¿Cómo se evalúa un hogar antes de proponer un sistema solar?">Cómo funciona la evaluación</button>
               <button type="button" data-ia-prompt="¿Qué debo considerar si quiero respaldo durante apagones?">Respaldo en apagones</button>
-              <button type="button" data-ia-prompt="Explícame la diferencia entre kW y kWh con un ejemplo sencillo.">kW frente a kWh</button>
+              <button type="button" data-ia-prompt="¿Qué preguntas conviene preparar antes de hablar con un asesor?">Preparar mis preguntas</button>
             </div>
           </div>
         </div>

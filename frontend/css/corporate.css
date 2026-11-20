@@ -468,3 +468,27 @@
   .corporate-body .team-solution-action:is(:hover, :focus-visible) .team-solution-arrow { transform: none; }
   .corporate-body .team-contact-list a:hover span { transform: none; }
 }
+
+/* Official service-center map (powersolarpr.com) with an equivalent text list. */
+.corporate-body .corp-locations { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; padding-block: 56px; border-top: 1px solid var(--corp-line); }
+.corporate-body .corp-locations h2 { margin-top: 10px; font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -1px; color: var(--corp-navy); }
+.corporate-body .corp-locations-copy > p:not(.corp-eyebrow) { margin-top: 12px; color: var(--corp-muted); max-width: 46ch; }
+.corporate-body .corp-locations-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin: 22px 0 24px; padding: 0; list-style: none; }
+.corporate-body .corp-locations-list li { display: flex; flex-direction: column; padding: 9px 12px; border-left: 3px solid var(--corp-orange); background: #f6f8fc; border-radius: 0 10px 10px 0; transition: transform .18s ease, background .18s ease; }
+.corporate-body .corp-locations-list li:hover { transform: translateX(3px); background: #eef3fb; }
+.corporate-body .corp-locations-list strong { font-size: 13px; color: var(--corp-navy); }
+.corporate-body .corp-locations-list span { font-size: 12px; color: var(--corp-muted); }
+.corporate-body .corp-locations-map { margin: 0; padding: 18px; background: radial-gradient(120% 90% at 100% 0%, #eef3fb 0%, #fff 60%); border: 1px solid var(--corp-line); border-radius: 22px; box-shadow: 0 24px 60px rgba(7, 29, 67, .1); }
+.corporate-body .corp-locations-map img { display: block; width: 100%; height: auto; }
+.corporate-body .corp-locations-map figcaption { margin-top: 10px; font-size: 11px; color: var(--corp-muted); }
+@media (max-width: 860px) {
+  .corporate-body .corp-locations { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 36px; }
+  .corporate-body .corp-locations-map { order: -1; padding: 10px; }
+}
+@media (max-width: 420px) {
+  .corporate-body .corp-locations-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corporate-body .corp-locations-list li { transition: none; }
+  .corporate-body .corp-locations-list li:hover { transform: none; }
+}
