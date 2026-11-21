@@ -4,7 +4,22 @@
     {
       "name": "reigel-preview-sintetica",
       "runtimeExecutable": ".venv\\Scripts\\python.exe",
-      "runtimeArgs": ["scripts/preview_team_caguas.py", "--port", "8877"],
+      "runtimeArgs": [
+        "scripts/preview_team_caguas.py",
+        "--port",
+        "8877"
+      ],
+      "port": 8877
+    },
+    {
+      "name": "reigel-preview-ia",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "scripts/preview_team_caguas.py",
+        "--port",
+        "8877",
+        "--ia-local"
+      ],
       "port": 8877
     }
   ]

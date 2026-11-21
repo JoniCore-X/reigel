@@ -105,6 +105,7 @@ def user_dict(row) -> dict:
     obj.pop("password_hash", None)
     obj["active"] = bool(obj["active"])
     obj["public_booking"] = bool(obj["public_booking"])
+    obj["is_owner"] = bool(obj.get("is_owner", 0))
     obj["work_days"] = json.loads(obj["work_days"])
     return obj
 
@@ -164,6 +165,21 @@ def default_db_path(db_path=None) -> str:
     return str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
 
 
+def migrate_owner(db):
+    """Additive: the platform owner is an admin flagged with is_owner.
+
+    When no active owner exists, the oldest active admin becomes the owner, so an
+    existing database keeps exactly one account with control over plans and admins.
+    """
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(users)")}
+    if "is_owner" not in columns:
+        db.execute("ALTER TABLE users ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0")
+    if not db.execute("SELECT 1 FROM users WHERE is_owner=1 AND active=1").fetchone():
+        first = db.execute("SELECT id FROM users WHERE role='admin' AND active=1 ORDER BY created_at,id LIMIT 1").fetchone()
+        if first:
+            db.execute("UPDATE users SET is_owner=1 WHERE id=?", (first["id"],))
+
+
 class Store(OperationsMixin):
     def __init__(self, db_path=None):
         self.path = default_db_path(db_path)
@@ -172,6 +188,7 @@ class Store(OperationsMixin):
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(SCHEMA)
             migrate_operations(db)
+            migrate_owner(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",
@@ -218,6 +235,11 @@ class Store(OperationsMixin):
         return self.settings()
 
     @staticmethod
+    def require_owner(actor):
+        if not actor or actor.get("role") != "admin" or not actor.get("is_owner"):
+            raise DomainError("Esta acción está reservada al propietario de R.E.I.G.E.L.", 403)
+
+    @staticmethod
     def require_admin(actor):
         if not actor or actor["role"] != "admin":
             raise DomainError("Esta acción requiere una cuenta administradora.", 403)
@@ -234,6 +256,8 @@ class Store(OperationsMixin):
         role = data.get("role", "advisor")
         if not isinstance(role, str) or role not in {"admin", "advisor"}:
             raise DomainError("Rol no válido.", 422)
+        if role == "admin" and not bootstrap:
+            self.require_owner(actor)
         encoded = password_hash(data.get("password", ""))
         user_id = uid()
         try:
@@ -241,8 +265,8 @@ class Store(OperationsMixin):
                 db.execute("BEGIN IMMEDIATE")
                 if bootstrap and db.execute("SELECT 1 FROM users LIMIT 1").fetchone():
                     raise DomainError("Ya hay usuarios. Inicia sesión para administrar el equipo.", 409)
-                db.execute("INSERT INTO users(id,name,email,password_hash,role,timezone,created_at) VALUES(?,?,?,?,?,?,?)",
-                           (user_id, name, email, encoded, role, self.settings()["timezone"], stamp()))
+                db.execute("INSERT INTO users(id,name,email,password_hash,role,timezone,created_at,is_owner) VALUES(?,?,?,?,?,?,?,?)",
+                           (user_id, name, email, encoded, role, self.settings()["timezone"], stamp(), int(bootstrap)))
                 self.audit(db, actor, "user.create", user_id)
                 return user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
         except sqlite3.IntegrityError:
@@ -262,6 +286,10 @@ class Store(OperationsMixin):
             if not row:
                 raise DomainError("Cuenta no encontrada.", 404)
             old = user_dict(row)
+            if "active" in data and old["is_owner"] and data["active"] is not True:
+                raise DomainError("La cuenta del propietario no se puede desactivar.", 409)
+            if "active" in data and old["role"] == "admin" and actor["id"] != user_id and not actor.get("is_owner"):
+                raise DomainError("Solo el propietario puede activar o desactivar administradores.", 403)
             merged = {**old, **data}
             values = {}
             if "name" in data:

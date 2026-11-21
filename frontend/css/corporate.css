@@ -161,7 +161,8 @@
 .corporate-body #evaluacion,
 .corporate-body #privacidad,
 .corporate-body #proceso,
-.corporate-body #preguntas { scroll-margin-top: 110px; }
+.corporate-body #preguntas,
+.corporate-body #como-funciona { scroll-margin-top: 110px; }
 
 .corporate-body .corp-faq { max-width: 950px; padding-block: 28px 24px; }
 .corporate-body .corp-faq details { padding: 0; border-bottom: 1px solid var(--corp-line); }
@@ -491,4 +492,76 @@
 @media (prefers-reduced-motion: reduce) {
   .corporate-body .corp-locations-list li { transition: none; }
   .corporate-body .corp-locations-list li:hover { transform: none; }
+}
+
+/* Rediseño fase 3: recorrido del sistema (/soluciones) y datos publicados (/empresa). */
+.corporate-body .corp-system { padding-block: 56px 48px; border-bottom: 1px solid var(--corp-line); }
+.corporate-body .corp-system-heading { display: grid; grid-template-columns: .8fr 1.2fr; gap: 12px 70px; align-items: end; margin-bottom: 34px; }
+.corporate-body .corp-system-heading .corp-eyebrow { grid-column: 1 / -1; margin-bottom: 0; }
+.corporate-body .corp-system-heading h2 { color: var(--corp-navy); }
+.corporate-body .corp-system-heading > p:last-child { max-width: 52ch; color: var(--corp-muted); }
+.corporate-body .corp-system-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0; padding: 0; list-style: none; counter-reset: corp-step; }
+.corporate-body .corp-system-step { position: relative; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; align-items: start; padding: 22px 20px 22px 18px; border: 1px solid var(--corp-line); border-radius: 18px; background: linear-gradient(180deg, #fff 0%, #f7f9fc 100%); counter-increment: corp-step; transition: border-color .2s ease, box-shadow .25s ease, transform .2s cubic-bezier(.2, .75, .25, 1); }
+.corporate-body .corp-system-step::after { content: "0" counter(corp-step); position: absolute; top: 14px; right: 16px; color: #9fb0c8; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+.corporate-body .corp-system-step:hover { border-color: #f3b27a; box-shadow: 0 16px 34px rgba(7, 29, 67, .09); transform: translateY(-2px); }
+.corporate-body .corp-system-step img { display: block; width: 72px; height: 72px; border-radius: 14px; }
+.corporate-body .corp-system-step h3 { margin: 2px 0 6px; color: var(--corp-navy); font-size: 18px; }
+.corporate-body .corp-system-step p { margin: 0; color: var(--corp-muted); font-size: 14.5px; line-height: 1.7; }
+.corporate-body .corp-system-foot { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: center; justify-content: space-between; margin-top: 26px; }
+.corporate-body main .corp-source { margin: 0; color: var(--corp-muted); font-size: 13px; line-height: 1.6; }
+.corporate-body .corp-source a,
+.corporate-body .corp-company .corp-detail a,
+.corporate-body .corp-projects figcaption a { color: var(--corp-blue); }
+
+.corporate-body .corp-company { padding-block: 52px; background: #f6f8fb; border-block: 1px solid var(--corp-line); }
+.corporate-body .corp-company > .corp-container { display: grid; grid-template-columns: .85fr 1.15fr; gap: 40px 80px; }
+.corporate-body .corp-company .corp-section-label h2 { color: var(--corp-navy); }
+.corporate-body .corp-company-facts { display: grid; gap: 0; margin: 0; }
+.corporate-body .corp-company-facts > div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 6px 20px; padding: 16px 0; border-top: 1px solid var(--corp-line); }
+.corporate-body .corp-company-facts > div:first-child { padding-top: 0; border-top: 0; }
+.corporate-body .corp-company-facts dt { color: var(--corp-blue); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; line-height: 1.9; }
+.corporate-body .corp-company-facts dd { margin: 0; color: #24384f; font-size: 16px; line-height: 1.7; }
+.corporate-body .corp-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.corporate-body .corp-chip-list li { padding: 5px 13px; border: 1px solid #f3c49b; border-radius: 999px; background: #fff7f0; color: #8a3a00; font-size: 14px; font-weight: 600; }
+.corporate-body .corp-partners { grid-column: 1 / -1; }
+.corporate-body .corp-partners h3 { margin-bottom: 16px; color: var(--corp-navy); }
+.corporate-body .corp-partner-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.corporate-body .corp-partner-list li { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--corp-line); border-left: 3px solid var(--corp-orange); border-radius: 0 14px 14px 0; background: #fff; }
+.corporate-body .corp-partner-list strong { color: var(--corp-navy); font-size: 16px; }
+.corporate-body .corp-partner-list span { color: var(--corp-muted); font-size: 13.5px; }
+
+.corporate-body .corp-projects { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; padding-block: 56px; }
+.corporate-body .corp-projects h2 { color: var(--corp-navy); }
+.corporate-body .corp-projects-copy > p:not(.corp-eyebrow) { margin-top: 12px; color: var(--corp-muted); }
+.corporate-body .corp-projects-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; }
+.corporate-body .corp-projects-list li { padding: 4px 11px; border-radius: 999px; background: #eef3fb; color: var(--corp-navy); font-size: 13px; font-weight: 600; }
+
+@media (max-width: 1000px) {
+  .corporate-body .corp-system-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .corporate-body .corp-partner-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .corporate-body .corp-system-heading,
+  .corporate-body .corp-company > .corp-container,
+  .corporate-body .corp-projects { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .corporate-body .corp-projects .corp-locations-map { order: -1; }
+}
+@media (max-width: 600px) {
+  .corporate-body .corp-system { padding-block: 34px 32px; }
+  .corporate-body .corp-system-steps,
+  .corporate-body .corp-partner-list { grid-template-columns: minmax(0, 1fr); }
+  .corporate-body .corp-system-step { grid-template-columns: 56px minmax(0, 1fr); padding: 18px 16px; }
+  .corporate-body .corp-system-step img { width: 56px; height: 56px; }
+  .corporate-body .corp-company { padding-block: 34px; }
+  .corporate-body .corp-company-facts > div { grid-template-columns: minmax(0, 1fr); }
+  .corporate-body .corp-projects { padding-block: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corporate-body .corp-system-step { transition: none; }
+  .corporate-body .corp-system-step:hover { transform: none; }
+}
+@media (forced-colors: active) {
+  .corporate-body .corp-system-step,
+  .corporate-body .corp-partner-list li,
+  .corporate-body .corp-chip-list li { border: 1px solid CanvasText; }
 }

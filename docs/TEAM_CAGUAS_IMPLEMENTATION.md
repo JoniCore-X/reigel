@@ -1533,3 +1533,151 @@ como «Fuente: <título publicado>» sin alterar el dato; los textos de interfaz
 quedan en 13 px o más. Medido en vista previa sintética: a 1280×800 las tres
 tarjetas caben completas en la primera vista; a 320×640 el área de conversación
 pasa de 235 a 329 px y muestra dos tarjetas completas.
+
+## Rediseño fase 3: `/soluciones` y `/empresa`, 21 de noviembre de 2026
+
+Contenido oficial atribuido, sin cambios de servidor. `corporate.css?v=7`.
+
+- `/soluciones`: sección `#como-funciona`, «Un sistema con batería, paso a paso»,
+  con las seis ilustraciones oficiales (`sistema/*.png`) en orden placas →
+  microinversores → batería → medición neta → red → hogar. Textos propios, sin
+  cifras, ahorro ni garantías; aclara que el respaldo depende de capacidad,
+  diseño y cargas conectadas y que los créditos de medición neta dependen de las
+  reglas vigentes. Botón que abre el chat con una pregunta preparada.
+- `/empresa`: «Lo que Power Solar publica de sí misma»: empresa netamente
+  puertorriqueña establecida en 2018, parte de Power Group, misión publicada
+  (cita corta), líneas Hogar/Apartamentos/Comercial/Techos y socios tecnológicos
+  (Tesla como placas e instalador certificado, Enphase, UNIRAC, Fortress Power,
+  EcoFlow; ver la nota de Canadian Solar más abajo). Aviso de que la página es de Team
+  Caguas y no un sitio oficial. Mapa de proyectos comerciales y municipales
+  (antes sin uso) con la lista en texto de sus 23 municipios.
+- Omitido a propósito: empleados, clientes, años de experiencia del grupo,
+  vientos de diseño de UNIRAC y socios de financiación (Power Financial,
+  Oriental). Fuentes y fecha en `frontend/assets/power-solar/SOURCES.md`.
+
+Pruebas: dos nuevas en `tests/test_official_content.py` (seis pasos con imagen
+local, sin cifras; hechos atribuidos, sin cifras de clientes o empleados,
+23 municipios). `test_public_intent_selector_…` contaba todos los botones con
+`data-chat-prefill` y falló con el botón nuevo; ahora cuenta las cuatro
+`.intent-option` y exige el botón del recorrido, con las mismas invariantes
+(abre el chat, no envía, sin campos de contacto).
+
+Revisión visual en la vista previa sintética (21 nov): `/soluciones` en 3/2/1
+columnas a 1280/768/375 px y `/empresa`, sin desplazamiento horizontal ni
+imágenes rotas. Corregido: el ancla `#como-funciona` dejaba el título bajo la
+cabecera fija (99 px); ahora usa el mismo `scroll-margin-top: 110px` que
+`#preguntas`. Sin cambiar: la cejilla `.corp-eyebrow` mide 12 px en todo el
+sitio, anterior a esta fase. Pendiente: componentes Uiverse nuevos.
+
+## Placas: Canadian Solar retirada, Tesla vigente, 21 de noviembre de 2026
+
+Instrucción del titular: Canadian Solar ya no se trabaja; se venden placas Tesla.
+Comprobado en las tres listas internas del 16 nov 2026 (Solo Placas, FlexiPay,
+PF Loans y Lease), leídas solo para identificar marcas: las ofertas indican
+«Panel Tesla», «Tesla Inverters» y baterías «PW»; ninguna menciona Canadian
+Solar. No se copió ningún precio, pago mensual ni nivel de crédito.
+
+- `/empresa`: se quitó Canadian Solar; Tesla figura como «Placas solares ·
+  Power Solar es instalador certificado» (se quitó «según», que restaba
+  confianza), con la aclaración de que las
+  placas Tesla son la oferta actual de Team Caguas y el resto de marcas lo que
+  muestra el sitio de Power Solar.
+- Prueba nueva: ningún archivo de `frontend/` ni `reigel/` menciona Canadian.
+- Fuera del alcance de este cambio: evidencias de conocimiento o notas guardadas
+  en la base comercial (`%LOCALAPPDATA%/PowerSolar`), que no se leyeron ni se
+  migraron. Si alguna menciona Canadian Solar, debe retirarla un administrador.
+- Inversores y baterías: el titular confirmó «todo Tesla» el mismo día.
+  `/empresa` quita Enphase y Fortress Power; Tesla figura como «Placas solares,
+  inversores y baterías Powerwall · Power Solar es instalador certificado».
+  UNIRAC (anclaje) y EcoFlow (baterías portátiles para apartamentos) se
+  mantienen: no forman parte de la pregunta y las listas no los mencionan.
+  `/soluciones` y la bienvenida de `/ia` dicen «Inversor» en lugar de
+  «Microinversores» (la ilustración oficial es una caja genérica; la de batería
+  ya muestra «TESLA»). La prueba de marcas retiradas cubre también Enphase y
+  Fortress. Se conserva en `knowledge.py` la explicación general del
+  microinversor (Departamento de Energía): es educativa y no dice qué se vende.
+
+## `/ia` con IA local en la vista previa y promesas de beneficio, 21 de noviembre de 2026
+
+Aviso reportado: «La IA local no está activada en este servidor». Causa: el único
+servidor activo era la vista previa sintética, que no lee `.env` y por tanto no
+tiene `REIGEL_CHAT_AI`; además Ollama estaba instalado pero apagado. No era un
+fallo de código.
+
+- `scripts/preview_team_caguas.py --ia-local` fija `REIGEL_CHAT_AI=ollama` solo
+  en ese proceso (no lee `.env`, no descarga modelos); configuración
+  `reigel-preview-ia` en `.claude/launch.json`. La vista previa normal sigue sin IA.
+- Ollama se encendió con autorización del titular; `qwen2.5:3b` ya estaba instalado.
+
+Prueba real con `qwen2.5:3b` en la vista previa: la tarjeta «Inversor»
+(«¿Qué hace el inversor en un sistema solar?», cambiada hoy desde
+«microinversor») produjo una respuesta que entendía «inversor» como quien
+invierte dinero y decía que «puede recibir una rebaja en sus facturas… recibir
+dinero de la compañía eléctrica» y «obtener un ahorro en sus facturas». Las tres
+frases pasaban el validador, que solo bloqueaba cifras y «garantiz…».
+
+- Validadores de `/ia` y `/chat` (`ai_chat._BENEFIT_PROMISES`): rechazan obtener,
+  recibir, lograr o ganar ahorro, rebaja, descuento, dinero o reembolso, los
+  futuros/condicionales de «ahorrar» y «rebaja en tu factura». Explicar de qué
+  depende un ahorro sigue permitido.
+- Instrucciones de `/ia`: «inversor» es el equipo que convierte corriente
+  continua en alterna, no una persona que invierte dinero.
+- Tarjeta: «¿Qué hace el inversor de corriente en un sistema solar?». Con el
+  modelo real la respuesta pasó a explicar la conversión CC→CA, sin beneficios.
+- Pruebas: las frases observadas y dos variantes en `QUANTITATIVE_CLAIMS`; dos
+  explicaciones permitidas; la instrucción del glosario.
+
+Límite: el validador sigue siendo de patrones, no semántico. Una sola respuesta
+correcta del modelo no demuestra que no vuelva a equivocarse.
+
+## `/precios`: simulador de mensualidad retirado, 21 de noviembre de 2026
+
+Por instrucción del titular («no es necesario») se retiró el simulador
+«Calcula la mensualidad del equipo» de `/precios`: sección `#simulador`,
+`frontend/js/pricing.js` (eliminado; ya no se carga en ninguna página) y sus
+reglas en `pricing.css` (`?v=3`). El botón principal del encabezado ahora lleva
+a `#planes` («Ver los planes») y se quitó el enlace secundario duplicado. La
+nota de planes y la pregunta frecuente sobre más de 15 vendedores ya no
+mencionan el simulador. Se conservan los planes, módulos, roles, piloto,
+condiciones y preguntas. La prueba de `/precios` exige ahora que no aparezcan
+el simulador, sus importes de ejemplo ni `pricing.js`.
+
+## Fase 1 de acceso: propietario, bajas y planes privados, 21 de noviembre de 2026
+
+Objetivo del titular: el equipo paga por usar R.E.I.G.E.L., los clientes no ven
+esa parte y el titular controla el sistema y puede cortar el acceso a quien
+renuncie. Ya existía: autenticación propia (scrypt, cookie HttpOnly/SameSite,
+sesiones en servidor) y desactivación que borra las sesiones.
+
+- **Propietario.** Columna aditiva `users.is_owner` (`core.migrate_owner`). La
+  cuenta creada con `bootstrap` es propietaria; en una base existente sin
+  propietario activo lo es el administrador activo más antiguo. Solo el
+  propietario crea, desactiva o da de baja administradores y ve la suscripción.
+  Su cuenta no se puede desactivar ni dar de baja.
+- **Baja en un paso** (`POST /api/team/{id}/offboard`, `OperationsMixin.offboard_user`):
+  en una sola transacción pasa a la cuenta elegida las citas confirmadas
+  futuras, los prospectos, las tareas pendientes y las conversaciones (en modo
+  humano); deja `active=0` y `public_booking=0`, borra sus sesiones, anota el
+  cambio de asesor en `lead_history` y audita `user.offboard`. Si una cita
+  choca con la agenda de quien recibe, no cambia nada (409). Un administrador
+  puede dar de baja asesores; nadie se da de baja a sí mismo. No se borra
+  ningún registro. Las conversaciones privadas de `/ia` de esa cuenta quedan
+  guardadas, sin acceso. En `/app`, la casilla «Cuenta activa» solo reactiva;
+  desactivar se hace con «Dar de baja».
+- **Planes fuera del sitio público.** Se retiraron `/precios`, sus enlaces
+  (menú, móvil, pie y página 404), el sitemap, `frontend/pages/precios.html` y
+  `pricing.css`. Como `/static` sirve todo `frontend/`, los planes ahora viven
+  en `reigel/plans.py` y se entregan por `GET /api/owner/plans` solo al
+  propietario; `/app` → «Suscripción» los muestra con las licencias en uso.
+  No hay pasarela de pago: no cobra, no factura ni suspende.
+
+Pruebas: `tests/test_owner_access.py` (8) y ajustes en
+`tests/test_corporate_pages.py`. Vista previa sintética: el propietario ve
+«Suscripción»; la baja de «Asesor · DEMO» transfirió 1 prospecto y 1 cita y su
+cuenta quedó «Dado de baja».
+
+Importante para la base comercial: al arrancar el servidor real con este código
+se añadirá la columna `is_owner` y se marcará como propietario al administrador
+activo más antiguo. No se probó contra la base comercial. Antes de reiniciar:
+copia con `scripts/backup.py`, SHA256 guardado y confirmar quién debe ser el
+propietario.

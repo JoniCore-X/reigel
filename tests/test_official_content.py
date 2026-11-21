@@ -51,3 +51,51 @@ def test_every_official_asset_has_a_recorded_source():
         if name in own:
             continue
         assert Path(name).name in sources, name
+
+
+def test_solutions_page_walks_through_the_battery_system_with_official_illustrations(client):
+    page = client.get("/soluciones").text
+    section = re.search(r'<section[^>]*id="como-funciona".*?</section>', page, re.S).group(0)
+    steps = re.findall(r'<li class="corp-system-step">.*?</li>', section, re.S)
+    assert len(steps) == len(SYSTEM)
+    for name, step in zip(SYSTEM, steps):
+        assert f'src="/static/assets/power-solar/sistema/{name}.png"' in step
+    text = re.sub(r"<[^>]+>", " ", section)
+    text = text.replace("19 de noviembre de 2026", "")
+    # Own explanatory text: no figures, prices or savings promises.
+    assert not re.search(r"\d|%|\$|ahorr|garant|gratis", text, re.I)
+    assert "powersolarpr.com/placas-solares-para-casas" in section
+    assert "data-open-chat" in section and "data-chat-prefill" in section
+
+
+def test_company_page_attributes_published_facts_without_customer_or_staff_figures(client):
+    page = client.get("/empresa").text
+    company = re.search(r'<section class="corp-company".*?</section>', page, re.S).group(0)
+    projects = re.search(r'<section[^>]*corp-projects.*?</section>', page, re.S).group(0)
+    for fact in ("puertorriqueña", "2018", "Power Group", "Hogar", "Apartamentos", "Comercial", "Techos"):
+        assert fact in company, fact
+    for partner in ("Tesla", "UNIRAC", "EcoFlow"):
+        assert f"<strong>{partner}</strong>" in company, partner
+    assert "Canadian" not in page
+    assert "<strong>Tesla</strong><span>Placas solares, inversores y baterías Powerwall" in company
+    assert "powersolarpr.com/conoce-a-power-solar" in company
+    assert "no es un sitio oficial" in company
+    for section in (company, projects):
+        text = re.sub(r"<[^>]+>", " ", section)
+        text = re.sub(r"\b(2018|19|21) de noviembre de 2026\b|\b2018\b", "", text)
+        assert not re.search(r"\d|%|\$|ahorr|financ", text, re.I), text
+    assert projects.count("<li>") == 23
+    assert 'src="/static/assets/power-solar/mapa-proyectos-power-solar.png"' in projects
+
+
+def test_discontinued_panel_brand_is_absent_from_every_public_and_private_surface():
+    """Canadian Solar, Enphase y Fortress Power ya no se ofrecen (noviembre de 2026): los equipos son Tesla."""
+    roots = [ROOT / "frontend", ROOT / "reigel"]
+    offenders = [
+        str(path.relative_to(ROOT))
+        for base in roots
+        for path in base.rglob("*")
+        if path.suffix in {".html", ".js", ".css", ".py", ".json", ".md", ".txt"}
+        and any(brand in path.read_text(encoding="utf-8", errors="ignore").lower() for brand in ("canadian", "enphase", "fortress"))
+    ]
+    assert offenders == []

@@ -26,13 +26,13 @@ vean hay que reiniciar el servidor activo, y eso lo decide el titular.
 - `/contacto`: mapa oficial de centros de servicio con la lista equivalente en
   texto y enlace al buscador oficial.
 
-## Fase 2 · `/chat` (coordinación)
+## Fase 2 · `/chat` (coordinación) — hecha (19 nov 2026)
 
 - Mismo lenguaje visual que `/ia`: cabecera, burbujas, estados y compositor.
 - Reserva por pasos (asesor → día → hora → datos → confirmación) con progreso
   visible y teclado completo; la confirmación sigue dependiendo del servidor.
 
-## Fase 3 · Sitio corporativo
+## Fase 3 · Sitio corporativo — contenido hecho (21 nov 2026); faltan componentes Uiverse
 
 - `/soluciones`: «Cómo funciona un sistema con batería» con las ilustraciones
   oficiales y texto propio.
@@ -41,6 +41,18 @@ vean hay que reiniciar el servidor activo, y eso lo decide el titular.
   socios tecnológicos), sin cifras de clientes ni empleados.
 - Nuevos componentes Uiverse documentados donde aporten (tarjetas, botones,
   conmutadores), revisando la cascada antes de añadir reglas.
+
+## Acceso y suscripción (pedido el 21 nov 2026)
+
+- Fase A — hecha (21 nov 2026): rol de propietario, baja en un paso con
+  transferencia de trabajo y planes fuera del sitio público (solo en `/app`).
+- Fase B: suscripción interna (plan asignado, licencias según asesores
+  activos, facturas y estado de pago; suspensión por impago si el titular lo
+  decide), sin cobrar dinero real.
+- Fase C: pasarela de pago en modo de prueba, cuando el titular cree la cuenta.
+- Fase D: IA comercial con aprobación humana (borradores de publicaciones,
+  seguimiento, prioridad de prospectos, guiones para citas). Imágenes y video
+  requieren otros modelos o un servicio de pago: decisión del titular.
 
 ## Fase 4 · `/app` (equipo)
 

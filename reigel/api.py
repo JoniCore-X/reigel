@@ -315,6 +315,16 @@ def create_app(db_path=None, *, load_env=None):
     async def update_user(user_id: str, request: Request, user=Depends(actor)):
         return {"user": app.state.store.update_user(user_id, await payload(request), user)}
 
+    @app.post("/api/team/{user_id}/offboard")
+    async def offboard_user(user_id: str, request: Request, user=Depends(actor)):
+        return app.state.store.offboard_user(user_id, await payload(request), user)
+
+    @app.get("/api/owner/plans")
+    async def owner_plans(user=Depends(actor)):
+        from .plans import overview
+        app.state.store.require_owner(user)
+        return overview(app.state.store.list_users())
+
     @app.get("/api/settings")
     async def settings(user=Depends(actor)):
         return {"business": app.state.store.settings(), "integrations": integrations()}

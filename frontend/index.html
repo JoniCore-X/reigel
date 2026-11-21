@@ -10,12 +10,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
   <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/operations.css">
+  <link rel="stylesheet" href="/static/css/operations.css?v=2">
   <link rel="stylesheet" href="/static/css/power-solar-identity.css?v=1">
   <link rel="stylesheet" href="/static/css/site-loader.css?v=7">
   <script src="/static/js/site-loader.js?v=5"></script>
   <script src="/static/js/operations.js" defer></script>
-  <script src="/static/js/app.js" defer></script>
+  <script src="/static/js/app.js?v=2" defer></script>
 </head>
 <body class="workspace-body">
   <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
@@ -71,6 +71,7 @@
         <button class="nav-item" data-view="automation" type="button"><span class="nav-icon" aria-hidden="true">R.</span>R.E.I.G.E.L.</button>
         <button class="nav-item" data-view="marketing" type="button"><span class="nav-icon" aria-hidden="true">↗</span>Marketing</button>
         <button class="nav-item" data-view="settings" type="button"><span class="nav-icon" aria-hidden="true">⚙</span>Equipo y ajustes</button>
+        <button class="nav-item" data-view="subscription" type="button" hidden><span class="nav-icon" aria-hidden="true">$</span>Suscripción</button>
       </nav>
       <div class="sidebar-bottom"><a class="capture-link" href="/captacion" target="_blank" rel="noopener"><span>Tu puerta de entrada</span><strong>Página de captación ↗</strong><small>Comparte. Conecta. Agenda.</small></a><div class="profile"><span class="avatar" id="user-avatar">PS</span><span><strong id="user-name"></strong><small id="user-role"></small></span><button type="button" id="logout" class="icon-button" aria-label="Cerrar sesión">↪</button></div></div>
     </aside>

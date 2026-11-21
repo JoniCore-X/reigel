@@ -183,7 +183,7 @@ def validate_reply(value, verified=False):
         value, re.I,
     ):
         raise ValueError("El texto afirma una gestión no realizada.")
-    if re.search(r"garantiz|asegur|financiamiento aprobado", value, re.I):
+    if re.search(r"garantiz|asegur|financiamiento aprobado", value, re.I) or _promises_benefit(value):
         raise ValueError("El texto promete condiciones que requieren verificación humana.")
     if re.search(r"\b(?:precio|precios|oferta|promoción|promocion|descuento|incentivo|mensualidad)\b", value, re.I):
         raise ValueError("El texto ofrece condiciones comerciales no verificadas.")
@@ -289,7 +289,9 @@ def workspace_instructions(verified=""):
         "Eres R.E.I.G.E.L., asistente de IA de Power Solar en Puerto Rico. Mantienes una conversación "
         "abierta, útil y clara con la persona que escribe. Reglas obligatorias: responde en el idioma "
         "de la persona, con español por defecto, en párrafos breves y sin Markdown. Puedes explicar "
-        "conceptos generales de energía solar con lenguaje educativo. No escribas números, "
+        "conceptos generales de energía solar con lenguaje educativo. En energía solar, «inversor» es "
+        "el equipo que convierte la corriente continua de los paneles en corriente alterna, no una "
+        "persona que invierte dinero. No escribas números, "
         "porcentajes ni cantidades de ningún tipo, ni en cifras ni en palabras: nada de rendimiento, "
         "ahorro, duración, autonomía, potencia ni precios; explica de qué depende cada resultado. "
         "No inventes ni prometas información de Power Solar: precios, "
@@ -369,6 +371,22 @@ _ABSOLUTE_PROMISES = re.compile(
 )
 
 
+# Benefit promises without figures: obtaining or receiving savings, rebates or
+# money ("puedes obtener un ahorro en tu factura", "recibir dinero de la
+# compañía eléctrica") and future/conditional savings ("ahorrarás"). Explaining
+# what savings depend on stays allowed.
+_BENEFIT_PROMISES = re.compile(
+    r"\b(?:obten|obtien|recib|logr|consig|consegu|disfrut|ganar|ganas|ganan)\w*\s+"
+    r"(?:\w+\s+){0,3}(?:ahorros?|rebajas?|descuentos?|dinero|ganancias?|reembolsos?)\b|"
+    r"\bahorrar(?:as|a|an|emos|ias|ia|ian|iamos)\b|"
+    r"\brebajas?\s+en\s+(?:tu|su|la|el)s?\s+(?:factura|recibo|cuenta)"
+)
+
+
+def _promises_benefit(value):
+    return bool(_BENEFIT_PROMISES.search(_plain(value)))
+
+
 def _plain(value):
     decomposed = unicodedata.normalize("NFKD", value)
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
@@ -402,7 +420,7 @@ def validate_workspace_reply(value, verified=False):
         r"garantiz|ahorro garantizado|sin riesgo|aprobaci[oó]n (?:inmediata|garantizada)|"
         r"financiamiento aprobado",
         value, re.I,
-    ):
+    ) or _promises_benefit(value):
         raise ValueError("El texto promete condiciones que requieren verificación humana.")
     if re.search(r"\$\s?\d|\b\d[\d.,]*\s*(?:d[oó]lares|usd)\b", value, re.I) or re.search(
         r"\b(?:precio|cuesta|costar[aá]|vale)\b[^.\n]{0,24}\d", value, re.I

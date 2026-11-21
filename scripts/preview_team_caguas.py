@@ -61,16 +61,26 @@ def build_preview():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8877)
+    parser.add_argument(
+        "--ia-local",
+        action="store_true",
+        help="Activa la IA con Ollama local (127.0.0.1:11434) solo en este proceso; no descarga modelos ni lee .env.",
+    )
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         parser.error("El puerto debe estar entre 1024 y 65535.")
     import uvicorn
 
     app, directory = build_preview()
+    if args.ia_local:
+        # Read at request time by ai_chat.enabled(); scoped to this process only.
+        os.environ["REIGEL_CHAT_AI"] = "ollama"
     print(f"DEMO SINTÉTICA: http://127.0.0.1:{args.port}/app", flush=True)
     print(f"Base aislada: {directory}", flush=True)
     print(f"Acceso de prueba: {PREVIEW_EMAIL} / {PREVIEW_PASSWORD}", flush=True)
     print("No se cargó .env, no se abrió la base comercial y no se programan refrescos externos.", flush=True)
+    if args.ia_local:
+        print("IA local activada en este proceso (Ollama en 127.0.0.1:11434).", flush=True)
     uvicorn.run(app, host="127.0.0.1", port=args.port, access_log=False)
 
 

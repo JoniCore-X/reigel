@@ -17,7 +17,6 @@ PAGES = {
     "/proceso": "proceso",
     "/contacto": "contacto",
     "/preguntas": "preguntas",
-    "/precios": "precios",
 }
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScbCm-67NFR1qFYLfD9oR-nMkCGsGionTB5iG9uR0JKWdZHMQ/viewform?embedded=true"
 
@@ -166,35 +165,13 @@ def test_team_page_publishes_only_the_verified_contact_card(corporate_app):
             assert unverified not in page.text
 
 
-def test_pricing_page_presents_a_proposal_without_charges_or_real_accounts(corporate_app):
+def test_subscription_plans_are_not_part_of_the_public_site(corporate_app):
+    """Los planes de R.E.I.G.E.L. son para el propietario (/app); los clientes no los ven."""
     with TestClient(corporate_app) as client:
-        page = client.get("/precios")
-        assert page.status_code == 200
-        assert "Planes R.E.I.G.E.L." in page.text
-        assert "VISTA PRELIMINAR" in page.text
-        assert "no son tarifas publicadas ni un cobro activo" in page.text
-        assert "Sin procesador de pagos" in page.text
-        for price in ("$29", "$149", "$299", "Cotización"):
-            assert price in page.text
-        assert "$209" in page.text
-        assert "$2,508" in page.text
-        for module in ("CRM comercial", "Agenda inteligente", "Asistente IA", "Panel del líder",
-                       "Suscripciones", "Calculadora solar", "Documentos", "Comunicación",
-                       "Automatizaciones", "Academia comercial", "Configuración"):
-            assert module in page.text
-        assert 'id="pricing-vendors"' in page.text
-        assert 'id="pricing-teams"' in page.text
-        assert 'aria-live="polite"' in page.text
-        assert "/static/js/pricing.js?v=1" in page.text
-        assert client.get("/static/js/pricing.js?v=1").status_code == 200
-        assert client.get("/static/css/pricing.css?v=2").status_code == 200
-        document = PageDocument(page.text)
-        forms = [attrs for tag, attrs in document.tags if tag == "form"]
-        assert all(not attrs.get("action") for attrs in forms)
-        lowered = page.text.lower()
-        for forbidden in ("comprar ahora", "pagar ahora", "checkout", "stripe", "paypal",
-                          "garantía de ahorro", "ahorro garantizado", "precio final"):
-            assert forbidden not in lowered
+        assert client.get("/precios", headers={"accept": "text/html"}).status_code == 404
+        for path in PAGES:
+            text = client.get(path).text
+            assert 'href="/precios"' not in text and "pricing.css" not in text, path
 
 
 def test_page_loader_promotes_the_solar_sun_with_local_assets(corporate_app):
@@ -254,7 +231,8 @@ def test_unknown_public_paths_render_the_branded_not_found_page(corporate_app):
         assert not [attrs for tag, attrs in document.tags if attrs.get("aria-current") == "page"]
         assert not [attrs for tag, attrs in document.tags if attrs.get("rel") == "canonical"]
         hrefs = {attrs.get("href") for tag, attrs in document.tags if tag == "a"}
-        assert {"/captacion", "/equipo", "/soluciones", "/precios", "/preguntas", "/contacto"} <= hrefs
+        assert {"/captacion", "/equipo", "/soluciones", "/proceso", "/preguntas", "/contacto"} <= hrefs
+        assert "/precios" not in hrefs
         assert {"main", "reigel-chat", "ps-loader"} <= {attrs["id"] for _, attrs in document.tags if "id" in attrs}
 
         with corporate_app.state.store.connect() as db:

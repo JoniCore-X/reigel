@@ -340,3 +340,17 @@
   .brief-known { grid-template-columns:1fr; }
 }
 @media(prefers-reduced-motion:reduce) { .workspace-body * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+
+/* Fase 1 (propietario): suscripción privada y bajas del equipo. */
+.team-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.usage-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.usage-summary small{display:block;color:var(--muted);font-size:11px;letter-spacing:.04em}
+.usage-summary p{margin-top:4px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+.plan-card.is-recommended{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange)}
+.plan-card h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.plan-price{margin:8px 0 10px;font-size:28px;font-weight:700;color:var(--blue)}
+.plan-price small{font-size:13px;font-weight:500;color:var(--muted)}
+.plan-list{margin:0 0 10px;padding-left:18px;display:grid;gap:4px}
+@media(max-width:600px){.usage-summary{grid-template-columns:1fr}}
+

@@ -156,6 +156,65 @@ class OperationsMixin:
             _error("El último contacto no puede estar en el futuro.")
         return values
 
+    def offboard_user(self, user_id, data, actor):
+        """Cut access and hand every open responsibility to one active colleague, atomically.
+
+        Future confirmed appointments, assigned leads, pending tasks and linked
+        conversations move to the receiving account; sessions are deleted in the
+        same transaction, so a departing person loses access immediately.
+        """
+        core = _core()
+        self.require_admin(actor)
+        if not isinstance(data, dict) or set(data) - {"target_id"}:
+            _error("Indica quién recibe los prospectos de esta cuenta.")
+        target_id = core.text(data.get("target_id"), "cuenta que recibe", limit=100, required=True)
+        if user_id == actor["id"]:
+            _error("No puedes dar de baja tu propia cuenta.", 409)
+        if target_id == user_id:
+            _error("Elige otra cuenta para recibir los prospectos.")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            leaving = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+            if not leaving:
+                _error("Cuenta no encontrada.", 404)
+            if leaving["is_owner"]:
+                _error("La cuenta del propietario no se puede dar de baja.", 409)
+            if leaving["role"] == "admin" and not actor.get("is_owner"):
+                _error("Solo el propietario puede dar de baja a un administrador.", 403)
+            if not leaving["active"]:
+                _error("Esta cuenta ya está desactivada.", 409)
+            if not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (target_id,)).fetchone():
+                _error("La cuenta que recibe debe estar activa.")
+            now = core.stamp()
+            appointments = db.execute(
+                "SELECT start_at,end_at FROM appointments WHERE advisor_id=? AND status='confirmed' AND end_at>?",
+                (user_id, now)).fetchall()
+            clashes = sum(1 for row in appointments if db.execute(
+                "SELECT 1 FROM appointments WHERE advisor_id=? AND status='confirmed' AND start_at<? AND end_at>?",
+                (target_id, row["end_at"], row["start_at"])).fetchone())
+            if clashes:
+                _error(f"{clashes} cita(s) pendiente(s) chocan con la agenda de quien recibe. "
+                       "Reprográmalas o elige a otra persona.", 409)
+            leads = [row["id"] for row in db.execute("SELECT id FROM leads WHERE advisor_id=?", (user_id,))]
+            db.execute("UPDATE appointments SET advisor_id=? WHERE advisor_id=? AND status='confirmed' AND end_at>?",
+                       (target_id, user_id, now))
+            db.execute("""UPDATE conversations SET advisor_id=?,mode='human',updated_at=?
+                WHERE advisor_id=? OR lead_id IN (SELECT id FROM leads WHERE advisor_id=?)""",
+                       (target_id, now, user_id, user_id))
+            tasks = db.execute("UPDATE tasks SET owner_id=?,updated_at=? WHERE owner_id=? AND status='pending'",
+                               (target_id, now, user_id)).rowcount
+            tasks += db.execute("""UPDATE tasks SET owner_id=?,updated_at=? WHERE status='pending' AND owner_id<>?
+                AND lead_id IN (SELECT id FROM leads WHERE advisor_id=?)""", (target_id, now, target_id, user_id)).rowcount
+            db.execute("UPDATE leads SET advisor_id=?,updated_at=? WHERE advisor_id=?", (target_id, now, user_id))
+            for lead_id in leads:
+                db.execute("INSERT INTO lead_history VALUES(?,?,?,?,?,?,?)",
+                           (core.uid(), lead_id, actor["id"], "advisor_id", user_id, target_id, now))
+            db.execute("UPDATE users SET active=0,public_booking=0 WHERE id=?", (user_id,))
+            db.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+            self.audit(db, actor, "user.offboard", user_id)
+            return {"user": core.user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()),
+                    "moved": {"leads": len(leads), "appointments": len(appointments), "tasks": tasks}}
+
     def _transfer_lead(self, db, lead, selected, actor):
         """Every ownership-changing path shares the same calendar/task boundary."""
         core = _core()

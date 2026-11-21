@@ -791,6 +791,11 @@ QUANTITATIVE_CLAIMS = [
     "Lograrás independencia energética total.",
     "Tendrás autonomía ilimitada durante los apagones.",
     "El sistema se paga solo.",
+    # Observed with qwen2.5:3b (21 nov 2026): benefit promises without figures.
+    "Dependiendo del tipo de inversión, el inversor puede recibir una rebaja en sus facturas de luz o incluso recibir dinero de la compañía eléctrica.",
+    "También pueden obtener un ahorro en sus facturas de luz a largo plazo.",
+    "Con placas solares ahorrarás en tu factura.",
+    "Lograrás un buen ahorro cada mes.",
 ]
 
 
@@ -813,6 +818,8 @@ def test_workspace_validator_rejects_quantitative_promises(claim):
     "Una batería puede respaldar equipos seleccionados durante un apagón; la duración depende de la capacidad y el consumo.",
     "No significa que toda la casa funcione indefinidamente.",
     "Un inversor transforma la corriente continua en corriente alterna.",
+    "Para estimar un posible ahorro hace falta una evaluación de tu consumo.",
+    "No es posible asegurar ahorros sin revisar tus facturas.".replace("asegurar", "prometer"),
 ])
 def test_workspace_validator_keeps_qualitative_explanations(text):
     assert ai_chat.validate_workspace_reply(text, verified=False) == text
@@ -835,6 +842,7 @@ def test_quantitative_promise_mid_stream_is_withheld(client, configured, monkeyp
 def test_workspace_prompt_states_the_quantity_policy():
     prompt = ai_chat.workspace_instructions()
     assert "números" in prompt and "porcentajes" in prompt
+    assert "no una persona que invierte dinero" in prompt
 
 
 def test_stream_with_done_signal_completes(configured, monkeypatch):

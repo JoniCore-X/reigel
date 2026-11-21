@@ -153,8 +153,12 @@ def test_public_intent_selector_prefills_chat_without_sending_or_collecting_cont
 
         selector = PrefillButtons()
         selector.feed(solutions.text)
-        assert len(selector.buttons) == 4
-        assert {button["data-chat-prefill"] for button in selector.buttons} == set(expected_prompts)
+        intents = [button for button in selector.buttons if "intent-option" in button.get("class", "").split()]
+        assert len(intents) == 4
+        assert {button["data-chat-prefill"] for button in intents} == set(expected_prompts)
+        assert "Quiero entender cómo funciona un sistema solar con batería en una casa." in {
+            button["data-chat-prefill"] for button in selector.buttons
+        }
         for button in selector.buttons:
             assert button.get("type") == "button"
             assert "data-open-chat" in button

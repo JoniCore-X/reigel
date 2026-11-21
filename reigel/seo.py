@@ -22,7 +22,6 @@ PUBLIC_PAGES = {
     "/proceso": ("proceso", "Evaluación | Power Solar · Team Caguas", "Conoce el proceso de orientación, evaluación y revisión de una propuesta de energía para tu hogar."),
     "/contacto": ("contacto", "Contacto | Power Solar · Team Caguas", "Comparte tu interés mediante el formulario de Power Solar o conversa con R.E.I.G.E.L. para coordinar una evaluación."),
     "/preguntas": ("preguntas", "Preguntas frecuentes | Power Solar · Team Caguas", "Respuestas sobre evaluación, consumo, respaldo, contacto y condiciones de una propuesta de energía solar."),
-    "/precios": ("precios", "Planes R.E.I.G.E.L. | Power Solar · Team Caguas", "Conoce los planes propuestos de R.E.I.G.E.L. para equipos comerciales: CRM, agenda, asistente y panel del líder. Precios preliminares por validar."),
 }
 CONTENT_START = "<!--corporate:content:start-->"
 CONTENT_END = "<!--corporate:content:end-->"
