@@ -1681,3 +1681,37 @@ se añadirá la columna `is_owner` y se marcará como propietario al administrad
 activo más antiguo. No se probó contra la base comercial. Antes de reiniciar:
 copia con `scripts/backup.py`, SHA256 guardado y confirmar quién debe ser el
 propietario.
+
+## Tema solar: paleta con color en todas las superficies, 21 de noviembre de 2026
+
+Pedido del titular: más color y relación con los temas de Power Solar, a partir
+de dos paletas: «Solar Power» (FFC100, FFDD02, 68A9F4, 3785EA, 2266DE) y
+«Agencia Snappy» (CBF3F0, FFBF69, 2EC4B6, FF9F1C, FFFFFF).
+
+- `frontend/css/solar-theme.css?v=2`, cargada la última en `/captacion` y las
+  páginas corporativas, `/app`, `/ia` y `/chat`. Reasigna las variables de cada
+  módulo (`--corp-*`, `--ui-*`, `--rc-*`, `--blue` de `/app`) y añade acentos;
+  no reescribe las hojas existentes.
+- Sitio: cabecera y pie con degradado nocturno y franja de amanecer
+  (amarillo → dorado → naranja); portada con cielo claro y sol; encabezados de
+  página con el mismo lavado; botones principales azul con flecha dorada;
+  tarjetas, pasos del sistema, temas y socios con acentos alternos
+  dorado/turquesa/azul/naranja; secciones de empresa y sistema con fondos
+  menta y cielo.
+- `/app` e `/ia`: barra lateral con degradado y franja de amanecer, elemento
+  activo con marca dorada, paneles con acento superior, insignias en turquesa,
+  azul y naranja; burbuja del usuario y botón de envío en azul.
+- Contraste (WCAG AA, calculado): amarillos, naranja, turquesa, menta y cielo
+  solo como fondo o decoración (texto navy encima: 7,6–14:1). Texto y enlaces de
+  color en `#1b55c4` (6,0–6,7:1 sobre los lavados). Los degradados oscuros
+  terminan en `#1747a8` para que el texto claro quede ≥ 7:1; con `#2266DE`
+  daba 4,49:1 en la zona de la navegación. En `forced-colors` se retiran los
+  degradados.
+- Revisado en la vista previa sintética a 1280 y 375 px: sin desplazamiento
+  horizontal; corregida la posición del sol sobre la foto, que heredaba `left`
+  de la decoración anterior.
+- Prueba: el tema es la última hoja en las cuatro superficies, contiene la
+  paleta y no usa los colores claros como color de texto.
+
+Límite: unas 650 declaraciones de color fijas en las hojas existentes no pasan
+por variables; se ajustaron las piezas más visibles, no todas.

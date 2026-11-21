@@ -1,0 +1,161 @@
+/* Tema solar de R.E.I.G.E.L. · Power Solar Team Caguas.
+   Paletas de referencia: «Solar Power» (FFC100, FFDD02, 68A9F4, 3785EA, 2266DE)
+   y «Agencia Snappy» (CBF3F0, FFBF69, 2EC4B6, FF9F1C, FFFFFF).
+   Se carga la última en cada página: reasigna variables de cada módulo y añade
+   acentos de color. Contraste (WCAG AA): amarillos, naranja, turquesa, menta y
+   cielo solo como fondo o decoración, con texto navy encima; el texto y los
+   enlaces de color usan --sol-deep (5,2:1) o --sol-link (6,7:1) sobre blanco. */
+
+:root {
+  --sol-gold: #ffc100;
+  --sol-sun: #ffdd02;
+  --sol-sky: #68a9f4;
+  --sol-blue: #3785ea;
+  --sol-deep: #2266de;
+  --sol-mint: #cbf3f0;
+  --sol-peach: #ffbf69;
+  --sol-orange: #ff9f1c;
+  --sol-teal: #2ec4b6;
+  --sol-navy: #071d43;
+  --sol-night: #0b2a66;
+  --sol-link: #1b55c4;
+  --sol-teal-ink: #0b6e66;
+  --sol-orange-ink: #a84400;
+  --sol-gold-ink: #7a5600;
+  --sol-sunrise: linear-gradient(90deg, var(--sol-sun) 0%, var(--sol-gold) 45%, var(--sol-orange) 100%);
+  --sol-night-sky: linear-gradient(135deg, var(--sol-navy) 0%, var(--sol-night) 48%, #1747a8 100%); /* texto claro ≥ 7:1 en todo el degradado */
+  --sol-sky-wash: linear-gradient(160deg, #eaf4ff 0%, #f2fbfa 55%, #fff6e3 100%);
+  --sol-deep-fill: linear-gradient(135deg, var(--sol-deep) 0%, #1747a8 100%);
+}
+
+/* ---------- Sitio corporativo ---------- */
+.corporate-body {
+  --corp-blue: var(--sol-link);
+  --ui-blue: var(--sol-link);
+  overflow-x: clip;
+}
+
+.corporate-body .public-header {
+  background: var(--sol-sunrise) bottom / 100% 3px no-repeat, var(--sol-night-sky);
+  border-bottom: 0;
+}
+.corporate-body .public-header .nav-chat:is(:hover, :focus-visible) { border-color: var(--sol-gold); }
+
+.corporate-body .corp-eyebrow::before { width: 22px; flex-basis: 22px; border-radius: 3px; background: var(--sol-sunrise); }
+
+/* Portada: cielo claro con sol. */
+.corporate-body .corp-home { position: relative; isolation: isolate; }
+.corporate-body .corp-home::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background:
+    radial-gradient(circle at 88% 18%, #ffdd0259, transparent 34%),
+    radial-gradient(circle at 6% 92%, #2ec4b626, transparent 38%),
+    var(--sol-sky-wash);
+}
+.corporate-body .corp-home-photo::before {
+  content: "";
+  position: absolute;
+  inset: -26px -26px auto auto;
+  width: 112px;
+  height: 112px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--sol-sun) 0%, var(--sol-gold) 58%, #ffc10000 62%);
+  box-shadow: 0 0 60px #ffc10066;
+}
+.corporate-body .corp-home-photo::after { display: none; } /* la raya naranja cuadrada no encaja con la foto redondeada */
+.corporate-body .corp-home-photo img { border-radius: 22px; box-shadow: 0 26px 54px #2266de2e; }
+.corporate-body .corp-home-photo figcaption { color: var(--sol-link); }
+
+/* Encabezados de las páginas interiores. */
+.corporate-body .corp-page-heading {
+  background:
+    radial-gradient(circle at 92% 0%, #ffc10040, transparent 32%),
+    var(--sol-sky-wash);
+  border-bottom: 1px solid #d6e6fb;
+}
+
+/* Botones. */
+.corporate-body .corp-text-link.ui-action.ui-action-primary { background: var(--sol-deep-fill); border-color: var(--sol-deep); color: #fff; }
+.corporate-body .corp-text-link.ui-action-primary > span[aria-hidden] { background: var(--sol-gold); color: var(--sol-navy); }
+.corporate-body .corp-text-link.ui-action-primary:is(:hover, :focus-visible) { background: var(--sol-navy); border-color: var(--sol-navy); }
+.corporate-body .ui-psy-face { background: var(--sol-deep-fill); }
+.corporate-body .ui-psy-button:is(:hover, :focus-visible) .ui-psy-face { background: var(--sol-navy); }
+.corporate-body .ui-psy-arrow { background: var(--sol-gold); }
+
+/* Tarjetas y listas: cada una con un acento de la paleta. */
+.corporate-body :is(.corp-directory-item, .corp-system-step, .intent-option, .corp-partner-list li, .team-solution-card):nth-child(4n + 1) { --sol-accent: var(--sol-gold); --sol-accent-soft: #fff4cc; }
+.corporate-body :is(.corp-directory-item, .corp-system-step, .intent-option, .corp-partner-list li, .team-solution-card):nth-child(4n + 2) { --sol-accent: var(--sol-teal); --sol-accent-soft: #dcf6f3; }
+.corporate-body :is(.corp-directory-item, .corp-system-step, .intent-option, .corp-partner-list li, .team-solution-card):nth-child(4n + 3) { --sol-accent: var(--sol-blue); --sol-accent-soft: #e3efff; }
+.corporate-body :is(.corp-directory-item, .corp-system-step, .intent-option, .corp-partner-list li, .team-solution-card):nth-child(4n + 4) { --sol-accent: var(--sol-orange); --sol-accent-soft: #ffeccf; }
+
+.corporate-body .corp-directory-item .corp-index {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--sol-accent-soft, #e3efff);
+  color: var(--sol-navy);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--sol-accent, var(--sol-blue));
+}
+.corporate-body .corp-directory-item .ui-corner-arrow { background: var(--sol-deep); }
+.corporate-body .corp-directory-item.ui-corner-card:is(:hover, :focus-visible) .ui-corner-arrow { background: var(--sol-accent, var(--sol-gold)); color: var(--sol-navy); }
+
+.corporate-body .corp-system-step { border-top: 4px solid var(--sol-accent, var(--sol-blue)); }
+.corporate-body .corp-system-step:hover { border-color: var(--sol-accent, var(--sol-gold)); background: linear-gradient(180deg, var(--sol-accent-soft, #fff) 0%, #fff 70%); }
+.corporate-body .intent-option { box-shadow: inset 0 3px 0 var(--sol-accent, var(--sol-blue)); }
+.corporate-body .corp-partner-list li { border-left-color: var(--sol-accent, var(--sol-orange)); }
+
+/* Secciones de fondo. */
+.corporate-body .corp-company { background: linear-gradient(180deg, #effaf9 0%, #f4f9ff 100%); }
+.corporate-body .corp-system { background: linear-gradient(180deg, #fff 0%, #f5f9ff 100%); }
+
+/* Pie de página. */
+.corporate-body .corp-footer { background: var(--sol-sunrise) top / 100% 3px no-repeat, var(--sol-night-sky); }
+
+/* ---------- /app (equipo) ---------- */
+.workspace-body {
+  --blue: var(--sol-deep);
+  --blue-dark: #1747a8;
+  --blue-light: #e6f0ff;
+  --paper: #f4f8fc;
+}
+.workspace-body .sidebar { background: var(--sol-sunrise) right / 3px 100% no-repeat, var(--sol-night-sky); }
+.workspace-body .nav-item.active { box-shadow: inset 4px 0 var(--sol-gold), 0 6px 16px #04173430; border-top-color: transparent; }
+.workspace-body .nav-item:hover { background: #ffffff1a; }
+.workspace-body .panel:nth-of-type(4n + 1) { --sol-accent: var(--sol-gold); }
+.workspace-body .panel:nth-of-type(4n + 2) { --sol-accent: var(--sol-teal); }
+.workspace-body .panel:nth-of-type(4n + 3) { --sol-accent: var(--sol-blue); }
+.workspace-body .panel:nth-of-type(4n + 4) { --sol-accent: var(--sol-orange); }
+.workspace-body .panel { border-top: 3px solid var(--sol-accent, var(--sol-blue)); }
+.workspace-body .badge.blue, .workspace-body .badge.cita { background: #e3efff; color: var(--sol-link); }
+.workspace-body :is(.badge.green, .badge.ganado, .badge.confirmed, .badge.sent, .badge.calificado) { background: #dcf6f3; color: var(--sol-teal-ink); }
+.workspace-body :is(.badge.orange, .badge.nuevo, .badge.uncertain) { background: #fff1d1; color: var(--sol-orange-ink); }
+.workspace-body .plan-card.is-recommended { border-color: var(--sol-gold); box-shadow: 0 0 0 1px var(--sol-gold), 0 16px 34px #ffc10026; }
+.workspace-body .plan-price { color: var(--sol-deep); }
+.workspace-body .usage-summary > div { padding: 12px 14px; border-radius: 12px; background: var(--sol-sky-wash); }
+
+/* ---------- /ia ---------- */
+.ia-body { --blue: var(--sol-deep); }
+.ia-body .ia-sidebar { background: var(--sol-sunrise) right / 3px 100% no-repeat, var(--sol-night-sky); }
+.ia-body .ia-msg--user .ia-msg-body { background: var(--sol-deep-fill); }
+.ia-body .ia-send:not(:disabled):not(.is-stop) { background: var(--sol-deep-fill); }
+.ia-body .ia-system-card:is(:hover, :focus-visible) { border-color: var(--sol-gold); box-shadow: 0 10px 24px #ffc10029; }
+
+/* ---------- /chat (coordinación) ---------- */
+.chat-page-body, .corporate-body {
+  --rc-blue: var(--sol-deep);
+  --rc-amber: var(--sol-gold);
+}
+
+@media (forced-colors: active) {
+  .corporate-body .public-header,
+  .corporate-body .corp-footer,
+  .workspace-body .sidebar,
+  .ia-body .ia-sidebar { background: Canvas; }
+}

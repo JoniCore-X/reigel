@@ -99,3 +99,16 @@ def test_discontinued_panel_brand_is_absent_from_every_public_and_private_surfac
         and any(brand in path.read_text(encoding="utf-8", errors="ignore").lower() for brand in ("canadian", "enphase", "fortress"))
     ]
     assert offenders == []
+
+
+@pytest.mark.parametrize("path", ["/captacion", "/app", "/ia", "/chat"])
+def test_solar_theme_is_the_last_stylesheet_on_every_surface(client, path):
+    page = client.get(path).text
+    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)"', page)
+    assert sheets and sheets[-1].startswith("/static/css/solar-theme.css"), sheets
+    theme = client.get(sheets[-1])
+    assert theme.status_code == 200
+    # Paleta pedida por el titular; los colores claros no se usan como color de texto.
+    for color in ("#ffc100", "#ffdd02", "#68a9f4", "#3785ea", "#2266de", "#cbf3f0", "#ffbf69", "#2ec4b6", "#ff9f1c"):
+        assert color in theme.text.lower(), color
+    assert not re.search(r"(?<![-\w])color:\s*var\(--sol-(?:gold|sun|sky|mint|peach|orange|teal)\)", theme.text)
