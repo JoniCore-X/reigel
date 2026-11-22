@@ -545,6 +545,185 @@ a.brand-lockup > span.brand-wordmark {
   background: #123e80;
 }
 
+/* Login refinements: contrast, field states and quiet feedback. */
+.workspace-body .login-portrait img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, #000c 91%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 82%, #000c 91%, transparent 100%);
+}
+
+.workspace-body .login-card .muted,
+.workspace-body .login-card .login-help {
+  color: #4f5f76;
+}
+
+.workspace-body .login-card .text-link {
+  transition: color 160ms ease;
+}
+
+.workspace-body .login-card .text-link:hover {
+  color: var(--blue-dark);
+  text-decoration: underline;
+}
+
+.workspace-body .login-card input {
+  border: 1px solid #c5d0df;
+  background: #fbfcfe;
+  color: #102c57;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.workspace-body .login-card input::placeholder {
+  color: #5d6b80;
+  opacity: 1;
+}
+
+.workspace-body .login-card input:hover {
+  border-color: #8fa3bf;
+}
+
+.workspace-body .login-card input:focus-visible {
+  border-color: var(--blue);
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  background: #fff;
+  box-shadow: 0 0 0 3px #16449430;
+}
+
+.workspace-body .login-card .password-field {
+  position: relative;
+}
+
+.workspace-body .login-card .password-field input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.workspace-body .login-card .password-field input::-ms-reveal {
+  display: none;
+}
+
+.workspace-body .login-card .password-toggle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #4f5f76;
+  background: transparent;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.workspace-body .login-card .password-toggle:hover {
+  color: #102c57;
+  background: #16449414;
+}
+
+.workspace-body .login-card .password-toggle:focus-visible {
+  outline-offset: -2px;
+}
+
+.workspace-body .login-card .password-toggle .eye-slash {
+  display: none;
+}
+
+.workspace-body .login-card .password-toggle[aria-pressed="true"] .eye-slash {
+  display: inline;
+}
+
+.workspace-body .login-card .button.primary {
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.workspace-body .login-card .button.primary:hover:not(:disabled) {
+  box-shadow: 0 8px 18px #0a285b2e;
+  transform: translateY(-1px);
+}
+
+.workspace-body .login-card .button.primary:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.workspace-body .login-card[aria-busy="true"] .button.primary {
+  opacity: .9;
+}
+
+.workspace-body .login-card[aria-busy="true"] .button.primary > span {
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  color: transparent;
+}
+
+.workspace-body .login-card[aria-busy="true"] .button.primary > span::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid #ffffff55;
+  border-top-color: #fff;
+  border-radius: 50%;
+  content: "";
+  animation: login-spin 700ms linear infinite;
+}
+
+.workspace-body .login-card .passkey-login {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 1px solid #c5d0df;
+  border-radius: 7px;
+  color: var(--blue);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.workspace-body .login-card .passkey-login:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+
+.workspace-body .team-access-link {
+  display: block;
+  margin-bottom: 10px;
+  color: #d4e0f3;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.workspace-body .team-access-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-body .login-card :is(input, .text-link, .password-toggle, .button.primary) {
+    transition: none;
+  }
+
+  .workspace-body .login-card .button.primary:is(:hover, :active):not(:disabled) {
+    transform: none;
+  }
+
+  .workspace-body .login-card[aria-busy="true"] .button.primary > span::after {
+    animation: none;
+  }
+}
+
 /* Use the real residential installation as a quiet visual anchor in the dashboard. */
 .workspace-body #view-content .page-heading:has(+ #dashboard-period) {
   position: relative;

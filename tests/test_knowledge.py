@@ -260,7 +260,7 @@ def test_conflicting_ac_claim_uses_cited_panel_fact(kb):
     )
 
     assert answer["topic"] == "pv_operation"
-    assert "corriente continua (CC)" in answer["text"]
+    assert "inversor" in answer["text"] and "corriente continua" not in answer["text"]
     assert answer["sources"][0]["organization"] == "U.S. Department of Energy"
 
 

@@ -91,8 +91,8 @@ function closeDialog() {dialog.close();if(lastDialogTrigger?.isConnected)lastDia
 function formError(form,error) {const element=$('.form-error',form);if(element)element.textContent=error.message || String(error);}
 async function submitForm(event,work) {
   event.preventDefault();const form=event.currentTarget;const button=$('[type=submit]',form);if(button?.disabled)return;
-  const error=$('.form-error',form);if(error)error.textContent='';if(button)button.disabled=true;
-  try {await work(form,new FormData(form));}catch(error){formError(form,error);}finally{if(button?.isConnected)button.disabled=false;}
+  const error=$('.form-error',form);if(error)error.textContent='';if(button)button.disabled=true;form.setAttribute('aria-busy','true');
+  try {await work(form,new FormData(form));}catch(error){formError(form,error);}finally{form.removeAttribute('aria-busy');if(button?.isConnected)button.disabled=false;}
 }
 function leadFields() {return operationsLeadFields();}
 async function newLead() {return newOperationsLead();}
@@ -234,7 +234,7 @@ function offboardUser(id) {
   const user=state.users.find(item=>item.id===id);if(!user)return;
   const options=state.users.filter(item=>item.active!==false&&item.id!==id);
   openDialog(`Dar de baja · ${user.name}`,`<form id="offboard-form"><p class="hint orange">La cuenta pierde el acceso en este momento: se cierran sus sesiones y no podrá volver a entrar. Sus prospectos, citas pendientes, tareas y conversaciones pasan a la persona que elijas. No se borra ningún registro.</p><div class="form-grid"><label class="span-2">¿Quién recibe su trabajo?<select name="target_id" required><option value="">Elige una cuenta activa</option>${options.map(item=>`<option value="${esc(item.id)}">${esc(item.name)} · ${esc(roleLabel(item))}</option>`).join('')}</select></label><label class="span-2 checkbox"><input name="confirm" type="checkbox" required><span>Confirmo que ${esc(user.name)} deja el equipo.</span></label></div><p class="form-error" role="alert"></p><div class="form-actions"><button class="button" type="button" data-action="close-dialog">Cancelar</button><button class="button danger" type="submit">Dar de baja</button></div></form>`);
-  $('#offboard-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post(`/api/team/${encodeURIComponent(id)}/offboard`,{target_id:data.get('target_id')});closeDialog();const moved=result.moved||{};const count=(n,one,many)=>`${n||0} ${(n||0)===1?one:many}`;toast(`${user.name} ya no tiene acceso. Se transfirieron ${count(moved.leads,'prospecto','prospectos')}, ${count(moved.appointments,'cita','citas')} y ${count(moved.tasks,'tarea','tareas')}.`);await navigate('settings',false);}));
+  $('#offboard-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post(`/api/team/${encodeURIComponent(id)}/offboard`,{target_id:data.get('target_id')});closeDialog();const moved=result.moved||{};const count=(n,one,many)=>`${n||0} ${(n||0)===1?one:many}`;const noBooking=result.public_booking_accounts===0?' Atención: ya nadie recibe reservas desde el chat público. Activa «Recibir reservas» en el horario de un asesor.':'';toast(`${user.name} ya no tiene acceso. Se transfirieron ${count(moved.leads,'prospecto','prospectos')}, ${count(moved.appointments,'cita','citas')} y ${count(moved.tasks,'tarea','tareas')}.${noBooking}`);await navigate('settings',false);}));
 }
 async function renderSubscription(requestId) {
   const data=await api('/api/owner/plans');if(!current(requestId))return;const usage=data.usage||{};
@@ -252,6 +252,7 @@ $('#menu-button').addEventListener('click',openMenu);$('#scrim').addEventListene
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#sidebar').classList.contains('open')){closeMenu();$('#menu-button').focus();}if(event.key==='Tab'&&$('#sidebar').classList.contains('open')){const focusable=$$('a,button:not([disabled])',$('#sidebar'));if(event.shiftKey&&document.activeElement===focusable[0]){event.preventDefault();focusable.at(-1).focus();}else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){event.preventDefault();focusable[0].focus();}}});
 $('#close-dialog').addEventListener('click',closeDialog);dialog.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)closeDialog();}});
 $('#login-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post('/api/auth/login',{email:data.get('email'),password:data.get('password')});form.reset();await enter(result.user);}));
+(()=>{const form=$('#login-form'),input=$('[name=password]',form),toggle=$('.password-toggle',form);const show=visible=>{input.type=visible?'text':'password';toggle.setAttribute('aria-pressed',String(visible));};toggle.addEventListener('click',()=>{show(input.type==='password');input.focus({preventScroll:true});});form.addEventListener('submit',()=>show(false));form.addEventListener('reset',()=>show(false));})();
 $('#logout').addEventListener('click',async()=>{try{await post('/api/auth/logout',{});showLogin();toast('Sesión cerrada.');}catch(error){toast(error.message);}});
 document.addEventListener('click',async event=>{
   const view=event.target.closest('[data-view]');if(view){if(dialog.open)closeDialog();navigate(view.dataset.view);return;}

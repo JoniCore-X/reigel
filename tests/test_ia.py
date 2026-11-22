@@ -848,3 +848,84 @@ def test_workspace_prompt_states_the_quantity_policy():
 def test_stream_with_done_signal_completes(configured, monkeypatch):
     ollama_lines(monkeypatch, [{"message": {"content": "Texto "}}, {"message": {"content": "completo."}, "done": True}])
     assert collect(ai_chat.stream_workspace([], "Hola")) == ["Texto ", "completo."]
+
+
+# Observed with qwen2.5:3b (21 nov 2026): the assistant claimed team actions and hinted savings.
+INVENTED_ACTIONS_AND_SAVINGS = [
+    "Para evaluar el consumo, primero revisamos cómo usas energía.",
+    "Luego, calculamos los costos basándonos en eso.",
+    "Si quieres, podemos hacer un estudio de consumo para entender mejor.",
+    "Esto incluye identificar áreas donde puedas ahorrar.",
+    "Con esto, puedes reducir el consumo y ahorrar.",
+    "Entender cómo tu hogar consume energía ayuda a encontrar formas de ahorrar.",
+    "Una persona del equipo identifica lo que puede ahorrar.",
+    "¿Te interesa saber cómo puede ahorrar?",
+    "Te puedo ofrecer dos opciones: una visita a tu casa o una explicación.",
+    "¿Te interesa que hagamos eso ahora?",
+    # Observed with llama3.2:3b.
+    "Primero miramos tus facturas de luz de varios meses.",
+    "Queremos ver cuánta luz usas.",
+    "¿Podrías traer esas facturas para que veamos cómo se usa la luz?",
+]
+
+
+@pytest.mark.parametrize("text", INVENTED_ACTIONS_AND_SAVINGS)
+def test_workspace_validator_rejects_invented_actions_and_savings_hints(text):
+    with pytest.raises(ValueError):
+        ai_chat.validate_workspace_reply(text, verified=True)
+
+
+@pytest.mark.parametrize("text", [
+    "En la evaluación, una persona del equipo revisa la factura y cómo usas la luz en tu casa.",
+    "Para saber qué te conviene, el equipo revisa tu caso en una evaluación.",
+    "El ahorro depende de tu consumo, tu tarifa y el diseño; el equipo puede evaluarlo.",
+    "Lo primero es mirar tus facturas de luz de varios meses.",
+    "No hace falta que compartas la factura por aquí.",
+])
+def test_workspace_validator_keeps_team_language_in_third_person(text):
+    assert ai_chat.validate_workspace_reply(text, verified=False) == text
+
+
+@pytest.mark.parametrize("buffer,expected", [
+    ("¡Perfecto! Para evaluar", ("strip", len("¡Perfecto! "))),
+    ("¡Súper! Hay opciones", ("strip", len("¡Súper! "))),
+    ("¡Excelente pregunta! La batería", ("strip", len("¡Excelente pregunta! "))),
+    ("¡Perf", ("wait", 0)),
+    ("¡Perfecto!", ("wait", 0)),
+    ("Las placas atrapan", ("keep", 0)),
+    ("¡Hola, buenas tardes!", ("keep", 0)),
+])
+def test_opening_acknowledgment_detection(buffer, expected):
+    assert ai_chat.opening_ack(buffer) == expected
+
+
+def test_opening_acknowledgment_is_removed_unless_answering_our_question(client, configured, monkeypatch):
+    client.get("/api/ia/bootstrap")
+    conversation = client.post("/api/ia/conversations", json={}).json()["conversation"]
+    mock_stream(monkeypatch, ["¡Perf", "ecto! las placas ", "atrapan la luz del sol. ", "¿Es para casa o apartamento?"])
+    first = sse_events(send(client, conversation["id"], "¿Cómo funcionan las placas?").text)
+    assert delta_text(first).startswith("Las placas atrapan")
+    assert "Perfecto" not in delta_text(first)
+    # The visitor now answers our question: the acknowledgment stays.
+    mock_stream(monkeypatch, ["¡Perfecto! ", "¿Qué buscas solucionar?"])
+    second = sse_events(send(client, conversation["id"], "Casa").text)
+    assert delta_text(second).startswith("¡Perfecto!")
+
+
+@pytest.mark.parametrize("text", [
+    "Solo necesitas limpiarlas ocasionalmente.",
+    "Puedes hacerlo con un paño suave.",
+    "Puedes subirte al techo y mirarlas.",
+    "Debes desconectar el inversor después de la tormenta.",
+])
+def test_validator_rejects_telling_people_to_handle_equipment(text):
+    with pytest.raises(ValueError):
+        ai_chat.validate_workspace_reply(text, verified=True)
+
+
+@pytest.mark.parametrize("text", [
+    "No debes subir al techo ni tocar los equipos; llama a un técnico cualificado.",
+    "No debes limpiarlas tú; eso lo hace un técnico.",
+])
+def test_validator_keeps_safety_advice(text):
+    assert ai_chat.validate_workspace_reply(text, verified=False) == text

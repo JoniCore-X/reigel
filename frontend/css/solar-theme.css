@@ -159,3 +159,6 @@
   .workspace-body .sidebar,
   .ia-body .ia-sidebar { background: Canvas; }
 }
+
+/* Contraste: «+ Nuevo prospecto» tenía texto blanco sobre naranja (2,86:1) en ambos modos. Navy sobre naranja ≈ 6,4:1. */
+.workspace-body #view-content .page-heading:has(+ #dashboard-period) .button.primary { color: var(--sol-navy); }

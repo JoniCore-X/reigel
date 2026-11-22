@@ -37,6 +37,25 @@ nativos de preguntas y el marco del formulario son trabajo original de integraci
 No se atribuyen a un componente descargado de Uiverse. Los números del recorrido
 describen una secuencia informativa, no el progreso real de un cliente.
 
+## Interruptor de modo claro/oscuro (21 nov 2026)
+
+Origen: [Galahhad/strong-squid-82](https://uiverse.io/Galahhad/strong-squid-82),
+MIT, código aportado por el titular. Se usa para el modo oscuro de `/app` e
+`/ia` (barra superior), que es el uso para el que está diseñado (sol y nubes ↔
+luna y estrellas). Archivos: `frontend/css/theme-switch.css`,
+`frontend/js/theme.js` y `frontend/css/dark-mode.css`.
+
+Adaptación: clases `ui-theme-switch*` en lugar de `theme-switch*`; los `div`
+son `span` (un `div` no es válido dentro de `label`) con `display:block` de
+especificidad cero; la casilla queda oculta solo a la vista (el original usaba
+`display:none`, que la dejaba fuera del teclado) con `role="switch"`,
+`aria-label="Modo oscuro"` y foco visible; `--toggle-size: 12px` en las barras
+con área táctil de 44 px; sin transiciones con `prefers-reduced-motion`. Los
+colores, sombras, nubes, estrellas y curvas de animación son los originales.
+El tema se aplica antes de pintar (script en `<head>`, permitido por la CSP
+`script-src 'self'`), se guarda en este navegador y, sin preferencia, sigue la
+del sistema. El sitio público no cambia.
+
 ## Licencia y límites
 
 Los avisos de los ocho creadores y el texto MIT completo del archivo oficial se

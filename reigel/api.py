@@ -213,6 +213,9 @@ def create_app(db_path=None, *, load_env=None):
                     item.update(configured=False, status="disabled_preview", detail="Deshabilitado en demostración sintética")
         return values
 
+    from .identity_api import register_identity
+    register_identity(app, production=production, team_cookie=COOKIE, team_actor=actor, payload=payload)
+
     @app.get("/health")
     async def health():
         with app.state.store.connect() as db:
@@ -457,7 +460,7 @@ def create_app(db_path=None, *, load_env=None):
 
     def ia_events(request, owner, conversation, incoming, history, assistant, regenerate=False):
         async def events():
-            from . import ai_chat
+            from . import ai_chat, safety
             # Output boundary: model text reaches the client, the database and
             # later prompts only after the validator accepted it. `buffer` holds
             # everything received; `emitted` marks the validated prefix already
@@ -498,10 +501,24 @@ def create_app(db_path=None, *, load_env=None):
                     "assistant_id": assistant["id"],
                     "regenerate": regenerate,
                 })
+                # Safety topics get a fixed reply and never reach the model.
+                fixed = safety.reply_for(incoming)
+                if fixed:
+                    buffer = fixed
+                    emitted = len(fixed)
+                    yield sse("delta", {"text": fixed})
+                    item = persist(fixed, "complete")
+                    yield sse("done", {
+                        "assistant": item,
+                        "conversation": app.state.ia.conversation_summary(owner, conversation["id"]),
+                    })
+                    return
                 answer = app.state.knowledge.answer(incoming)
                 verified = answer.get("text", "") if isinstance(answer, dict) else ""
                 has_source = bool(str(verified).strip())
                 stream = ai_chat.stream_workspace(ai_chat.safe_history(history), incoming, verified)
+                # «¡Perfecto!» only acknowledges an answer to our own question.
+                strip_ack = not ai_chat.answering_our_question(history)
                 try:
                     async for piece in stream:
                         counter += 1
@@ -509,6 +526,14 @@ def create_app(db_path=None, *, load_env=None):
                             preserve_partial(keep_empty=True)
                             return
                         buffer += piece
+                        if strip_ack and emitted == 0:
+                            state, end = ai_chat.opening_ack(buffer)
+                            if state == "wait":
+                                continue
+                            if state == "strip":
+                                buffer = buffer[end:]
+                                buffer = buffer[:1].upper() + buffer[1:]
+                            strip_ack = False
                         if len(buffer) > ai_chat.MAX_WORKSPACE_REPLY:
                             break
                         cut = ai_chat.sentence_boundary(buffer, emitted)
@@ -610,6 +635,20 @@ def create_app(db_path=None, *, load_env=None):
         app.state.limiter.check(request, "ia_create", 30, 3600)
         owner, _ = ia_owner(request)
         return {"conversation": app.state.ia.create(owner)}
+
+    @app.get("/api/ia/suggestions")
+    def ia_suggestions(request: Request, conversation_id: str = "", seen: str = ""):
+        """Six suggestions for /ia. Context comes only from a conversation the caller owns."""
+        from . import suggestions
+        app.state.limiter.check(request, "ia_read", 120, 60)
+        owner, _ = ia_owner(request)
+        conversation_id = text(conversation_id, "conversación", limit=100)
+        messages = app.state.ia.detail(owner, conversation_id)["messages"] if conversation_id else []
+        seen_ids = [item for item in text(seen, "vistas", limit=4000).split(",") if item][:300]
+        # Rotates as the conversation and the list of shown suggestions grow.
+        seed = f"{conversation_id}:{len(messages)}:{len(seen_ids)}"
+        picked = suggestions.select(messages, seen_ids, seed=seed)
+        return {"suggestions": [{"id": item.id, "text": item.text, "category": item.category} for item in picked]}
 
     @app.get("/api/ia/conversations/{conversation_id}")
     def ia_conversation(conversation_id: str, request: Request):

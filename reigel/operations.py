@@ -123,9 +123,11 @@ class OperationsMixin:
         clause, args = self._scope(actor, "l")
         values = list(args)
         if query:
-            clause += " AND (l.name LIKE ? ESCAPE '\\' OR l.email LIKE ? ESCAPE '\\' OR l.phone LIKE ? ESCAPE '\\' OR l.municipality LIKE ? ESCAPE '\\')"
+            clause += (" AND (l.name LIKE ? ESCAPE '\\' OR l.email LIKE ? ESCAPE '\\' OR l.phone LIKE ? ESCAPE '\\' OR l.municipality LIKE ? ESCAPE '\\'"
+                       " OR EXISTS (SELECT 1 FROM appointments ar WHERE ar.lead_id=l.id AND ar.reference=?))")
             escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             values.extend(["%" + escaped + "%"] * 4)
+            values.append(core.normalize_reference(query) or "-")
         if stage:
             clause += " AND l.stage=?"
             values.append(stage)
@@ -212,8 +214,11 @@ class OperationsMixin:
             db.execute("UPDATE users SET active=0,public_booking=0 WHERE id=?", (user_id,))
             db.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
             self.audit(db, actor, "user.offboard", user_id)
+            # /chat only offers schedules of active accounts with public booking enabled.
+            booking = db.execute("SELECT count(*) FROM users WHERE active=1 AND public_booking=1").fetchone()[0]
             return {"user": core.user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()),
-                    "moved": {"leads": len(leads), "appointments": len(appointments), "tasks": tasks}}
+                    "moved": {"leads": len(leads), "appointments": len(appointments), "tasks": tasks},
+                    "public_booking_accounts": booking}
 
     def _transfer_lead(self, db, lead, selected, actor):
         """Every ownership-changing path shares the same calendar/task boundary."""

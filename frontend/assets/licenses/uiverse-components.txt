@@ -16,6 +16,10 @@ Original components:
   (Radio-buttons/andrew-demchenk0_spicy-fish-10.html)
 - https://uiverse.io/AqFox/tasty-robin-91
   (Buttons/AqFox_tasty-robin-91.html)
+- https://uiverse.io/Galahhad/strong-squid-82
+  (interruptor día/noche; código aportado por el usuario el 21 nov 2026;
+  aviso del autor: MIT License, Copyright (c) https://youtu.be/S6T6hrc8cQo,
+  Galahhad (Galahad))
 
 MIT License
 
@@ -28,6 +32,7 @@ Copyright - 2026 SelfMadeSystem
 Copyright - 2026 20essentials
 Copyright - 2026 andrew-demchenk0
 Copyright - 2026 AqFox
+Copyright (c) https://youtu.be/S6T6hrc8cQo, Galahhad (Galahad)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

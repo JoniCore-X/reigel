@@ -9,6 +9,7 @@
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const requestId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const zone = () => chat.config?.business?.timezone || 'America/Puerto_Rico';
+  const zoneLabel = () => zone() === 'America/Puerto_Rico' ? 'hora de Puerto Rico' : `hora de ${zone()}`;
   const dateValue = (offset = 0) => new Intl.DateTimeFormat('en-CA',{timeZone:zone(),year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+offset*86400000));
   const dateLabel = value => new Intl.DateTimeFormat('es-PR',{timeZone:zone(),weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit'}).format(new Date(value));
   const timeLabel = value => new Intl.DateTimeFormat('es-PR',{timeZone:zone(),hour:'numeric',minute:'2-digit'}).format(new Date(value));
@@ -100,6 +101,12 @@
   }
 
   function render(data) {
+    // The two-option dock appears once R.E.I.G.E.L. has prospected the visitor (decided by the server).
+    if (typeof data.next_step === 'boolean') {
+      const was = panel.dataset.nextStep;
+      panel.dataset.nextStep = data.next_step ? 'ready' : 'hidden';
+      if (data.next_step && was === 'hidden') panel.dataset.nextStepNew = 'true';
+    }
     const log = find('#chat-messages');
     const scroll = find('.chat-scroll');
     const sessionState = find('#chat-session-state');
@@ -190,7 +197,8 @@
         notice('#chat-status',error.message);
       }
     } else await refresh();
-    if (prompt) find('#chat-text').value = prompt;
+    // A topic chosen on the site is a complete question: it goes out right away.
+    if (prompt) await send(prompt);
     fitComposer();
     find('#chat-text').focus();
     clearInterval(chat.poll);
@@ -250,7 +258,7 @@
       find('#chat-date').min = dateValue();
       find('#chat-date').max = dateValue(60);
       find('#chat-date').value = dateValue(1);
-      find('#chat-zone').textContent = `Horarios de ${zone()}.`;
+      find('#chat-zone').textContent = `Horarios en ${zoneLabel()}.`;
       notice('#chat-booking-status',advisors.length ? 'Elige un horario, revisa tus datos y confirma. La cita se reserva solamente al pulsar Confirmar mi cita.' : 'Aún no hay horarios publicados. Solicita atención del equipo para coordinar tu evaluación.','info');
       find('#chat-book-form').hidden = !advisors.length;
       if (advisors.length === 1) { find('#chat-advisor').value = advisors[0].id; await slots(); }
@@ -301,7 +309,7 @@
     const contact = [value('email'),value('phone')].filter(Boolean).join(' · ');
     const rows = [
       ['Asesor',advisor?.name || 'Equipo de Power Solar'],
-      ['Fecha y hora',start ? `${dateLabel(start)} (${zone()})` : 'Sin horario'],
+      ['Fecha y hora',start ? `${dateLabel(start)} (${zoneLabel()})` : 'Sin horario'],
       ['Nombre',value('name')],
       ['Contacto',contact],
       ['Municipio',value('municipality') || 'No indicado'],
@@ -392,7 +400,7 @@
     find('#chat-appointment').hidden = false;
     find('#chat-appointment').classList.toggle('cancelled',cancelled);
     find('#chat-appointment').classList.toggle('is-confirmed',confirmed);
-    find('#chat-appointment').innerHTML = `${sun}<div class="rc-appointment-body"><span class="chat-step">${safe(presentation[0])}</span><h3>${safe(presentation[1])}</h3><p>${safe(dateLabel(appointment.start_at))}<br>${safe(appointment.advisor_name || 'Equipo de Power Solar')}</p><small>${safe(zone())} · Referencia ${safe(appointment.id)}</small><p class="field-help">${safe(presentation[2])}</p></div>`;
+    find('#chat-appointment').innerHTML = `${sun}<div class="rc-appointment-body"><span class="chat-step">${safe(presentation[0])}</span><h3>${safe(presentation[1])}</h3><p>${safe(dateLabel(appointment.start_at))}<br>${safe(appointment.advisor_name || 'Equipo de Power Solar')}</p>${appointment.reference?`<p class="rc-appointment-code"><span>Código de tu cita</span><strong>${safe(appointment.reference)}</strong></p>`:''}<small>Horario en ${safe(zoneLabel())}. Si llamas o escribes al equipo, dales este código.</small><p class="field-help">${safe(presentation[2])}</p></div>`;
     showDockFor(appointment);
     if (confirmed) setBooking(false);
   }
@@ -418,7 +426,15 @@
   // legacy dialog on / stays available for existing links and deep entry.
   document.querySelectorAll('[data-open-chat]').forEach(button => button.addEventListener('click',async () => {
     const prompt = button.dataset.chatPrefill;
-    if (await iaAvailable()) location.assign(prompt ? `/ia?q=${encodeURIComponent(prompt)}` : '/ia');
+    if (await iaAvailable()) {
+      // One-time authorization for /ia to send this exact question (same tab, 30 s).
+      // A link /ia?q=… shared from elsewhere carries no authorization and only fills the field.
+      if (prompt) {
+        try { sessionStorage.setItem('ia:autosend', JSON.stringify({pregunta:prompt,timestamp:Date.now()})); }
+        catch { /* Without storage /ia only fills the field. */ }
+      }
+      location.assign(prompt ? `/ia?q=${encodeURIComponent(prompt)}` : '/ia');
+    }
     else open({currentTarget:button});
   }));
   find('#chat-close').addEventListener('click',() => panel.close());

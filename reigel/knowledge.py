@@ -125,75 +125,73 @@ TECHNICAL_TOPICS = {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "Los paneles fotovoltaicos producen electricidad en corriente continua (CC). "
-            "El inversor la convierte en corriente alterna (CA), que puede utilizar el hogar "
-            "y la red. Esto explica el proceso general, no estima la producción de una propiedad."
+            "Las placas atrapan la luz del sol y la convierten en electricidad. Esa electricidad "
+            "todavía no sirve tal cual para la casa: un equipo llamado inversor la deja lista para "
+            "tus enseres y para la red. Cuánta produciría tu casa se sabe con una evaluación."
         ),
     },
     "inverter": {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "El inversor convierte la electricidad de corriente continua de los paneles "
-            "en corriente alterna. Según el sistema, también puede supervisar la instalación "
-            "y coordinarse con almacenamiento."
+            "El inversor es el equipo que toma la electricidad que sale de las placas y la deja "
+            "lista para usarla en tu casa. Según el sistema, también vigila que todo funcione bien "
+            "y trabaja junto con la batería."
         ),
     },
     "microinverter": {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "Un microinversor se instala asociado a cada panel. El Departamento de Energía "
-            "explica que una sombra o problema en un panel no reduce del mismo modo la energía "
-            "que se puede obtener de los demás; el costo y la conveniencia dependen del diseño."
+            "Un microinversor es un inversor pequeñito que va en cada placa. Así, si a una placa "
+            "le da sombra o tiene un problema, las demás no se afectan igual, según explica el "
+            "Departamento de Energía. Si te conviene o no depende del diseño de tu casa."
         ),
     },
     "power_energy": {
         "status": "verified",
         "source_ids": ("eia_measurement",),
         "answer": (
-            "kW mide potencia: cuánta energía se produce o consume en un momento. "
-            "kWh mide energía acumulada durante un periodo. Por ejemplo, usar una carga "
-            "de 1 kW durante una hora equivale a 1 kWh; no son unidades intercambiables."
+            "Piénsalo como un carro: el kW es como la velocidad, cuánta luz se usa en un momento; "
+            "el kWh es como la distancia recorrida, cuánta luz se usó en total. Por eso el contador "
+            "de tu casa suma kWh, y no son lo mismo."
         ),
     },
     "grid_outage": {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "En general, un inversor conectado a la red se desconecta cuando la red presenta "
-            "una interrupción o una condición fuera de sus límites; por eso no se debe asumir "
-            "que los paneles mantendrán la casa energizada durante un apagón. El respaldo requiere "
-            "un sistema diseñado para operar sin la red, con inversor y controles compatibles; "
-            "una batería por sí sola no confirma que toda la vivienda tenga respaldo."
+            "Cuando se va la luz, un sistema conectado a la red se desconecta solo, por seguridad. "
+            "O sea, las placas solas no mantienen tu casa prendida en un apagón. Para eso hace falta "
+            "un sistema diseñado para trabajar sin la red, con equipos compatibles, y una batería "
+            "no siempre cubre la casa completa."
         ),
     },
     "grid_connected_system": {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "Un inversor que sigue la red utiliza la señal eléctrica de la red para sincronizar "
-            "su funcionamiento. Los equipos y protecciones concretos dependen del diseño; una "
-            "instalación conectada a la red no implica automáticamente respaldo durante apagones."
+            "Un sistema conectado a la red trabaja al compás de la luz que llega a tu casa. "
+            "Qué equipos y protecciones lleva depende del diseño, y estar conectado a la red no "
+            "quiere decir que vayas a tener luz en un apagón."
         ),
     },
     "generation_storage": {
         "status": "verified",
         "source_ids": ("doe_inverters",),
         "answer": (
-            "Los paneles generan electricidad cuando hay recurso solar; una batería almacena "
-            "energía para usarla después. La batería no crea la energía ni garantiza por sí sola "
-            "respaldo: el funcionamiento depende de que el sistema esté diseñado para trabajar "
-            "sin la red y de las cargas conectadas."
+            "Las placas hacen electricidad cuando hay sol, y la batería la guarda para usarla "
+            "después, como una alcancía. La batería no fabrica energía, y que te dé luz en un "
+            "apagón depende de cómo se diseñe el sistema y de qué equipos tengas conectados."
         ),
     },
     "residential_consumption": {
         "status": "verified",
         "source_ids": ("eia_measurement",),
         "answer": (
-            "El consumo eléctrico acumulado se expresa normalmente en kWh y lo registra el medidor. "
-            "Ese dato describe energía usada durante un periodo; no basta por sí solo para interpretar "
-            "todos los cargos de una factura ni para dimensionar un sistema."
+            "Lo que gastas de luz se mide en kWh, y el contador de tu casa lo va sumando. "
+            "Ese número ayuda, pero no explica todos los cargos de la factura ni basta "
+            "para saber qué sistema necesitas."
         ),
     },
     "solar_production": {

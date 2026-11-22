@@ -213,7 +213,7 @@ test('booking runs in three validated steps, returns to step 1 on 409 and only s
     'POST /api/public/chat/book': data => {
       bookings += 1;
       if (bookings === 1) return json({ detail: 'Ese horario ya no está disponible. Elige otro.' }, 409);
-      return json({ messages: [], appointment: { id: 'apt-1', start_at: data.start_at, status: 'confirmed', advisor_name: 'Asesora Demo' } });
+      return json({ messages: [], appointment: { id: 'apt-1', reference: 'K7M-4QX', start_at: data.start_at, status: 'confirmed', advisor_name: 'Asesora Demo' } });
     },
   });
   await flush();
@@ -277,7 +277,7 @@ test('booking runs in three validated steps, returns to step 1 on 409 and only s
 
   // Step 3: generated summary, consent unchecked and required.
   const summary = find('#chat-book-summary').textContent;
-  for (const text of ['Asesora Demo', 'America/Puerto_Rico', 'Visitante Sintético', '+1 787 555 0100', 'Caguas']) assert.ok(summary.includes(text), text);
+  for (const text of ['Asesora Demo', 'hora de Puerto Rico', 'Visitante Sintético', '+1 787 555 0100', 'Caguas']) assert.ok(summary.includes(text), text);
   assert.equal(field('consent').checked, false);
   assert.equal(find('#chat-book-confirm').hidden, false);
   form.requestSubmit();
@@ -312,7 +312,8 @@ test('booking runs in three validated steps, returns to step 1 on 409 and only s
   assert.notEqual(second.data.request_id, first.data.request_id);
   assert.equal(find('#chat-appointment').hidden, false);
   assert.match(find('#chat-appointment').textContent, /CITA CONFIRMADA/);
-  assert.match(find('#chat-appointment').textContent, /Referencia apt-1/);
+  assert.match(find('#chat-appointment').textContent, /Código de tu citaK7M-4QX/);
+  assert.doesNotMatch(find('#chat-appointment').textContent, /apt-1/);
   assert.ok(find('#chat-appointment').querySelector('.rc-appointment-sun'));
   assert.equal(find('#chat-booking').hidden, true);
   assert.equal(field('consent').checked, false);

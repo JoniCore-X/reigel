@@ -29,16 +29,18 @@ def normalize(value: str) -> str:
 
 
 _AMOUNT = r"\d{1,5}(?:[.,]\d{1,2})?"
+# Approximate amounts as people say them in Puerto Rico: «pago como 200», «alrededor de 200».
+_ABOUT = r"(?:como|unos?|alrededor de|cerca de|mas o menos|masomenos|aproximadamente|aprox\.?)"
 _BILL_AMOUNT = re.compile(
     rf"(?:factura(?:\s+(?:es\s+de|de|es))?|pago|mensual(?:es)?(?:\s+(?:es|de))?|al mes|\$)"
-    rf"\s*\$?\s*({_AMOUNT})\b"
+    rf"\s*(?:{_ABOUT}\s*)?\$?\s*({_AMOUNT})\b"
 )
 _BILL_AMOUNT_TRAILING = re.compile(
     rf"(?<!\w)\$?({_AMOUNT})\s*(?:dolares|al mes|mensual(?:es)?)\b"
 )
 _MONTHLY_BILL_ANSWER = re.compile(
     rf"\s*(?:(?:son|serian|pago|es)\s*)?"
-    rf"(?:(?:unos?|aproximadamente|aprox\.?)\s*)?"
+    rf"(?:{_ABOUT}\s*)?"
     rf"\$?\s*{_AMOUNT}\s*(?:dolares|al mes|mensual(?:es)?)?\s*"
 )
 _CORRECTION = re.compile(

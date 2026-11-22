@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Team Access · R.E.I.G.E.L.</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
+  <link rel="stylesheet" href="/static/css/identity.css?v=1">
+  <script src="/static/js/passkey-client.js?v=1" defer></script>
+  <script src="/static/js/team-access.js?v=1" defer></script>
+</head>
+<body class="team-access">
+  <main class="id-card">
+    <header class="id-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 11v4M8.5 10a3.5 3.5 0 0 1 7 0v3c0 2-.4 4-1.3 6M8.5 14c0 2-.3 3.6-1 5M5 16c.3-1.200.5-2.500.5-4V10a6.500 6.500 0 0 1 11-4.700M19 9c.300 1 .5 2 .5 3v2"/></svg>
+      <h1>R.E.I.G.E.L. Team Access</h1>
+      <p>Identidad privada · Autenticación criptográfica</p>
+    </header>
+    <p id="team-message" class="id-message" role="status"></p>
+    <p id="team-unsupported" class="id-note" hidden>Este navegador o dirección no admite llaves de acceso. Usa HTTPS o <strong>localhost</strong>.</p>
+
+    <section id="guest-view" hidden>
+      <button id="verify-identity" class="id-button" type="button">Verificar identidad</button>
+      <p class="id-note id-center">Sin registro público ni acceso por redes sociales</p>
+      <form id="enroll-form" class="id-section">
+        <h2>Tengo un código del administrador</h2>
+        <label>Correo del equipo<input name="email" type="email" autocomplete="username" required></label>
+        <label>Código de registro<input name="code" autocomplete="one-time-code" required></label>
+        <label>Nombre del dispositivo<input name="label" maxlength="60" required placeholder="Mi teléfono"></label>
+        <button class="id-button" type="submit">Registrar llave de acceso</button>
+      </form>
+      <p class="id-center"><a class="id-link" href="/app">Volver al acceso del equipo</a></p>
+    </section>
+
+    <section id="member-view" hidden>
+      <p id="member-name" class="id-note id-center"></p>
+      <div class="id-section">
+        <h2>Tus llaves de acceso</h2>
+        <ul id="key-list" class="id-list"></ul>
+        <form id="add-key-form">
+          <label>Nombre del dispositivo<input name="label" maxlength="60" required placeholder="Mi laptop"></label>
+          <button class="id-button" type="submit">Añadir llave de acceso</button>
+        </form>
+      </div>
+      <div id="pending-section" class="id-section" hidden>
+        <h2>Dispositivos por aprobar</h2>
+        <ul id="pending-list" class="id-list"></ul>
+      </div>
+      <div id="admin-section" class="id-section" hidden>
+        <h2>Administración de accesos</h2>
+        <form id="grant-form">
+          <label>Persona<select name="user_id" id="grant-user" required></select></label>
+          <label>Tipo<select name="purpose"><option value="enroll">Registro de llave</option><option value="recovery">Recuperación (revoca sus llaves)</option></select></label>
+          <label>Motivo<input name="reason" maxlength="200" required></label>
+          <button class="id-button" type="submit">Emitir código de un solo uso</button>
+        </form>
+        <p id="grant-code" class="id-code" hidden></p>
+        <form id="role-form">
+          <label>Persona<select name="user_id" id="role-user" required></select></label>
+          <label>Rol<select name="role"><option value="consultor">Consultor</option><option value="supervisor">Supervisor</option></select></label>
+          <button class="id-button" type="submit">Actualizar rol</button>
+        </form>
+      </div>
+      <div id="policy-section" class="id-section" hidden>
+        <h2>Política del equipo</h2>
+        <p id="policy-state" class="id-note"></p>
+        <button id="policy-toggle" class="id-button" type="button"></button>
+      </div>
+      <p class="id-center"><a class="id-link" href="/app">Volver al espacio</a></p>
+    </section>
+  </main>
+</body>
+</html>

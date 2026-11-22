@@ -61,10 +61,11 @@ def test_solutions_page_walks_through_the_battery_system_with_official_illustrat
     for name, step in zip(SYSTEM, steps):
         assert f'src="/static/assets/power-solar/sistema/{name}.png"' in step
     text = re.sub(r"<[^>]+>", " ", section)
-    text = text.replace("19 de noviembre de 2026", "")
     # Own explanatory text: no figures, prices or savings promises.
     assert not re.search(r"\d|%|\$|ahorr|garant|gratis", text, re.I)
-    assert "powersolarpr.com/placas-solares-para-casas" in section
+    # Crédito visible retirado por el titular (21 nov 2026); la fuente sigue en SOURCES.md.
+    assert "Ilustraciones: Power Solar" not in section
+    assert "powersolarpr.com/placas-solares-para-casas" in (ASSETS / "SOURCES.md").read_text(encoding="utf-8")
     assert "data-open-chat" in section and "data-chat-prefill" in section
 
 
@@ -102,13 +103,47 @@ def test_discontinued_panel_brand_is_absent_from_every_public_and_private_surfac
 
 
 @pytest.mark.parametrize("path", ["/captacion", "/app", "/ia", "/chat"])
-def test_solar_theme_is_the_last_stylesheet_on_every_surface(client, path):
+def test_solar_theme_follows_every_module_stylesheet(client, path):
     page = client.get(path).text
     sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)"', page)
-    assert sheets and sheets[-1].startswith("/static/css/solar-theme.css"), sheets
-    theme = client.get(sheets[-1])
+    # The solar theme follows every module sheet; only the theme switch and dark mode may follow it.
+    position = next(i for i, sheet in enumerate(sheets) if sheet.startswith("/static/css/solar-theme.css"))
+    assert all(sheet.split("?")[0] in {"/static/css/theme-switch.css", "/static/css/dark-mode.css"}
+               for sheet in sheets[position + 1:]), sheets
+    theme = client.get(sheets[position])
     assert theme.status_code == 200
     # Paleta pedida por el titular; los colores claros no se usan como color de texto.
     for color in ("#ffc100", "#ffdd02", "#68a9f4", "#3785ea", "#2266de", "#cbf3f0", "#ffbf69", "#2ec4b6", "#ff9f1c"):
         assert color in theme.text.lower(), color
     assert not re.search(r"(?<![-\w])color:\s*var\(--sol-(?:gold|sun|sky|mint|peach|orange|teal)\)", theme.text)
+
+
+@pytest.mark.parametrize("path", ["/app", "/ia"])
+def test_theme_switch_is_credited_accessible_and_loads_before_paint(client, path):
+    page = client.get(path).text
+    head = page.split("</head>")[0]
+    assert '<script src="/static/js/theme.js?v=1"></script>' in head  # sin defer: tema antes de pintar
+    assert "From Uiverse.io by Galahhad - https://uiverse.io/Galahhad/strong-squid-82" in page
+    assert 'class="ui-theme-switch__checkbox" role="switch" aria-label="Modo oscuro"' in page
+    css = client.get("/static/css/theme-switch.css?v=1").text
+    assert "MIT License, Copyright (c) https://youtu.be/S6T6hrc8cQo, Galahhad (Galahad)" in css
+    assert "display: none" not in css.split(".ui-theme-switch__checkbox {")[1].split("}")[0]
+    assert "prefers-reduced-motion" in css
+    assert client.get("/static/js/theme.js?v=1").status_code == 200
+    assert client.get("/static/css/dark-mode.css?v=1").status_code == 200
+
+
+def test_public_site_does_not_load_the_theme_switch(client):
+    for path in ("/captacion", "/chat"):
+        page = client.get(path).text
+        assert "theme.js" not in page and "ui-theme-switch" not in page
+    notice = client.get("/static/assets/licenses/uiverse-components.txt").text
+    assert "Galahhad/strong-squid-82" in notice
+
+
+def test_visible_illustration_credits_were_removed_but_the_source_is_kept(client):
+    # Retirados por el titular (21 nov 2026); la procedencia queda en SOURCES.md.
+    for path in ("/soluciones", "/ia", "/"):
+        assert "Ilustraciones: Power Solar" not in client.get(path).text, path
+    assert "Explora un tema o selecciona una pregunta para conversar con R.E.I.G.E.L." in client.get("/ia").text
+    assert "powersolarpr.com" in (ASSETS / "SOURCES.md").read_text(encoding="utf-8")

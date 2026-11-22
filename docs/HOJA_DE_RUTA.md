@@ -57,7 +57,7 @@ vean hay que reiniciar el servidor activo, y eso lo decide el titular.
 ## Fase 4 · `/app` (equipo)
 
 - Paleta de comandos (Ctrl+K) para buscar prospectos, tareas y vistas.
-- Modo oscuro con preferencia del sistema.
+- Modo oscuro con preferencia del sistema — hecho (21 nov 2026) en `/app` e `/ia`, con el interruptor de Uiverse de Galahhad.
 - Agenda en vista semanal.
 - Pipeline con arrastrar y soltar, con alternativa de teclado.
 - Avisos con contador que se actualiza solo.

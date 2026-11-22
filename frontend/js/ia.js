@@ -18,6 +18,8 @@
   const state = {
     owner: null, conversations: [], activeId: null, messages: [],
     streaming: false, controller: null, modelReady: false,
+    // Suggestions already shown in this conversation (sent to the engine to avoid repeats).
+    sending: false, seen: [], seenFor: undefined,
     // Incremented whenever the visible conversation changes. A response or a
     // reply that belongs to an earlier view only updates the history list.
     view: 0,
@@ -330,12 +332,62 @@
     if (!state.messages.length) {
       empty.hidden = false;
       thread.append(empty);
+      loadSuggestions();
       return;
     }
     state.messages.forEach(message => {
       thread.append(messageNode(message));
     });
     scrollToEnd();
+    loadSuggestions();
+  }
+
+  function removeFollowups() {
+    thread.querySelectorAll?.('.ia-followups').forEach(node => node.remove());
+  }
+
+  // Six suggestions chosen by the server (reigel/suggestions.py) from the visitor's
+  // own conversation. They are optional: if the request fails, nothing is shown.
+  async function loadSuggestions() {
+    const view = state.view;
+    if (state.seenFor !== state.activeId) {
+      state.seen = [];
+      state.seenFor = state.activeId;
+    }
+    const params = new URLSearchParams();
+    if (state.activeId) params.set('conversation_id', state.activeId);
+    if (state.seen.length) params.set('seen', state.seen.slice(-60).join(','));
+    let data;
+    try {
+      data = await request(`/api/ia/suggestions?${params}`);
+    } catch {
+      return;
+    }
+    if (view !== state.view || state.streaming || state.sending) return;
+    const items = Array.isArray(data?.suggestions) ? data.suggestions : [];
+    if (!items.length) return;
+    state.seen.push(...items.map(item => item.id));
+    const buttons = items.map(item => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ia-suggestion';
+      button.dataset.iaPrompt = item.text;
+      button.dataset.suggestionId = item.id;
+      button.textContent = item.text;
+      return button;
+    });
+    if (!state.messages.length) {
+      empty.querySelector('.ia-prompts')?.replaceChildren(...buttons);
+      return;
+    }
+    removeFollowups();
+    const row = document.createElement('div');
+    row.className = 'ia-followups';
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', 'Preguntas sugeridas');
+    row.append(...buttons);
+    thread.append(row);
+    if (nearEnd()) scrollToEnd();
   }
 
   function appendUser(text) {
@@ -349,13 +401,94 @@
     scrollToEnd();
   }
 
+  // Sol de Power Solar en la punta del texto mientras se genera: los rayos giran
+  // como un engranaje y el rayo eléctrico queda quieto (decorativo).
+  const SUN_SVG = '<svg viewBox="0 0 100 100" focusable="false" aria-hidden="true">'
+    + '<path class="ia-sun-rays" d="M44.7 16.4L50.0 1.0L55.3 16.4ZM62.2 18.3L74.5 7.6L71.4 23.6ZM76.4 28.6L92.4 25.5L81.7 37.8ZM83.6 44.7L99.0 50.0L83.6 55.3ZM81.7 62.2L92.4 74.5L76.4 71.4ZM71.4 76.4L74.5 92.4L62.2 81.7ZM55.3 83.6L50.0 99.0L44.7 83.6ZM37.8 81.7L25.5 92.4L28.6 76.4ZM23.6 71.4L7.6 74.5L18.3 62.2ZM16.4 55.3L1.0 50.0L16.4 44.7ZM18.3 37.8L7.6 25.5L23.6 28.6ZM28.6 23.6L25.5 7.6L37.8 18.3Z"/>'
+    + '<circle class="ia-sun-ring" cx="50" cy="50" r="34"/><circle class="ia-sun-core" cx="50" cy="50" r="26"/>'
+    + '<path class="ia-sun-bolt" d="M56 27 41 54h10l-5 21 16-29H51l5-19Z"/></svg>';
+
+  function sunCursor() {
+    const sun = document.createElement('span');
+    sun.className = 'ia-sun';
+    sun.setAttribute('aria-hidden', 'true');
+    sun.innerHTML = SUN_SVG;
+    return sun;
+  }
+
+  // Revela el texto ya validado por el servidor de forma suave: avanza a ritmo
+  // constante por palabras completas y acelera si el modelo va más rápido, para
+  // no quedarse atrás. Sin animación (movimiento reducido, pestaña oculta o un
+  // entorno sin requestAnimationFrame) muestra el texto de inmediato.
+  function createRevealer(body) {
+    const animate = typeof requestAnimationFrame === 'function'
+      && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const cursor = sunCursor();
+    let target = '';
+    let shown = 0;
+    let frame = 0;
+    let last = 0;
+    const waiters = [];
+    body.replaceChildren(cursor);
+    const hidden = () => typeof document.hidden === 'boolean' && document.hidden;
+    const release = () => { if (shown >= target.length) waiters.splice(0).forEach(resolve => resolve()); };
+    function insert(text, fresh) {
+      if (!text) return;
+      const node = fresh ? document.createElement('span') : document.createTextNode(text);
+      if (fresh) { node.className = 'ia-word'; node.textContent = text; }
+      body.insertBefore(node, cursor);
+    }
+    function flush() {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      if (!animate) {
+        body.textContent = target;
+        body.append(cursor);
+      } else {
+        insert(target.slice(shown), false);
+      }
+      shown = target.length;
+      release();
+    }
+    function step(now) {
+      frame = 0;
+      const elapsed = last ? Math.min(now - last, 100) : 16;
+      last = now;
+      const backlog = target.length - shown;
+      if (backlog <= 0) { last = 0; release(); return; }
+      const perSecond = Math.max(60, backlog * 3);
+      let next = Math.min(target.length, shown + Math.max(1, Math.round(perSecond * elapsed / 1000)));
+      const space = target.slice(next).search(/\s/);
+      if (space > 0 && space < 20) next += space;
+      insert(target.slice(shown, next), true);
+      shown = next;
+      if (nearEnd()) scrollToEnd();
+      frame = requestAnimationFrame(step);
+    }
+    return {
+      push(text) {
+        target += text;
+        if (!animate || hidden()) { flush(); return; }
+        if (!frame) frame = requestAnimationFrame(step);
+      },
+      finished() {
+        if (!animate || hidden() || shown >= target.length) { flush(); return Promise.resolve(); }
+        return new Promise(resolve => { waiters.push(resolve); setTimeout(flush, 6000); });
+      },
+      stop() { if (frame) cancelAnimationFrame(frame); frame = 0; },
+    };
+  }
+
   function appendAssistant() {
     const node = messageNode({ id: 'pending', role: 'assistant', content: '', status: 'streaming' });
-    const dots = document.createElement('span');
-    dots.className = 'ia-typing';
-    dots.setAttribute('aria-label', 'R.E.I.G.E.L. está preparando la respuesta');
-    dots.append(document.createElement('i'), document.createElement('i'), document.createElement('i'));
-    node.querySelector('.ia-msg-body').append(dots);
+    const waiting = document.createElement('span');
+    waiting.className = 'ia-waiting';
+    waiting.setAttribute('role', 'status');
+    waiting.setAttribute('aria-label', 'R.E.I.G.E.L. está preparando la respuesta');
+    waiting.append(sunCursor());
+    node.querySelector('.ia-msg-body').append(waiting);
+    // «Respuesta incompleta» describes a saved reply left unfinished, not one being written now.
+    node.querySelector('.ia-msg-state').hidden = true;
     thread.append(node);
     scrollToEnd();
     return node;
@@ -387,7 +520,10 @@
   function applyModel(model) {
     state.modelReady = Boolean(model && model.enabled && model.status === 'available');
     setComposerEnabled(state.modelReady);
-    if (state.modelReady) return;
+    if (state.modelReady) {
+      if (state.pendingQuery) autoSendPending();
+      return;
+    }
     const reasons = {
       disabled: 'La IA local no está activada en este servidor. Puedes consultar el historial guardado.',
       model_missing: `El modelo local ${model?.model || ''} no está instalado en Ollama. El equipo debe instalarlo.`.replace('  ', ' '),
@@ -534,6 +670,16 @@
   }
 
   async function send() {
+    if (state.sending) return;
+    state.sending = true;
+    try {
+      await sendNow();
+    } finally {
+      state.sending = false;
+    }
+  }
+
+  async function sendNow() {
     const value = input.value.trim();
     if (!value || state.streaming || !state.modelReady) return;
     hideNotice();
@@ -554,9 +700,11 @@
     }
     input.value = '';
     resizeInput();
+    removeFollowups();
     appendUser(value);
     const pending = appendAssistant();
     let content = '';
+    let reveal = null;
     // This reply belongs to the conversation visible now. If the visitor opens
     // another one, the server still stores the reply, but it no longer touches
     // the visible thread, its messages or its notices.
@@ -573,30 +721,42 @@
         },
         delta: data => {
           if (!visible()) return;
-          const body = pending.querySelector('.ia-msg-body');
-          if (!content) body.replaceChildren();
+          if (!reveal) reveal = createRevealer(pending.querySelector('.ia-msg-body'));
           content += data.text;
-          body.textContent = content;
+          reveal.push(data.text);
           if (nearEnd()) scrollToEnd();
         },
-        done: data => {
-          if (visible()) finalize(pending, data.assistant);
+        done: async data => {
           upsertConversation(data.conversation);
           renderHistory();
+          if (!visible()) return;
+          // The last words finish appearing before the message settles.
+          if (reveal) await reveal.finished();
+          if (visible()) {
+            finalize(pending, data.assistant);
+            loadSuggestions();
+          }
         },
         replace: data => {
           if (!visible()) return;
+          reveal?.stop();
           finalize(pending, data.assistant);
           showNotice(data.detail);
         },
         error: data => {
           if (!visible()) return;
+          reveal?.stop();
           if (data.assistant) finalize(pending, data.assistant);
-          else pending.remove();
+          else {
+            pending.remove();
+            input.value = value;
+            resizeInput();
+          }
           showNotice(data.detail, { retry: true });
         },
       });
     } catch (error) {
+      reveal?.stop();
       if (!visible()) {
         // Stopped because the visitor left this conversation; nothing to show.
       } else if (isAbort(error)) {
@@ -615,6 +775,8 @@
           });
         } else {
           pending.remove();
+          input.value = value;
+          resizeInput();
         }
         showNotice(error.message, { retry: true });
       }
@@ -689,7 +851,10 @@
       if (prompt) {
         input.value = prompt.dataset.iaPrompt;
         resizeInput();
-        input.focus();
+        // A suggestion is a complete question: it is sent right away. While a reply is
+        // being written or the model is unavailable, it stays in the field instead.
+        if (!state.streaming && state.modelReady) send();
+        else input.focus();
       }
     });
     plus.addEventListener('click', () => setMenu(menu.hidden));
@@ -707,17 +872,56 @@
     });
   }
 
+  // Decides whether a question that arrived in the address (?q=) may be sent without
+  // the visitor pressing Enviar. The site's topic buttons use this route, but anyone
+  // can also build a link /ia?q=… and send it to someone. Regla del titular: solo con
+  // una autorización de un solo uso que el clic en un botón del sitio deja en
+  // sessionStorage (misma pestaña), para la misma pregunta y con menos de 30 s.
+  // No es autenticación; evita que un enlace externo hable en nombre del visitante.
+  function shouldAutoSend(query) {
+    if (!state.modelReady || state.streaming || typeof query !== 'string' || !query.trim()) {
+      return false;
+    }
+    const key = 'ia:autosend';
+    try {
+      const saved = sessionStorage.getItem(key);
+      // Autorización de un solo uso.
+      sessionStorage.removeItem(key);
+      if (!saved) return false;
+      const data = JSON.parse(saved);
+      const elapsed = Date.now() - data.timestamp;
+      return data.pregunta === query && Number.isFinite(elapsed) && elapsed >= 0 && elapsed < 30000;
+    } catch {
+      return false;
+    }
+  }
+
   function prefill() {
     const query = new URLSearchParams(location.search).get('q');
     if (!query) return;
     input.value = query.slice(0, 4000);
     resizeInput();
-    input.focus();
     try {
       const url = new URL(location.href);
       url.searchParams.delete('q');
       history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
     } catch { /* The query string is optional. */ }
+    state.pendingQuery = input.value;
+    if (!autoSendPending()) input.focus();
+  }
+
+  // Sends the question that arrived with ?q= when the rule allows it. Also called when
+  // the model becomes ready later (Reintentar), within the same 30-second authorization.
+  function autoSendPending() {
+    const query = state.pendingQuery;
+    if (!query || input.value !== query || !shouldAutoSend(query)) return false;
+    state.pendingQuery = null;
+    // A topic chosen on the site starts its own conversation instead of joining the last one.
+    state.activeId = null;
+    state.messages = [];
+    renderMessages();
+    send();
+    return true;
   }
 
   async function boot() {

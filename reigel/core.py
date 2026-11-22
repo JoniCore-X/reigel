@@ -16,6 +16,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from argon2 import PasswordHasher
+from argon2.exceptions import Argon2Error, InvalidHashError
+
 STAGES = ("nuevo", "contacto_pendiente", "contactado", "calificado", "cita", "cita_realizada",
           "propuesta_preparacion", "propuesta_presentada", "negociacion", "ganado", "perdido")
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,22 +84,34 @@ def site_origin(value: str) -> str:
     return value.rstrip("/")
 
 
+PASSWORDS = PasswordHasher()
+_MISSING_HASH = None
+
+
 def password_hash(password: str) -> str:
     if not isinstance(password, str) or len(password) < 12 or len(password) > 512:
         raise DomainError("Usa una contraseña de 12 a 512 caracteres.", 422)
-    salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
-    return f"scrypt${salt.hex()}${digest.hex()}"
+    return PASSWORDS.hash(password)
+
+
+def missing_password_hash() -> str:
+    """Keep verification cost equal when an account does not exist."""
+    global _MISSING_HASH
+    if _MISSING_HASH is None:
+        _MISSING_HASH = PASSWORDS.hash(secrets.token_urlsafe(24))
+    return _MISSING_HASH
 
 
 def password_matches(password: str, encoded: str) -> bool:
     try:
         if not isinstance(password, str) or len(password) > 512:
             return False
+        if encoded.startswith("$argon2id$"):
+            return PASSWORDS.verify(encoded, password)
         _, salt, digest = encoded.split("$")
         actual = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1)
         return hmac.compare_digest(actual.hex(), digest)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, Argon2Error, InvalidHashError):
         return False
 
 
@@ -165,6 +180,42 @@ def default_db_path(db_path=None) -> str:
     return str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
 
 
+# Appointment codes people can read aloud and type: six characters from an
+# alphabet without look-alikes (0/O, 1/I/L, 2/Z, 5/S, 8/B), shown as ABC-DEF.
+REFERENCE_ALPHABET = "ACDEFGHJKMNPQRTUVWXY34679"
+REFERENCE_LENGTH = 6
+
+
+def new_reference(db):
+    for _ in range(25):
+        code = "".join(secrets.choice(REFERENCE_ALPHABET) for _ in range(REFERENCE_LENGTH))
+        if not db.execute("SELECT 1 FROM appointments WHERE reference=?", (code,)).fetchone():
+            return code
+    raise DomainError("No se pudo generar el código de la cita. Inténtalo de nuevo.", 503)
+
+
+def format_reference(code):
+    return f"{code[:3]}-{code[3:]}" if code else ""
+
+
+def normalize_reference(value):
+    """Accepts lower case, spaces and hyphens: 'k7m 4qx' -> 'K7M4QX'; anything else -> ''."""
+    if not isinstance(value, str):
+        return ""
+    code = re.sub(r"[\s-]", "", value).upper()
+    return code if len(code) == REFERENCE_LENGTH and all(ch in REFERENCE_ALPHABET for ch in code) else ""
+
+
+def migrate_appointment_reference(db):
+    """Additive: short appointment code; existing appointments receive one too."""
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(appointments)")}
+    if "reference" not in columns:
+        db.execute("ALTER TABLE appointments ADD COLUMN reference TEXT")
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS appointments_reference ON appointments(reference) WHERE reference IS NOT NULL")
+    for row in db.execute("SELECT id FROM appointments WHERE reference IS NULL").fetchall():
+        db.execute("UPDATE appointments SET reference=? WHERE id=?", (new_reference(db), row["id"]))
+
+
 def migrate_owner(db):
     """Additive: the platform owner is an admin flagged with is_owner.
 
@@ -189,6 +240,9 @@ class Store(OperationsMixin):
             db.executescript(SCHEMA)
             migrate_operations(db)
             migrate_owner(db)
+            migrate_appointment_reference(db)
+            from .identity import migrate_identity
+            migrate_identity(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",
@@ -341,10 +395,16 @@ class Store(OperationsMixin):
         email = email_address(email, required=True)
         with self.connect() as db:
             row = db.execute("SELECT * FROM users WHERE email=? COLLATE NOCASE AND active=1", (email,)).fetchone()
-            encoded = row["password_hash"] if row else "scrypt$00000000000000000000000000000000$" + "00" * 64
+            encoded = row["password_hash"] if row else missing_password_hash()
             matched = password_matches(password, encoded)
             if not row or not matched:
                 raise DomainError("Correo o contraseña incorrectos.", 401)
+            from .identity import password_login_block
+            blocked = password_login_block(db, row["id"])
+            if blocked:
+                raise DomainError(blocked, 403)
+            if row["password_hash"].startswith("scrypt$"):
+                db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(password), row["id"]))
             token = secrets.token_urlsafe(36)
             db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
             db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), row["id"], (now() + timedelta(hours=12)).isoformat()))
@@ -579,14 +639,15 @@ class Store(OperationsMixin):
             if lead_id is None:
                 lead_id = self._insert_lead(db, public_data, advisor_id)
             appointment_id = uid()
-            db.execute("INSERT INTO appointments VALUES(?,?,?,?,?,?,?,?)", (appointment_id, lead_id, advisor_id, begin, finish, "confirmed", source, stamp()))
+            db.execute("""INSERT INTO appointments(id,lead_id,advisor_id,start_at,end_at,status,source,created_at,reference)
+                VALUES(?,?,?,?,?,?,?,?,?)""", (appointment_id, lead_id, advisor_id, begin, finish, "confirmed", source, stamp(), new_reference(db)))
             db.execute("UPDATE tasks SET owner_id=?,updated_at=? WHERE lead_id=? AND status='pending'", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE leads SET stage='cita',advisor_id=?,updated_at=? WHERE id=?", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE conversations SET advisor_id=? WHERE lead_id=?", (advisor_id, lead_id))
             self.audit(db, actor, "appointment.book", appointment_id)
             result = self._appointment(db, appointment_id, actor)
             if actor is None:
-                return {key: result[key] for key in ("id", "start_at", "end_at", "advisor_name")}
+                return {key: result[key] for key in ("id", "reference", "start_at", "end_at", "advisor_name")}
             return result
 
     def list_appointments(self, actor, lead_id=None):

@@ -130,6 +130,7 @@ def test_offboarding_moves_work_and_cuts_access_immediately(team):
         assert response.status_code == 200, response.text
         result = response.json()
     assert result["moved"] == {"leads": 1, "appointments": 1, "tasks": 2}
+    assert result["public_booking_accounts"] == 1  # «Otra asesora» sigue recibiendo reservas
     assert result["user"]["active"] is False and result["user"]["public_booking"] is False
 
     assert departing.get("/api/auth/me").status_code == 401
@@ -184,3 +185,15 @@ def test_offboarding_permissions(team):
         login(client, OWNER)
         assert client.post(f"/api/team/{admin['id']}/offboard", json={"target_id": owner["id"]}).status_code == 200
         assert client.post(f"/api/team/{admin['id']}/offboard", json={"target_id": owner["id"]}).status_code == 409
+
+
+def test_offboarding_the_last_bookable_account_is_reported(team):
+    app, store, owner, _, advisor, other = team
+    store.update_user(other["id"], {"public_booking": False}, owner)
+    with TestClient(app) as client:
+        assert [item["id"] for item in client.get("/api/public/config").json()["advisors"]] == [advisor["id"]]
+        login(client, OWNER)
+        result = client.post(f"/api/team/{advisor['id']}/offboard", json={"target_id": other["id"]}).json()
+        assert result["public_booking_accounts"] == 0
+        assert client.get("/api/public/config").json()["advisors"] == []
+

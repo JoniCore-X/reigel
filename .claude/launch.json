@@ -17,10 +17,12 @@
       "runtimeArgs": [
         "scripts/preview_team_caguas.py",
         "--port",
-        "8877",
-        "--ia-local"
+        "8878",
+        "--ia-local",
+        "--ia-modelo",
+        "llama3.2:3b"
       ],
-      "port": 8877
+      "port": 8878
     }
   ]
 }

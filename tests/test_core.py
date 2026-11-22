@@ -76,7 +76,7 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         assert 'id="ia-shell"' in page.text
         assert 'id="ia-thread"' in page.text
         assert 'id="ia-form"' in page.text
-        assert 'src="/static/js/ia.js?v=10"' in page.text
+        assert 'src="/static/js/ia.js?v=15"' in page.text
         assert 'src="/static/assets/power-solar/reigel-logo.png"' in page.text
         assert 'id="ia-plus"' in page.text
         assert 'data-ia-menu="new"' in page.text
@@ -97,8 +97,8 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         assert 'id="chat-form"' in chat.text
         assert "El historial de esta conversación se guarda para el equipo" in chat.text
         assert 'id="chat-session-state" hidden' in chat.text
-        assert 'src="/static/js/chat.js?v=7"' in chat.text
-        assert chat.text.index("/static/css/coordination-chat.css?v=1") > chat.text.index("/static/css/site-loader.css")
+        assert 'src="/static/js/chat.js?v=10"' in chat.text
+        assert chat.text.index("/static/css/coordination-chat.css?v=3") > chat.text.index("/static/css/site-loader.css")
         assert 'data-book-step="3"' in chat.text and 'id="chat-book-progress" hidden' in chat.text
         assert 'href="/captacion"' in chat.text
         assert 'href="/app"' in chat.text
@@ -128,7 +128,7 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         assert 'class="capture-link" href="/captacion"' in workspace.text
 
 
-def test_public_intent_selector_prefills_chat_without_sending_or_collecting_contact_data(system):
+def test_public_intent_selector_sends_its_question_without_collecting_contact_data(system):
     app, *_ = system
     expected_prompts = (
         "Quiero entender cómo evaluar el consumo y los costos de energía de mi hogar.",
@@ -170,13 +170,15 @@ def test_public_intent_selector_prefills_chat_without_sending_or_collecting_cont
         chat_script = client.get("/static/js/chat.js")
         assert chat_script.status_code == 200
         assert "const prompt = event?.currentTarget?.dataset.chatPrefill;" in chat_script.text
-        assert "if (prompt) find('#chat-text').value = prompt;" in chat_script.text
+        assert "if (prompt) await send(prompt);" in chat_script.text
+        # /ia only auto-sends with the one-time authorization left by this click (same tab, 30 s).
+        assert "sessionStorage.setItem('ia:autosend'" in chat_script.text
 
 
 def test_password_hashed_session_cookie_and_logout(system):
     app, store, admin, _ = system
     with store.connect() as db:
-        assert db.execute("SELECT password_hash FROM users WHERE id=?", (admin["id"],)).fetchone()[0].startswith("scrypt$")
+        assert db.execute("SELECT password_hash FROM users WHERE id=?", (admin["id"],)).fetchone()[0].startswith("$argon2id$")
     with TestClient(app) as client:
         assert client.get("/api/dashboard").status_code == 401
         response = auth(client)
@@ -275,7 +277,7 @@ def test_atomic_booking_duplicate_rejects_and_no_orphan_lead(system):
         request = lead_data(advisor_id=advisor["id"], start_at=start)
         response = client.post("/api/public/book", json=request)
         assert response.status_code == 201, response.text
-        assert set(response.json()["appointment"]) == {"id", "start_at", "end_at", "advisor_name"}
+        assert set(response.json()["appointment"]) == {"id", "reference", "start_at", "end_at", "advisor_name"}
         assert client.post("/api/public/book", json=lead_data(email="second@example.test", advisor_id=advisor["id"], start_at=start)).status_code == 409
     with store.connect() as db:
         assert db.execute("SELECT count(*) FROM leads").fetchone()[0] == 1

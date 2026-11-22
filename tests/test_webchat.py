@@ -235,7 +235,8 @@ def test_technical_chat_abstains_on_unverified_maintenance_guidance(tmp_path):
         "technical-maintenance-001",
     )
 
-    assert "no tengo una fuente técnica vigente" in answer["reply"].lower()
+    # Maintenance gets the fixed safety reply: no instructions, a qualified technician.
+    assert "técnico cualificado" in answer["reply"]
     assert answer["sources"] == []
     assert answer["actions"] == ["human"]
 

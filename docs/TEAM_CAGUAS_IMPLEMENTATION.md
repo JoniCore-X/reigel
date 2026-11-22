@@ -1715,3 +1715,407 @@ de dos paletas: «Solar Power» (FFC100, FFDD02, 68A9F4, 3785EA, 2266DE) y
 
 Límite: unas 650 declaraciones de color fijas en las hojas existentes no pasan
 por variables; se ajustaron las piezas más visibles, no todas.
+
+## `/chat` sin horarios en la demo, 21 de noviembre de 2026
+
+Reporte: «Aún no hay horarios publicados» en `/chat`. Causa reproducida: el
+servidor era la vista previa sintética y su único asesor con «Recibir reservas»
+había sido dado de baja en la prueba de la fase de acceso (la baja desactiva
+sus reservas públicas, como corresponde). `/api/public/config` devolvía
+`advisors: []`. No era un fallo de reservas.
+
+- La baja devuelve `public_booking_accounts`; si queda en 0, `/app` avisa que ya
+  nadie recibe reservas desde el chat público y cómo activarlas. Prueba nueva.
+- Demo reiniciada: reserva completa en `/chat` con datos ficticios (asesor →
+  día → hora → datos → confirmación); la cita aparece en `/api/appointments`
+  con instante UTC correcto y la conversación en la bandeja del equipo.
+
+Para el servidor real: `/chat` solo ofrece horarios de cuentas activas con
+«Recibir reservas» activado en «Equipo y ajustes → Horario». La solicitud de
+atención humana queda en «Conversaciones» de `/app`; no hay aviso externo
+(correo o WhatsApp) mientras esos canales no estén configurados.
+
+## Código corto de cita, 21 de noviembre de 2026
+
+Pedido del titular: la «Referencia» era el identificador interno de 32
+caracteres hexadecimales, difícil de leer o escribir para personas mayores.
+
+- Columna aditiva `appointments.reference` con índice único
+  (`core.migrate_appointment_reference`); las citas existentes reciben código
+  al arrancar. Seis caracteres de `ACDEFGHJKMNPQRTUVWXY34679` (sin 0/O, 1/I/L,
+  2/Z, 5/S, 8/B), mostrados como `ABC-DEF`. Se generan con `secrets` y se
+  reintenta ante colisión. El identificador interno no cambia ni se muestra.
+- Las dos inserciones de citas (`core.book` y `webchat.book`) nombran ahora sus
+  columnas: con la columna nueva, `VALUES(8 valores)` habría fallado.
+- `/chat`: la tarjeta muestra «Código de tu cita» en grande y la frase «Si
+  llamas o escribes al equipo, dales este código»; el mensaje dice la fecha
+  como «domingo 22 de noviembre a las 10:00 a. m. (hora de Puerto Rico)» en
+  lugar de `22/11/2026 a las 10:00 (America/Puerto_Rico)`.
+- `/app`: la agenda muestra el código y la búsqueda de prospectos lo acepta en
+  mayúsculas o minúsculas, con o sin guion o espacio.
+- Pruebas: `tests/test_appointment_codes.py` (6) y ajustes en `test_core.py` y
+  `frontend_chat.test.cjs`. Demo: reserva con código `6W3-K6R`, encontrado por
+  «6W3-K6R», «6w3 k6r» y «6w3k6r».
+
+En la base comercial, el próximo arranque con este código añadirá la columna y
+asignará código a las citas existentes (incluidas en la copia previa exigida).
+
+## Voz de asesor, cabecera del chat y doble alternativa, 21 de noviembre de 2026
+
+**Voz.** El titular compartió una conversación real de Messenger como modelo de
+trato. Solo se tomó el estilo: el nombre y los datos de la persona no están en
+el código, las pruebas ni la documentación. `reigel/voice.py` define la guía
+(mensajes cortos, de tú, cálidos; reconocer cada respuesta; una pregunta a la
+vez con dos opciones; orden casa/apartamento → interrupciones o factura →
+estudio de consumo previo), un ejemplo anónimo adaptado («hay diferentes
+opciones…» en lugar de «trabajo con…», sin promesas) y el saludo según la hora
+de Puerto Rico. Se añade a las instrucciones de `/ia`, al respaldo de IA de
+`/chat` y a los borradores del equipo. «Entrenar» aquí es instrucción y
+ejemplo: Ollama no se reentrena. Las tres respuestas del ejemplo pasan los tres
+validadores. Prueba real con `qwen2.5:3b` en `/ia`: con «Buenas! Quisiera
+información» → «Casa» → «Las alzas en la factura» respondió «¡Hola! ¿Es para
+casa o apartamento?», «¡Perfecto! ¿Qué buscas solucionar…?» y «¡Súper! Hay
+diferentes opciones… ¿anteriormente te han hecho un estudio de consumo?» (muy
+cerca del ejemplo, porque las entradas eran las mismas). Límite: las
+respuestas fijas del motor determinista de `/chat` no usan esta voz.
+
+**Cabecera de `/chat`.** Azul plano `#0b2858`, sin degradado, anillos, sol ni
+raya naranja inferior (`coordination-chat.css?v=3`).
+
+**Doble alternativa.** «Coordinar evaluación» y «Hablar con el equipo» quedan
+ocultos hasta que el servidor marca `next_step`: se conoce la necesidad
+(factura y/o respaldo) y otro dato (municipio, factura o equipos a respaldar),
+o la persona pidió cita, atención humana o un cambio de cita, o ya hay cita,
+atención humana o baja. Una vez ofrecida no desaparece; entra con una
+animación suave (sin animación con `prefers-reduced-motion`). Sin JavaScript
+la barra sigue visible. Demo: «Las alzas en la factura» → oculta; «Vivo en
+Caguas» → visible. Pruebas: `tests/test_voice.py`, `tests/test_chat_next_step.py`.
+
+## Respuestas fijas de `/chat` con la voz de asesor, 21 de noviembre de 2026
+
+Se reescribieron 43 textos del motor determinista (`webchat.py`): bienvenida,
+preguntas de calificación, reserva, objeciones, mantenimiento, respaldo,
+consumo, correcciones, baja comercial y atención humana. Tono de asesor de
+Team Caguas (de tú, breve, «¡Perfecto!», «¡Súper!», una pregunta con dos
+opciones), conservando cada límite: no prometer precios, aprobación, ahorros ni
+garantías; no diagnosticar; no compartir documentos; la cita se confirma solo
+con su código. El saludo usa la hora de Puerto Rico. Las respuestas de baja,
+privacidad y `/start` no se cambiaron (son avisos legales). La pregunta final
+ofrece la doble alternativa: «¿Quieres ver los horarios disponibles o prefieres
+hablar con alguien del equipo?».
+
+Hallazgo durante la prueba (anterior a este cambio): «Pago como 200»,
+«alrededor de 200», «más o menos 180» y «cerca de 150 dólares» no se
+entendían como factura. `conversation._ABOUT` añade «como», «alrededor de»,
+«cerca de», «más o menos»; prueba parametrizada con seis frases.
+
+Demo: «Las alzas en la factura» → «¡Súper! Hay diferentes opciones… ¿en qué
+pueblo está tu hogar?» → «Caguas» → «¡Perfecto, Caguas! … ¿Más o menos cuánto
+pagas de luz al mes?» → «Pago como 200» → «¡Gracias! Anoto $200… ¿Quieres ver
+los horarios disponibles o prefieres hablar con alguien del equipo?», con la
+barra de dos opciones visible. 446 pruebas de Python y 17 de Node.
+
+Pendiente posible: el motor aún no pregunta «¿casa o apartamento?» ni por un
+estudio de consumo previo; la IA de `/ia` sí lo hace.
+
+## Lenguaje «en arroz y habichuela» en todo el sistema, 21 de noviembre de 2026
+
+Reporte: en `/ia`, «¿Cómo convierten las placas solares la luz del sol en
+electricidad?» recibió una respuesta técnica (fotones, electrones, protones,
+«fotoelectricidad»), con un error de física, y empezando con «¡Perfecto!».
+
+- `voice.PLAIN`: hablar como a una abuela o un vecino, palabras de todos los
+  días, máximo tres oraciones, sin términos técnicos salvo que la persona los
+  use, con comparaciones de la vida diaria. La guía ahora dice que «¡Perfecto!»
+  y «¡Súper!» solo reconocen una respuesta de la persona; ante una pregunta se
+  contesta directo. Ejemplo sencillo de placas (calculadora con cuadrito solar).
+- `voice.GLOSSARY`: definiciones correctas y sencillas de placas, inversor,
+  batería, medición neta, red, apagón y kW/kWh, iguales a `/soluciones` y a la
+  base verificada. Motivo: con solo la regla de sencillez, `qwen2.5:3b` definió
+  la medición neta al revés («cuentan solo lo que tú consumes, sin incluir lo
+  que la luz del sol genera»).
+- `/ia` ya no pide «lenguaje educativo»; el inversor se define sin corriente
+  continua/alterna. Las ocho respuestas técnicas verificadas de
+  `knowledge.py` (usadas en `/chat`), tres textos fijos de `webchat.py` y los
+  pasos de `/soluciones` se reescribieron sin jerga, con el mismo contenido.
+- Pruebas: la regla y el glosario llegan a las tres rutas de IA; ninguna
+  respuesta fija, texto de conocimiento ni `/soluciones` usa la jerga listada;
+  el glosario mantiene «la que le devuelve» y «créditos» en medición neta.
+
+Prueba real (`qwen2.5:3b`, conversación nueva): medición neta → «un contador
+que cuenta tanto lo que tomas de la luz de la calle [como] lo que regresas con
+las placas solares» (correcto; escribió «quanto»); batería en apagón → guarda
+lo de las placas de día para usarlo cuando se va la luz; kW/kWh → comparación
+del carro. Límite: un modelo pequeño puede equivocarse o simplificar de más
+(la de batería omitió que depende del tamaño y del diseño); el validador es de
+patrones, no revisa si una explicación es correcta.
+
+## Modo oscuro con el interruptor de Uiverse (Galahhad), 21 de noviembre de 2026
+
+El titular pidió añadir el interruptor «strong-squid-82» donde hubiera
+interruptores. No había ninguno de encendido/apagado (`crm-view-switch` es un
+selector Tabla/Tablero y `menu-toggle` el botón del menú); el componente es de
+día/noche, así que el titular eligió usarlo para el modo oscuro.
+
+- Interruptor en la barra superior de `/app` y de `/ia`; detalle de la
+  adaptación y licencia en `docs/UIVERSE_COMPONENTS.md` y
+  `frontend/assets/licenses/uiverse-components.txt`.
+- `theme.js` aplica el tema antes de pintar; guarda la elección en este
+  navegador (`reigel-theme`, con try/catch) y, sin elección, sigue la
+  preferencia del sistema y sus cambios. La elección en `/app` vale en `/ia`.
+- `dark-mode.css`: variables y superficies de ambas vistas. Auditoría en el
+  navegador de las 12 vistas de `/app` y de `/ia` (fondos claros, texto
+  oscuro y contraste WCAG calculado): se corrigieron, entre otros, el botón
+  «Volver» y las sugerencias de `/ia` (texto claro sobre blanco), la barra de
+  periodo, listas, tarjetas, etiquetas y textos secundarios.
+- Hallazgo previo, corregido en ambos modos: «+ Nuevo prospecto» tenía texto
+  blanco sobre naranja (2,86:1); ahora navy (≈6,4:1).
+- Sin corregir: el emblema «R.» de Automatización y la etiqueta de Marketing
+  quedan cerca de 4:1 sobre degradados que la auditoría no mide con exactitud;
+  vienen de antes.
+- Verificado: teclado (espacio cambia el tema, foco visible), lector de
+  pantalla («switch, Modo oscuro»), persistencia al recargar y paso a `/ia`;
+  el sitio público no carga el tema. Nota: con el panel de vista previa oculto
+  (`visibilityState: hidden`) las transiciones se congelan y las capturas
+  muestran colores intermedios; no es un fallo del tema.
+
+## `/soluciones`: crédito visible retirado, 21 de noviembre de 2026
+
+Por instrucción del titular se quitó de la sección «Cómo funciona» la línea
+«Ilustraciones: Power Solar, powersolarpr.com (consultado el 19 de noviembre
+de 2026). Textos de Team Caguas.». La fuente y la fecha siguen registradas en
+`frontend/assets/power-solar/SOURCES.md`; la prueba ahora exige que la línea no
+aparezca en la página y que la fuente siga en ese registro. Queda una línea
+parecida en la bienvenida de `/ia` («Ilustraciones: Power Solar,
+powersolarpr.com. Toca un tema…»), que no se tocó.
+Después, también por instrucción del titular, se quitó el crédito de la
+bienvenida de `/ia` (y `/`); se conserva la indicación «Toca un tema para llevar
+la pregunta al campo de mensaje.». Prueba nueva para `/soluciones`, `/ia` y `/`.
+
+## `/ia`: letras «cortadas», acciones inventadas y ahorro, 21 de noviembre de 2026
+
+Reporte: «¡Perfecto! Para evaluar el consumo y os costos… primero revisamos…
+hacemos un seguimiento… dónde puedes ahorrar».
+
+- Letras: no se pierden en el sistema. Con el modelo real, el texto enviado
+  por SSE y el guardado coinciden carácter por carácter en tres pruebas. «os
+  costos», «quanto», «custos» son errores del propio `qwen2.5:3b`.
+- «¡Perfecto!» al contestar una pregunta: ahora se quita en el servidor
+  (`ai_chat.opening_ack`) salvo que la persona esté contestando una pregunta
+  de R.E.I.G.E.L. (`answering_our_question`). El modelo no seguía la instrucción.
+- Acciones inventadas: la guía prohíbe «revisamos», «calculamos», «podemos
+  hacer»; el glosario añade «evaluación o estudio de consumo» en tercera
+  persona; el validador de `/ia` y de `/chat` rechaza esas formas, «hagamos»,
+  «te puedo ofrecer» y «una visita» (`_TEAM_ACTIONS`).
+- Ahorro: la guía pide no usar «ahorrar»; el validador rechaza «puedes/puedas
+  … ahorrar», «formas/áreas de ahorrar» y «puede(n) ahorrar».
+- Respuesta rechazada: se muestra el mensaje seguro (`SAFE_REPLACEMENT`).
+
+Medición con modelos locales ya instalados (12 respuestas, mismo filtro):
+`qwen2.5:3b` 10/12 aceptadas pero con faltas y simplificaciones;
+`llama3.2:3b` 8/12, con mejor español y salvedades, y sus 4 rechazos en la
+misma pregunta por «cómo puedes ahorrar». El modelo se elige con
+`REIGEL_CHAT_MODEL` (configuración del servidor; no se cambió).
+
+## Prueba de `llama3.2:3b` en la vista previa, 22 de noviembre de 2026
+
+A pedido del titular, la demo con IA usa `llama3.2:3b` (ya instalado; no se
+descargó nada): `scripts/preview_team_caguas.py --ia-modelo` y la
+configuración `reigel-preview-ia`, ahora en el puerto 8878 (antes compartía el
+8877 con la demo sintética y la app la movía sola). El servidor real no cambia:
+su modelo sigue siendo el de `REIGEL_CHAT_MODEL` (o `qwen2.5:3b` por defecto).
+
+- Pregunta de consumo y costos: con `llama3.2:3b` se rechazaba siempre por
+  «cómo puedes ahorrar». Se añadió a la guía un ejemplo sencillo y una entrada
+  de glosario («consumo y costos de la luz»), sin datos no verificados.
+- Filtro ampliado con lo observado: «miramos», «veamos», «queremos ver» y
+  pedir que la persona traiga, envíe o comparta facturas. Se quita también
+  «¡Excelente pregunta!» al empezar.
+- Medición final (12 respuestas, mismo filtro): 10 aceptadas; los 2 rechazos
+  fueron «primero miramos», atrapados correctamente. Flujo del asesor
+  idéntico al ejemplo. Español sin faltas.
+- Límite: una respuesta aceptada explicó la medición neta con un «contador de
+  bicicletas» confuso; otra dijo que el contador «devuelve» la electricidad.
+  El filtro es de palabras y no detecta explicaciones incorrectas.
+
+## IA encendida 24/7 en la computadora del titular (opción provisional), 22 de noviembre de 2026
+
+Diagnóstico (sin cambios en el equipo): Windows se suspende a los 15 minutos
+con corriente; Ollama arranca solo al iniciar sesión (clave Run «Ollama
+Server») pero nada lo levanta si se cierra; el servidor de R.E.I.G.E.L. solo
+arranca a mano y escucha en `127.0.0.1`; `compose.yaml` no incluye Ollama y la
+dirección de Ollama está fija en el código.
+
+Preparado (el titular registra la tarea; no se registró nada):
+`scripts/run_forever.ps1` (supervisor), `scripts/install_autostart.ps1`
+(copia de seguridad → tarea al iniciar sesión, o al encender con
+`-SinIniciarSesion` tipo S4U sin contraseña → arranque y comprobación) y
+`scripts/uninstall_autostart.ps1`. Guía: `docs/OPERACION_24_7.md`. El
+supervisor evita la suspensión con `SetThreadExecutionState` solo mientras
+corre; no cambia opciones de energía.
+
+Probado en modo demo (`-Preview`, puerto 8879, base sintética): arranque,
+reinicio tras matar el servidor (10 s: espera de 5 s más el arranque), segunda
+copia que termina sola, registro con acentos correctos, limpieza de procesos.
+Corregido durante la prueba: archivos guardados como UTF-8 con BOM (PowerShell
+5.1 los leía como ANSI), código de salida conservado y detección inmediata de
+la caída. Pruebas estáticas en `tests/test_autostart_scripts.py`.
+
+No probado: el registro real de la tarea, el arranque sin sesión ni el primer
+arranque contra la base comercial (migración de propietario y códigos de cita).
+
+## `/ia`: generación suave con el sol de Power Solar, 22 de noviembre de 2026
+
+Pedido del titular: que el texto aparezca de forma suave (no a golpes de
+frase) y que en la punta del texto haya un sol cuyo aro de rayos gire como
+engranaje mientras el rayo eléctrico queda quieto.
+
+- El servidor sigue enviando solo frases ya validadas; el navegador las revela
+  por palabras completas a ritmo constante (mínimo 60 caracteres por segundo,
+  más rápido si se acumula texto, para no quedarse atrás) y cada tramo entra con
+  un fundido de 0,5 s. Al terminar, el mensaje espera a que acaben de aparecer
+  las últimas palabras (máximo 6 s) antes de fijarse.
+- Sol en SVG propio (`ia.js`, `SUN_SVG`): 12 rayos que giran (3,2 s por
+  vuelta), aro y rayo fijos, color `#f9b000`; centro blanco en modo claro y del
+  color del fondo en oscuro. Sustituye al cursor naranja parpadeante y a los
+  tres puntos de espera. Decorativo (`aria-hidden`); la espera conserva el
+  aviso para lectores de pantalla.
+- Sin animación (movimiento reducido, pestaña oculta o entorno sin
+  `requestAnimationFrame`) el texto aparece de inmediato.
+- Corregido de paso: la nota «Respuesta incompleta.» aparecía mientras la
+  respuesta se estaba escribiendo; ahora solo en respuestas guardadas sin
+  terminar.
+- Verificado con `llama3.2:3b` en la demo (puerto 8878): sol durante la espera
+  y en la punta, crecimiento gradual (0 → 16 → 61 → 96 → 166 caracteres…), sol
+  retirado al terminar. El panel de vista previa estaba oculto, así que el
+  avance por fotogramas se simuló con un temporizador solo en esa prueba.
+
+## `/ia`: las sugerencias se envían al tocarlas, 22 de noviembre de 2026
+
+Antes: tocar una sugerencia («Cómo funciona la evaluación», las tarjetas del
+sistema) pegaba la pregunta y había que pulsar Enviar. Ahora se envía de
+inmediato. Si ya se está escribiendo una respuesta o la IA no está
+disponible, la pregunta queda en el campo como antes, para no perderla. El
+texto de ayuda dice «Toca un tema y R.E.I.G.E.L. te contesta enseguida.».
+Prueba nueva en `tests/frontend_ia.test.cjs`; verificado en la demo
+(puerto 8878) con respuesta real. Los botones de temas del sitio público que
+abren `/chat` siguen preparando la pregunta sin enviarla («Tú decides si la
+envías»); no se cambiaron.
+
+## Botones de temas del sitio: envío directo con autorización de un solo uso, 22 de noviembre de 2026
+
+Pedido del titular: los temas del sitio público también se envían al
+tocarlos. Regla de seguridad diseñada por el titular para `/ia`, donde la
+pregunta llega en la dirección (`/ia?q=…`) y cualquiera podría compartir un
+enlace así:
+
+- Al tocar un tema, `chat.js` guarda en `sessionStorage` (`ia:autosend`) la
+  pregunta y la hora, y navega en la misma pestaña.
+- `ia.js` (`shouldAutoSend`, escrita por el titular) envía solo si la IA está
+  lista, no hay otra respuesta en curso, y la autorización existe, es de la
+  misma pregunta y tiene menos de 30 s. La autorización se consume siempre,
+  aunque se rechace. Sin ella (enlace compartido, otra pestaña, más de 30 s o
+  pregunta distinta) la pregunta solo se pega en el campo.
+- Si la IA no estaba lista al cargar, la autorización no se consume y la
+  pregunta sale sola cuando la IA queda disponible («Reintentar»), dentro de
+  los 30 s y si el visitante no la cambió (`autoSendPending`).
+- La pregunta enviada desde un tema abre su propia conversación.
+- Sin IA disponible, el botón abre el chat de citas y la pregunta se envía al
+  abrirse.
+- Texto de `/soluciones`: «Elige un tema y R.E.I.G.E.L. te contesta
+  enseguida.» (antes «Tú decides si la envías»).
+
+No es autenticación: evita que un enlace externo hable en nombre del
+visitante. Pruebas: tres casos nuevos en `tests/frontend_ia.test.cjs`
+(autorizado, enlace externo, autorización vencida o distinta) y
+`test_core.py` actualizado. Demo (8878): tema desde `/soluciones` → enviado
+y respondido, autorización consumida; `/ia?q=…` directo → solo en el campo.
+
+## `/ia`: motor de sugerencias conversacionales, 22 de noviembre de 2026
+
+Propuesta del titular: 160 preguntas con rotación, contexto y memoria. Implementado
+en `reigel/suggestions.py` y `GET /api/ia/suggestions` (solo lee conversaciones del
+solicitante; ajena = 404). Selección determinista, sin tokens: 6 por ronda, una por
+categoría en la primera pasada, nunca una pregunta ya hecha, sin repetir las vistas
+hasta agotar el banco. Puntuación: relevancia del contexto (mensajes recientes pesan
+más), nivel según el avance, empujón leve a evaluar/preparar y seguir el último tema.
+La interfaz las muestra bajo la bienvenida y tras cada respuesta; al tocar se envían.
+Doble clic = un envío; un error de conexión devuelve la pregunta al campo.
+
+Catálogo: 103 preguntas en palabras sencillas. Excluidas de las 160: cifras y cálculos
+(cuántas placas, W, horas, costo total, recuperación), ahorro y rentabilidad, jerga
+(MPPT, LFP, mono/policristalino, corriente alterna/continua, demanda), pedir datos de
+factura, revisar contratos, equipos médicos (requiere una persona) y marcas. Tras
+probar con `llama3.2:3b` se retiraron seis de mantenimiento, limpieza, daños y
+tormentas: el modelo indicó limpiar con paño o agua y afirmó hechos falsos.
+
+Guía y filtro añaden: no subir al techo ni manipular equipos (`_UNSAFE_DIY`).
+Medición real: una pregunta por categoría, 15/15 aceptadas por el filtro, pero varias
+con imprecisiones; preguntas de riesgo, 10/12 aceptadas y aún con consejos inseguros.
+Límite: si alguien ESCRIBE esas preguntas, la respuesta sigue siendo generada y el
+filtro de patrones no garantiza que sea correcta. Sin sugerencias generadas por IA.
+
+## Respuestas fijas de seguridad, 22 de noviembre de 2026
+
+`reigel/safety.py` detecta, sin usar el modelo, emergencias (humo, chispas, fuego,
+olor a quemado, cable caído, descarga), revisión tras tormentas, limpieza o subir al
+techo, daños o manipulación de equipos, y mantenimiento. Responde con un texto fijo:
+no tocar, alejarse, técnico cualificado y, en emergencia, 911.
+
+Cubre las tres rutas que responden a clientes: `/ia` (antes de `stream_workspace`),
+`/chat` (`WebChat._answer`) y el modo IA de canales (`channels._respond_locked`), que
+envía sin revisión humana. Las dudas generales siguen al modelo («¿por qué el sistema
+no funciona en un apagón?»), y ninguna sugerencia del catálogo cae en una respuesta fija.
+
+Verificado: `tests/test_safety.py` (incluye que el modelo no se llama en `/ia` ni en
+canales) y demo en 8878: cinco preguntas de riesgo con respuesta fija en menos de
+60 ms y dos preguntas normales respondidas por `llama3.2:3b`. Canales: solo con envío
+simulado; no se envió ningún mensaje real.
+
+Límites: la detección es por patrones; una forma no prevista de preguntar llega al
+modelo. Los textos fijos conviene que los revise una persona responsable de seguridad
+de Power Solar. La respuesta del modelo a «¿por qué el sistema no funciona en un
+apagón?» sigue siendo generada y puede ser imprecisa.
+
+## `/soluciones`: visualización interactiva de energía, 22 de noviembre de 2026
+
+Sección `#energia-en-casa`, antes de «Un sistema con batería, paso a paso». Escena SVG
+original tomando como referencia visual una captura de otra aplicación; no se usa la
+captura, su marca ni sus medidas. Archivos: `frontend/css/energy-scene.css`,
+`frontend/js/energy-scene.js` (sin dependencias ni llamadas de red).
+
+- Seis estados: día, noche y apagón, cada uno con y sin batería. Partículas por
+  dirección entre placas, inversor, batería, red y casa; corte visible de la red;
+  ventanas según el estado; anotaciones progresivas con `IntersectionObserver`; cámara
+  sutil solo con puntero fino.
+- Sin cifras: los indicadores son estados y barras ilustrativas, con la etiqueta
+  «Simulación educativa · No son datos de tu casa». Se omitieron kW, porcentajes y horas
+  de la referencia por la política de contenido del sitio.
+- Apagón sin batería: las placas se apagan por seguridad y la casa queda sin luz. Con
+  respaldo: solo los equipos conectados, según tamaño y diseño.
+- Sin JavaScript se ve el estado de día y los controles quedan ocultos.
+
+Verificado: `tests/test_energy_scene.py`; seis estados en navegador; 1280 y 375 px sin
+desbordes; controles de 44 px; sin texto menor de 13 px en el panel; recursos 200; rutas
+existentes intactas. Límites: el panel de vista previa estaba oculto, así que la fluidez
+real no se midió (solo 7 cuadros simulados, 0,2 ms de promedio); `prefers-reduced-motion`
+quedó implementado y revisado en código, pero no se emuló en navegador. Sin publicar.
+
+## `/soluciones`: rediseño de la consola de energía, 22 de noviembre de 2026
+
+`#energia-en-casa` pasa a ser una maqueta iluminada con instrumentos integrados
+(`energy-scene.css` y `.js`, `?v=7`). Una evaluación de diseño pidió cambios y se
+aplicaron: ruta red → panel → casa de noche sin batería, apagón con batería claramente
+de día, carga y descarga visibles, aviso de que el respaldo dura mientras haya carga,
+letra mayor y botón flotante que solo cede si taparía los controles.
+
+Pendiente: segunda evaluación de diseño (no se ejecutó), lector de pantalla, teléfono
+físico, `forced-colors` y contraste sobre el cielo de apagón de día. El apagón de noche
+solo se explica en texto. Sin commit ni publicación.
+
+## R.E.I.G.E.L. Identity (2026-11-22)
+
+- Clientes (`/cuenta`) y Team (`/app`, `/app/acceso`) usan tablas, cookies y sesiones separadas. Migración aditiva `reigel_identity_v1`; se aplica al arrancar y no se ejecutó sobre la base comercial.
+- Comprobado con pruebas locales y un autenticador por software. Sin probar: passkeys en dispositivos reales y OAuth con proveedores reales.
+- Bloqueado hasta configurar: credenciales OAuth y un canal autorizado de correo/SMS. Sin canal, correo y teléfono no se pueden verificar ni recuperar; el acceso por usuario sí funciona.
+- Transición del Team: la contraseña sigue activa hasta que la persona registra una passkey; el propietario puede exigirla a todos desde `/app/acceso`.

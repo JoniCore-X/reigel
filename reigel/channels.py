@@ -26,7 +26,7 @@ import httpx
 from fastapi import BackgroundTasks, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
-from . import assistant
+from . import assistant, safety
 
 MAX_BODY = 256 * 1024
 MAX_TEXT = 4000
@@ -287,7 +287,9 @@ async def _respond_locked(store, conversation_id: str, event_id: str, incoming_t
         return
     status = "human_required"
     try:
-        reply = await assistant.draft(incoming_text, store.settings(), history=history[:-1])
+        # This route sends without human review: safety topics never reach the model.
+        reply = safety.reply_for(incoming_text, safety.HANDOFF_CHAT) or await assistant.draft(
+            incoming_text, store.settings(), history=history[:-1])
         # Re-check handover/opt-out immediately before dispatch.
         with store.connect() as db:
             current = db.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()

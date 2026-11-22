@@ -13,15 +13,15 @@ import unicodedata
 from datetime import UTC, datetime, timedelta
 
 from .conversation import IntentDecision, classify_message
-from .core import DomainError, stamp, text, uid, zone
-from . import privacy
+from .core import DomainError, format_reference, new_reference, stamp, text, uid, zone
+from . import privacy, safety, voice
 
 
 WELCOME = (
-    "Soy R.E.I.G.E.L., asistente virtual de Power Solar. Puedo orientarte, atender tus dudas "
-    "y ayudarte a reservar una evaluación en un horario disponible. También puedes pedir atención humana. "
-    "¿Qué te interesa más: reducir tu factura, tener respaldo durante apagones o ambas cosas? "
-    "No compartas documentos, cuentas ni datos bancarios por el chat."
+    "¡Hola! Soy R.E.I.G.E.L., el asistente virtual de Power Solar · Team Caguas. Te ayudo con tus dudas "
+    "y, cuando quieras, con una evaluación o con alguien del equipo. "
+    "Para empezar, ¿qué buscas solucionar: las alzas en la factura, las interrupciones del servicio o ambas? "
+    "Por seguridad, no compartas documentos, cuentas ni datos bancarios por aquí."
 )
 MUNICIPALITIES = (
     "Adjuntas", "Aguada", "Aguadilla", "Aguas Buenas", "Aibonito", "Añasco", "Arecibo", "Arroyo", "Barceloneta",
@@ -97,13 +97,28 @@ class WebChat:
             "reply": reply, "actions": actions or [], "sources": json.loads(session["sources_json"]),
             "profile": {key: profile[key] for key in ("priority", "municipality", "monthly_bill") if key in profile},
             "privacy_requests": privacy.public_requests(db, session["conversation_id"]),
+            "next_step": self.next_step_ready(profile, conversation, session),
         }
         if session["appointment_id"]:
-            appointment = db.execute("""SELECT a.id,a.start_at,a.end_at,a.status,u.name advisor_name
+            appointment = db.execute("""SELECT a.id,a.reference,a.start_at,a.end_at,a.status,u.name advisor_name
                 FROM appointments a JOIN users u ON u.id=a.advisor_id WHERE a.id=?""", (session["appointment_id"],)).fetchone()
             if appointment:
-                result["appointment"] = dict(appointment)
+                result["appointment"] = {**dict(appointment), "reference": format_reference(appointment["reference"])}
         return result
+
+    @staticmethod
+    def next_step_ready(profile, conversation, session):
+        """Offer «Coordinar evaluación» / «Hablar con el equipo» once the visitor is prospected.
+
+        Prospected: we know what they want to solve plus one more fact (town, bill
+        or loads to back up). The visitor asking for an appointment or a person,
+        an existing appointment or a human-handled conversation also qualify.
+        """
+        qualified = bool(profile.get("priority")) and any(
+            profile.get(key) for key in ("municipality", "bill_amount", "monthly_bill", "backup_loads")
+        ) or profile.get("bill_period") == "declined" and bool(profile.get("priority"))
+        return bool(qualified or profile.get("asked_next_step") or session["appointment_id"]
+                    or conversation["mode"] == "human" or session["opted_out"])
 
     @staticmethod
     def _append(db, conversation_id, direction, value):
@@ -224,6 +239,9 @@ class WebChat:
                 profile["bill_amount"] = profile["monthly_bill"]
                 profile["bill_period"] = "monthly"
             decision = classify_message(value, context=profile)
+            if decision.intent in {"booking", "human", "appointment_change"}:
+                # The visitor asked for the next step: offer it even before qualifying.
+                profile["asked_next_step"] = True
             reply, actions, sources = "", [], []
             command = re.sub(r"[.!¡¿?]", "", value).strip()
             if value == "/start":
@@ -255,7 +273,7 @@ class WebChat:
                 actions = ["human"]
             elif decision.intent == "human":
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
-                reply = "Tu solicitud de atención humana quedó registrada en esta conversación. El equipo podrá responder aquí cuando esté disponible; no puedo prometer un tiempo de respuesta."
+                reply = "¡Listo! Tu solicitud de atención humana quedó registrada. Alguien del equipo te responderá por este mismo chat cuando esté disponible; no puedo prometer un tiempo de respuesta."
             elif conversation["mode"] == "human":
                 # The advisor owns the floor; store inbound without an automated sales reply.
                 reply = ""
@@ -370,18 +388,18 @@ class WebChat:
     @staticmethod
     def _next_question(profile):
         if "priority" not in profile:
-            field, question = "priority", "¿Tu prioridad es la factura, el respaldo durante apagones o ambas cosas?"
+            field, question = "priority", "¿Qué buscas solucionar: las alzas en la factura, las interrupciones del servicio o ambas?"
         elif "municipality" not in profile:
-            field, question = "municipality", "¿En qué municipio está tu propiedad?"
+            field, question = "municipality", "Te pregunto, ¿en qué pueblo está tu hogar?"
         elif profile.get("bill_period") == "unknown":
             field, question = "bill_period", "¿Ese importe corresponde a tu factura mensual?"
         elif "monthly_bill" not in profile:
             if profile.get("bill_period") in {"annual", "declined"}:
-                field, question = "booking", "Podemos continuar sin ese dato y revisar tu caso en una evaluación. ¿Deseas consultar los horarios disponibles?"
+                field, question = "booking", "¡Sin problema! Eso lo vemos en la evaluación. ¿Quieres ver los horarios disponibles o prefieres hablar con alguien del equipo?"
             else:
-                field, question = "monthly_bill", "¿Cuánto pagas aproximadamente al mes de luz? Puedes omitirlo si prefieres."
+                field, question = "monthly_bill", "¿Más o menos cuánto pagas de luz al mes? Si prefieres no decirlo, está bien."
         else:
-            field, question = "booking", "Podemos revisar tu caso en una evaluación. ¿Deseas consultar los horarios disponibles?"
+            field, question = "booking", "¡Excelente! Con eso ya podemos revisar tu caso en una evaluación. ¿Quieres ver los horarios disponibles o prefieres hablar con alguien del equipo?"
         profile["last_question"] = field
         return question
 
@@ -397,62 +415,65 @@ class WebChat:
     ):
         decision = decision or classify_message(value, context=profile)
         actions, sources = ["book", "human"], []
+        fixed = safety.reply_for(value, safety.HANDOFF_CHAT)
+        if fixed:
+            return fixed, ["human"], sources
         if decision.intent == "safety":
-            return "Puedo ayudarte con orientación solar y la agenda. No compartas contraseñas, tarjetas, cuentas ni documentos aquí. Para una evaluación, utiliza el formulario seguro de reserva.", actions, sources
+            return "Por tu seguridad, no compartas contraseñas, tarjetas, cuentas ni documentos por aquí. Te ayudo con tus dudas de energía solar y con la agenda; para una evaluación usa el formulario seguro de reserva.", actions, sources
         if decision.intent == "appointment_change":
-            return "El cambio o la cancelación necesita revisión del equipo. Pide atención humana en este chat para gestionarlo; tu cita sigue igual hasta que se registre el cambio.", ["human"], sources
+            return "¡Claro! Un cambio o una cancelación lo revisa el equipo. Pide atención humana aquí mismo y lo gestionan; mientras tanto, tu cita sigue igual.", ["human"], sources
         if decision.intent == "booking":
             available = db.execute("SELECT 1 FROM users WHERE active=1 AND public_booking=1 LIMIT 1").fetchone()
             if available:
-                return "Consulta un día y un horario en la agenda de abajo. Después completa tus datos y autoriza el contacto. La cita sólo estará confirmada cuando aparezca su referencia; esta conversación por sí sola no reserva un espacio.", ["book"], sources
-            return "El equipo todavía no ha publicado horarios de atención. Puedes solicitar atención humana aquí o dejar tu solicitud de contacto en la página. Aún no hay una cita reservada.", ["human"], sources
+                return "¡Perfecto! Abajo puedes escoger el día y la hora. Luego completas tus datos y autorizas el contacto. La cita queda confirmada cuando te aparezca su código; esta conversación por sí sola no separa el espacio.", ["book"], sources
+            return "Ahora mismo el equipo no tiene horarios publicados. Puedes pedir atención humana aquí o dejar tus datos en la página de contacto. Todavía no hay una cita reservada.", ["human"], sources
         if decision.intent == "technical_question":
             answer = self.knowledge.answer_technical(value)
             if answer and answer["status"] == "verified":
                 return answer["text"], actions, answer["sources"]
             if answer:
                 return answer["text"], ["human"], answer["sources"]
-            return "No encontré una respuesta técnica clara en las fuentes verificadas disponibles. ¿Qué equipo o concepto específico quieres consultar?", ["human"], sources
+            return "No encontré una respuesta clara en las fuentes verificadas. ¿Qué equipo o concepto quieres consultar?", ["human"], sources
         if decision.intent == "contradiction":
             profile["last_question"] = "monthly_bill"
-            return "Mencionaste más de un importe y no quiero asumir cuál corresponde a tu factura. ¿Cuánto pagas aproximadamente al mes? Puedes omitir el dato.", ["book", "human"], sources
+            return "Veo más de una cantidad y no quiero asumir cuál es tu factura. ¿Más o menos cuánto pagas al mes? Si prefieres, lo omitimos.", ["book", "human"], sources
         if decision.intent == "correction":
             if updated_facts:
-                reply = "Gracias por la corrección. Actualicé ese dato para esta conversación y no asumiré resultados de ahorro."
+                reply = "¡Gracias por la corrección! Ya lo actualicé y no asumiré resultados de ahorro."
             else:
-                return "Quiero actualizarlo correctamente. ¿Qué dato o importe debo corregir?", actions, sources
+                return "Quiero anotarlo bien. ¿Qué dato o cantidad debo corregir?", actions, sources
         elif decision.intent == "bill_confirmation":
             amount = profile.get("monthly_bill")
             if amount is not None:
-                reply = f"Perfecto, tomaré ${amount:g} como tu factura mensual para esta conversación."
+                reply = f"¡Perfecto! Tomo ${amount:g} como tu factura mensual."
             else:
-                reply = "Gracias por confirmarlo."
+                reply = "¡Gracias por confirmarlo!"
         elif decision.intent == "bill_answer":
             amount = profile.get("monthly_bill")
             reply = (
-                f"Gracias, anoto ${amount:g} como importe mensual para esta conversación."
+                f"¡Gracias! Anoto ${amount:g} como tu pago mensual de luz."
                 if amount is not None
-                else "No pude registrar ese importe con certeza. Puedes escribirlo de nuevo o continuar sin ese dato."
+                else "No pude anotar esa cantidad con seguridad. ¿Me la escribes de nuevo o seguimos sin ese dato?"
             )
         elif decision.intent == "bill_uncertain":
-            reply = "No pasa nada; podemos continuar sin ese dato. No hace falta que compartas la factura ni documentos por el chat."
+            reply = "¡No pasa nada! Seguimos sin ese dato. No hace falta que compartas la factura ni documentos por aquí."
         elif decision.intent == "decline":
-            return "Entendido. No insistiré ni iniciaré una reserva. Si más adelante quieres orientación, puedes volver a escribir.", [], sources
+            return "¡Entendido! No insistiré ni haré ninguna reserva. Cuando quieras orientación, aquí estoy.", [], sources
         elif decision.intent == "budget_objection":
-            reply = "Es razonable cuidar tu presupuesto. Una comparación útil mira el costo total, las condiciones y lo que el sistema cubriría en tu hogar. Podemos evaluar tu caso antes de hablar de una propuesta; no necesitas decidir hoy."
+            reply = "Te entiendo, es normal cuidar el presupuesto. Para comparar bien hay que mirar el costo total, las condiciones y lo que el sistema cubriría en tu hogar. Eso se revisa en una evaluación antes de hablar de una propuesta, y no tienes que decidir hoy."
         elif decision.intent == "trust_objection":
-            reply = "Pide una propuesta por escrito y revisa equipos, alcance, garantías y condiciones antes de comprometerte. Tus preguntas merecen respuestas concretas. Podemos comenzar por la duda que más te preocupa y, si hace falta, pasarla a una persona del equipo."
+            reply = "Te entiendo. Pide siempre la propuesta por escrito y revisa equipos, alcance, garantías y condiciones antes de comprometerte. Empecemos por lo que más te preocupa y, si hace falta, se lo paso a una persona del equipo."
         elif decision.intent == "defer":
-            return "Tómate el tiempo que necesites. Si te ayuda a comparar opciones, podemos aclarar una duda concreta o consultar una evaluación cuando tú lo decidas. No hay una reserva ni una compra por conversar aquí.", actions, sources
+            return "¡Tómate tu tiempo! Si te ayuda a comparar, aclaramos una duda puntual o vemos una evaluación cuando tú decidas. Conversar aquí no es una reserva ni una compra.", actions, sources
         elif decision.intent in {"commercial_terms", "financing", "guaranteed_savings"}:
-            reply = "No tengo una propuesta vigente y validada para tu hogar, así que no puedo prometer precios, aprobación, ahorros, incentivos ni condiciones de garantía. Lo útil es revisar tu consumo y tus prioridades para pedir una propuesta por escrito y comparar sus condiciones."
+            reply = "Todavía no tengo una propuesta validada para tu hogar, así que no puedo prometer precios, aprobación, ahorros, incentivos ni condiciones de garantía. Lo que sí ayuda es revisar tu consumo y lo que buscas resolver, y pedir la propuesta por escrito para comparar."
         elif decision.intent == "maintenance":
             technical = self.knowledge.answer_technical(value)
             if technical:
                 return technical["text"], ["human"], technical["sources"]
-            return "Para mantenimiento o una avería, el equipo necesita revisar tu caso. Describe el problema sin compartir números de cuenta ni documentos. Este chat no diagnostica fallas eléctricas ni confirma una visita técnica.", ["human"], sources
+            return "Para mantenimiento o una avería, alguien del equipo tiene que revisar tu caso. Cuéntame qué pasa, sin compartir números de cuenta ni documentos. Por aquí no puedo diagnosticar fallas eléctricas ni confirmar una visita técnica.", ["human"], sources
         elif decision.intent == "existing_system":
-            return "Para un sistema existente o una avería, el equipo necesita revisar tu caso. Pide atención humana y describe el problema sin compartir números de cuenta ni documentos. Este chat no diagnostica fallas eléctricas ni confirma una visita técnica.", ["human"], sources
+            return "Para un sistema existente o una avería, alguien del equipo tiene que revisar tu caso. Pide atención humana y cuéntales qué pasa, sin compartir números de cuenta ni documentos. Por aquí no puedo diagnosticar fallas eléctricas ni confirmar una visita técnica.", ["human"], sources
         elif decision.intent == "backup":
             technical = self.knowledge.answer_technical(value)
             if technical:
@@ -460,13 +481,13 @@ class WebChat:
                     return technical["text"], actions, technical["sources"]
                 return technical["text"], ["human"], technical["sources"]
             if profile.get("backup_loads"):
-                return "Gracias por indicar esas cargas. La capacidad y la autonomía dependen del diseño y requieren evaluación técnica; este chat no puede calcularlas con certeza. Si quieres, podemos pasar la consulta al equipo.", ["book", "human"], sources
+                return "¡Gracias por decirme esos equipos! Cuánto respaldo tendrías depende del diseño y se calcula en la evaluación técnica; por aquí no puedo calcularlo con certeza. ¿Quieres que se lo pase al equipo?", ["book", "human"], sources
             answer = self.knowledge.answer(value)
             if answer and isinstance(answer.get("text"), str):
                 reply, sources = answer["text"], answer.get("sources", [])
-                reply += " ¿Qué equipos te importa mantener funcionando?"
+                reply += " ¿Qué equipos quieres mantener prendidos cuando se va la luz?"
             else:
-                reply = "Si buscas respaldo durante apagones, hay que evaluar batería, diseño y las cargas que quieres mantener encendidas. Los paneles conectados a la red, por sí solos, no garantizan respaldo. ¿Qué equipos te importa mantener funcionando?"
+                reply = "¡Perfecto! Para tener respaldo en los apagones se evalúan la batería, el diseño y los equipos que quieres mantener prendidos. Las placas conectadas a la red, por sí solas, no garantizan respaldo. ¿Qué equipos quieres mantener prendidos cuando se va la luz?"
             profile["last_question"] = "loads"
             return reply, actions, sources
         elif decision.intent == "consumption":
@@ -475,7 +496,7 @@ class WebChat:
                 if technical["status"] == "verified":
                     return technical["text"], actions, technical["sources"]
                 return technical["text"], ["human"], technical["sources"]
-            reply = "No hace falta que conozcas los kWh ahora. Una factura reciente puede ayudar al equipo a evaluar el consumo, pero no la compartas por este chat. Si sabes el importe mensual aproximado, puedes indicarlo; también puedes omitirlo."
+            reply = "No hace falta que sepas cuánta luz gastas exactamente. Una factura reciente ayuda al equipo a ver tu consumo, pero no la compartas por aquí. Si sabes más o menos cuánto pagas al mes, me lo dices; si no, lo omitimos."
             profile["last_question"] = "monthly_bill"
             return reply, actions, sources
         elif decision.intent == "company_information":
@@ -483,28 +504,29 @@ class WebChat:
             if answer and isinstance(answer.get("text"), str):
                 reply, sources = answer["text"], answer.get("sources", [])
             else:
-                return "No tengo información vigente verificada para responder esa pregunta específica sobre Power Solar. Puedo pedir al equipo que la confirme; prefiero no inventar direcciones, ofertas ni condiciones.", ["human"], sources
+                return "No tengo información vigente verificada para contestar eso sobre Power Solar. Se lo puedo pasar al equipo para que lo confirme; prefiero no inventar direcciones, ofertas ni condiciones.", ["human"], sources
         elif decision.intent == "greeting":
-            reply = "Hola. Soy R.E.I.G.E.L., asistente virtual de Power Solar. ¿Qué te interesa revisar hoy: tu factura, respaldo durante apagones o una pregunta sobre el proceso?"
+            reply = (f"¡Hola, {voice.greeting()}! Soy R.E.I.G.E.L., el asistente virtual de Power Solar. "
+                     "¿Qué buscas solucionar: las alzas en la factura o las interrupciones del servicio?")
             return reply, actions, sources
         elif decision.intent == "contextual_follow_up":
             if "municipality" in (updated_facts or []):
                 reply = (
-                    f"Gracias, tomo {profile['municipality']} como referencia para esta conversación. "
-                    "La viabilidad y la propuesta se determinan durante la evaluación."
+                    f"¡Perfecto, {profile['municipality']}! Lo tomo en cuenta. "
+                    "En la evaluación se ve qué opción le conviene a tu casa."
                 )
                 return reply + " " + self._next_question(profile), actions, sources
             if profile.get("last_question") == "loads":
                 self._qualify(profile, value, decision)
                 if profile.get("backup_loads"):
-                    return "Gracias, tomo esas cargas como referencia. La autonomía y la capacidad dependen del diseño y requieren evaluación técnica.", actions, sources
-                return "No entendí con certeza qué equipos quieres mantener encendidos. ¿Puedes mencionarlos o prefieres pasar la consulta al equipo?", actions, sources
+                    return "¡Gracias! Tomo esos equipos en cuenta. Cuánto respaldo tendrías depende del diseño y se determina en la evaluación técnica.", actions, sources
+                return "No entendí bien qué equipos quieres mantener prendidos. ¿Me los mencionas o prefieres que se lo pase al equipo?", actions, sources
             if profile.get("last_question") == "bill_period":
-                return "No quiero asumir la frecuencia de ese importe. ¿Corresponde a un mes, a un año o prefieres omitir ese dato?", actions, sources
-            return "No entendí con certeza tu respuesta. ¿Puedes aclararla con otras palabras o prefieres continuar sin ese dato?", actions, sources
+                return "No quiero asumir de qué período es esa cantidad. ¿Es de un mes, de un año o prefieres omitirla?", actions, sources
+            return "No te entendí bien. ¿Me lo dices de otra forma o seguimos sin ese dato?", actions, sources
         elif profile.get("bill_period") == "unknown":
             amount = profile.get("bill_amount")
-            return f"Anoto ${amount:g} como importe indicado, sin asumir la frecuencia. ¿Corresponde a tu factura mensual?" if amount is not None else "¿Ese importe corresponde a tu factura mensual?", actions, sources
+            return f"Anoto ${amount:g}, sin asumir el período. ¿Corresponde a tu factura mensual?" if amount is not None else "¿Ese importe corresponde a tu factura mensual?", actions, sources
         else:
             if ai_reply:
                 reply = ai_reply if "?" in ai_reply else ai_reply + " " + self._next_question(profile)
@@ -516,11 +538,11 @@ class WebChat:
             if answer and isinstance(answer.get("text"), str):
                 reply, sources = answer["text"], answer.get("sources", [])
             elif "municipality" in profile and re.search(r"\b" + re.escape(normalized(profile["municipality"])) + r"\b", value):
-                reply = f"Gracias. Tomo {profile['municipality']} como referencia para esta conversación. La viabilidad y la propuesta se determinan durante la evaluación."
+                reply = f"¡Perfecto, {profile['municipality']}! Lo tomo en cuenta. En la evaluación se ve qué opción le conviene a tu casa."
             elif "monthly_bill" in profile or "priority" in profile:
-                reply = "Con ese contexto podemos enfocar mejor la evaluación. El siguiente paso es revisar datos de tu hogar antes de prometer resultados."
+                reply = "¡Súper! Hay diferentes opciones para ayudarte con eso; primero revisamos los datos de tu hogar, sin prometer resultados."
             else:
-                reply = "No entendí con certeza qué necesitas. Puedo orientarte sobre factura eléctrica, respaldo, sistemas solares o coordinar una evaluación; también puedo pedir ayuda al equipo."
+                reply = "No te entendí bien. Te puedo orientar sobre la factura de luz, el respaldo en apagones o los sistemas solares, coordinar una evaluación o pasarte con alguien del equipo. ¿Qué prefieres?"
                 return reply, actions, sources
         return reply + " " + self._next_question(profile), actions, sources
 
@@ -531,7 +553,7 @@ class WebChat:
             current = db.execute("SELECT mode FROM conversations WHERE id=?", (session["conversation_id"],)).fetchone()
             reply = ""
             if current["mode"] != "human":
-                reply = "Tu solicitud de atención humana quedó registrada. El equipo podrá responder en este chat cuando esté disponible; no puedo prometer un tiempo de respuesta."
+                reply = "¡Listo! Tu solicitud de atención humana quedó registrada. Alguien del equipo te responderá por este mismo chat cuando esté disponible; no puedo prometer un tiempo de respuesta."
                 db.execute("UPDATE conversations SET mode='human',updated_at=? WHERE id=?", (stamp(), session["conversation_id"]))
                 self._append(db, session["conversation_id"], "outbound", reply)
             return self._view(db, session, reply)
@@ -581,15 +603,36 @@ class WebChat:
                 raise DomainError("Ya existe una cita para este contacto en ese horario.", 409)
             lead_id = self.store._insert_lead(db, lead_data, advisor_id)
             appointment_id = uid()
-            db.execute("INSERT INTO appointments VALUES(?,?,?,?,?,?,?,?)", (appointment_id, lead_id, advisor_id, begin, end, "confirmed", "web_chat", stamp()))
+            reference = new_reference(db)
+            db.execute("""INSERT INTO appointments(id,lead_id,advisor_id,start_at,end_at,status,source,created_at,reference)
+                VALUES(?,?,?,?,?,?,?,?,?)""", (appointment_id, lead_id, advisor_id, begin, end, "confirmed", "web_chat", stamp(), reference))
             db.execute("UPDATE leads SET stage='cita',updated_at=? WHERE id=?", (stamp(), lead_id))
             db.execute("UPDATE conversations SET lead_id=?,advisor_id=?,contact_name=?,updated_at=? WHERE id=?", (lead_id, advisor_id, lead_data["name"], stamp(), session["conversation_id"]))
             db.execute("UPDATE web_chat_sessions SET appointment_id=? WHERE token_hash=?", (appointment_id, session["token_hash"]))
             self.store.audit(db, None, "appointment.book.web_chat", appointment_id)
             local = selected.astimezone(zone(advisor["timezone"]))
-            reply = f"Tu cita quedó confirmada en la agenda de Power Solar para el {local.strftime('%d/%m/%Y a las %H:%M')} ({advisor['timezone']}), con {advisor['name']}. Referencia: {appointment_id}. Guarda esta confirmación."
+            reply = (f"Tu cita quedó confirmada en la agenda de Power Solar para el {spoken_datetime(local)} "
+                     f"({zone_label(advisor['timezone'])}), con {advisor['name']}. "
+                     f"Código de tu cita: {format_reference(reference)}. Guárdalo; si llamas o escribes al equipo, dales este código.")
             self._append(db, session["conversation_id"], "outbound", reply)
             session = self._session(db, token)
             result = self._view(db, session, reply, ["human"])
             self._save_request(db, session, request_id, "book", content_hash, result)
             return result
+
+
+_WEEKDAYS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+_MONTHS = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+           "septiembre", "octubre", "noviembre", "diciembre")
+
+
+def spoken_datetime(local):
+    """'domingo 22 de noviembre a las 10:00 a. m.' — easier to read than 22/11/2026 10:00."""
+    hour = local.hour % 12 or 12
+    suffix = "a. m." if local.hour < 12 else "p. m."
+    return (f"{_WEEKDAYS[local.weekday()]} {local.day} de {_MONTHS[local.month - 1]} "
+            f"a las {hour}:{local.minute:02d} {suffix}")
+
+
+def zone_label(name):
+    return "hora de Puerto Rico" if name == "America/Puerto_Rico" else f"hora de {name}"

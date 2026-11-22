@@ -81,7 +81,7 @@ const messages = (id, reply) => [
   { id: `${id}-a`, role: 'assistant', content: reply, status: 'complete' },
 ];
 
-function harness(conversations) {
+function harness(conversations, options = {}) {
   const ids = ['ia-thread', 'ia-empty', 'ia-scroll', 'ia-form', 'ia-text', 'ia-send', 'ia-send-label', 'ia-notice',
     'ia-counter', 'ia-history', 'ia-menu', 'ia-collapse', 'ia-scrim', 'ia-sidebar', 'ia-history-empty', 'ia-owner',
     'ia-retention', 'ia-back', 'ia-actions-menu', 'ia-plus', 'ia-actions-copy', 'ia-actions-stop', 'ia-new', 'ia-search'];
@@ -109,7 +109,8 @@ function harness(conversations) {
     document, fetch, AbortController, TextDecoder, TextEncoder, URL, URLSearchParams, Intl,
     setTimeout, clearTimeout,
     matchMedia: () => ({ matches: false, addEventListener() {} }),
-    location: { origin: 'http://localhost', pathname: '/ia', search: '', href: 'http://localhost/ia' },
+    location: { origin: 'http://localhost', pathname: '/ia', search: options.search || '', href: `http://localhost/ia${options.search || ''}` },
+    ...(options.storage ? { sessionStorage: options.storage } : {}),
     history: { replaceState() {} },
     navigator: { clipboard: { writeText: async text => { copied.push(text); } } },
   });
@@ -232,4 +233,130 @@ test('switching conversation during a reply never moves that reply into the new 
   setup.elements['ia-actions-menu'].dispatch('click', { target: { closest: () => ({ dataset: { iaMenu: 'copy' }, classList: { contains: () => false }, disabled: false }) } });
   await settle();
   assert.deepEqual(setup.copied, ['Respuesta B']);
+});
+
+test('choosing a suggested question sends it at once, without pasting it first', async () => {
+  const setup = harness([conversation('a', 'Primera')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Primera'), messages: [] }));
+  const sent = [];
+  const encoder = new TextEncoder();
+  setup.routes.set('POST /api/ia/conversations/a/messages', async options => {
+    sent.push(JSON.parse(options.body).text);
+    const chunks = [
+      `event: meta\ndata: ${JSON.stringify({ assistant_id: 'a-r', conversation: conversation('a', 'Primera') })}\n\n`,
+      `event: delta\ndata: ${JSON.stringify({ text: 'Una persona del equipo revisa la factura.' })}\n\n`,
+      `event: done\ndata: ${JSON.stringify({ assistant: { id: 'a-r', role: 'assistant', content: 'Una persona del equipo revisa la factura.', status: 'complete' }, conversation: conversation('a', 'Primera') })}\n\n`,
+    ];
+    return { ok: true, status: 200, body: { getReader: () => ({
+      read: () => Promise.resolve(chunks.length ? { value: encoder.encode(chunks.shift()), done: false } : { value: undefined, done: true }),
+    }) } };
+  });
+  setup.run();
+  await settle(); await settle();
+
+  const question = '¿Cómo se evalúa un hogar antes de proponer un sistema solar?';
+  setup.elements['ia-thread'].dispatch('click', { target: { closest: selector => (selector === '[data-ia-prompt]' ? { dataset: { iaPrompt: question } } : null) } });
+  await new Promise(resolve => setTimeout(resolve, 20));
+
+  assert.deepEqual(sent, [question]);
+  assert.equal(setup.elements['ia-text'].value, '', 'the field is left empty after sending');
+  assert.match(setup.threadText(), /revisa la factura/);
+});
+
+function memoryStorage(entries = {}) {
+  const data = new Map(Object.entries(entries));
+  return {
+    data,
+    getItem: key => (data.has(key) ? data.get(key) : null),
+    setItem: (key, value) => data.set(key, String(value)),
+    removeItem: key => data.delete(key),
+  };
+}
+
+function autoSendSetup(storage) {
+  const question = 'Quiero entender cómo evaluar el consumo y los costos de energía de mi hogar.';
+  const setup = harness([], { search: `?q=${encodeURIComponent(question)}`, storage });
+  const sent = [];
+  const encoder = new TextEncoder();
+  setup.routes.set('POST /api/ia/conversations', async () => json({ conversation: conversation('n', 'Nueva') }));
+  setup.routes.set('POST /api/ia/conversations/n/messages', async options => {
+    sent.push(JSON.parse(options.body).text);
+    const chunks = [`event: done\ndata: ${JSON.stringify({ assistant: { id: 'n-r', role: 'assistant', content: 'Respuesta.', status: 'complete' }, conversation: conversation('n', 'Nueva') })}\n\n`];
+    return { ok: true, status: 200, body: { getReader: () => ({
+      read: () => Promise.resolve(chunks.length ? { value: encoder.encode(chunks.shift()), done: false } : { value: undefined, done: true }),
+    }) } };
+  });
+  return { setup, sent, question };
+}
+
+test('a topic clicked on the site (one-time authorization) is sent at once in /ia', async () => {
+  const storage = memoryStorage();
+  const { setup, sent, question } = autoSendSetup(storage);
+  storage.setItem('ia:autosend', JSON.stringify({ pregunta: question, timestamp: Date.now() }));
+  setup.run();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.deepEqual(sent, [question]);
+  assert.equal(storage.getItem('ia:autosend'), null, 'the authorization is single use');
+});
+
+test('a shared link /ia?q=… without authorization only fills the field', async () => {
+  const { setup, sent, question } = autoSendSetup(memoryStorage());
+  setup.run();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.deepEqual(sent, []);
+  assert.equal(setup.elements['ia-text'].value, question);
+});
+
+test('an expired or mismatched authorization does not send', async () => {
+  for (const saved of [
+    { pregunta: 'Quiero entender cómo evaluar el consumo y los costos de energía de mi hogar.', timestamp: Date.now() - 31000 },
+    { pregunta: 'Otra pregunta distinta', timestamp: Date.now() },
+  ]) {
+    const storage = memoryStorage({ 'ia:autosend': JSON.stringify(saved) });
+    const { setup, sent } = autoSendSetup(storage);
+    setup.run();
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.deepEqual(sent, []);
+    assert.equal(storage.getItem('ia:autosend'), null, 'a rejected authorization is still consumed');
+  }
+});
+
+
+test('a fast double click on a suggestion sends it only once', async () => {
+  const setup = harness([]);
+  let created = 0;
+  const sent = [];
+  const encoder = new TextEncoder();
+  setup.routes.set('POST /api/ia/conversations', async () => {
+    created += 1;
+    await new Promise(resolve => setTimeout(resolve, 10));
+    return json({ conversation: conversation('n', 'Nueva') });
+  });
+  setup.routes.set('POST /api/ia/conversations/n/messages', async options => {
+    sent.push(JSON.parse(options.body).text);
+    const chunks = [`event: done\ndata: ${JSON.stringify({ assistant: { id: 'n-r', role: 'assistant', content: 'Ok.', status: 'complete' }, conversation: conversation('n', 'Nueva') })}\n\n`];
+    return { ok: true, status: 200, body: { getReader: () => ({
+      read: () => Promise.resolve(chunks.length ? { value: encoder.encode(chunks.shift()), done: false } : { value: undefined, done: true }),
+    }) } };
+  });
+  setup.run();
+  await settle(); await settle();
+  const click = { target: { closest: selector => (selector === '[data-ia-prompt]' ? { dataset: { iaPrompt: '¿Qué es la medición neta?' } } : null) } };
+  setup.elements['ia-thread'].dispatch('click', click);
+  setup.elements['ia-thread'].dispatch('click', click);
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(created, 1);
+  assert.deepEqual(sent, ['¿Qué es la medición neta?']);
+});
+
+test('a connection error keeps the chosen question in the field', async () => {
+  const setup = harness([conversation('a', 'Primera')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Primera'), messages: [] }));
+  setup.routes.set('POST /api/ia/conversations/a/messages', async () => { throw new Error('Sin conexión'); });
+  setup.run();
+  await settle(); await settle();
+  setup.elements['ia-thread'].dispatch('click', { target: { closest: selector => (selector === '[data-ia-prompt]' ? { dataset: { iaPrompt: '¿Qué es la medición neta?' } } : null) } });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(setup.elements['ia-text'].value, '¿Qué es la medición neta?');
+  assert.match(setup.elements['ia-notice'].textContent, /conexión|Sin/i);
 });

@@ -66,6 +66,11 @@ def main():
         action="store_true",
         help="Activa la IA con Ollama local (127.0.0.1:11434) solo en este proceso; no descarga modelos ni lee .env.",
     )
+    parser.add_argument(
+        "--ia-modelo",
+        default="",
+        help="Modelo local ya instalado para esta vista previa (por ejemplo llama3.2:3b). No lo descarga.",
+    )
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         parser.error("El puerto debe estar entre 1024 y 65535.")
@@ -75,12 +80,14 @@ def main():
     if args.ia_local:
         # Read at request time by ai_chat.enabled(); scoped to this process only.
         os.environ["REIGEL_CHAT_AI"] = "ollama"
+        if args.ia_modelo:
+            os.environ["REIGEL_CHAT_MODEL"] = args.ia_modelo
     print(f"DEMO SINTÉTICA: http://127.0.0.1:{args.port}/app", flush=True)
     print(f"Base aislada: {directory}", flush=True)
     print(f"Acceso de prueba: {PREVIEW_EMAIL} / {PREVIEW_PASSWORD}", flush=True)
     print("No se cargó .env, no se abrió la base comercial y no se programan refrescos externos.", flush=True)
     if args.ia_local:
-        print("IA local activada en este proceso (Ollama en 127.0.0.1:11434).", flush=True)
+        print(f"IA local activada en este proceso (Ollama en 127.0.0.1:11434, modelo {os.environ.get('REIGEL_CHAT_MODEL') or 'qwen2.5:3b'}).", flush=True)
     uvicorn.run(app, host="127.0.0.1", port=args.port, access_log=False)
 
 
