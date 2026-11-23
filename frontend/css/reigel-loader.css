@@ -1,15 +1,24 @@
-/* R.E.I.G.E.L. loader. The script moves letters with transform and opacity only;
+/* R.E.I.G.E.L. loader. Compositor animations move the letters, so a busy page cannot stall them;
    without it, or with reduced motion, the finished mark stays still. */
 .rl-loader {
-  --rl-blue: #1f4297;
+  --rl-scrim: rgb(6 13 28 / .74);
+  --rl-scrim-solid: rgb(7 15 31 / .95);
   --rl-ink: #fff;
-  --rl-accent: #ff6b2c;
+  --rl-accent: #ff8a3d;
   display: grid;
   place-items: center;
   overflow: hidden;
   color: var(--rl-ink);
-  background: var(--rl-blue);
+  background: var(--rl-scrim-solid);
   contain: layout paint;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .rl-loader:not(.rl-lite) {
+    background: var(--rl-scrim);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    backdrop-filter: blur(20px) saturate(1.15);
+  }
 }
 
 .rl-loader[hidden] { display: none; }
@@ -46,15 +55,39 @@ html.rl-locked { overflow: hidden; }
 .rl-glyph { display: inline-block; }
 .rl-glyph--letter { padding-inline: .025em; }
 .rl-glyph--dot { color: var(--rl-accent); }
-.rl-active .rl-glyph,
-.rl-active .rl-line { will-change: transform, opacity; }
+.rl-word { position: relative; }
+.rl-face { display: inline-block; text-shadow: 0 1px 14px rgb(2 8 20 / .55); }
+.rl-active .rl-glyph { will-change: translate, rotate, transform, opacity; }
+.rl-active .rl-face { will-change: rotate, transform, scale; }
+.rl-active .rl-line { transition: transform 320ms ease-out; will-change: transform; }
+
+/* Hairline orbits give the motion a visible geometry, then fade as the word forms. */
+.rl-active .rl-word::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--rl-orbit, 8em);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    transparent calc(46% - 1px), rgb(255 255 255 / .13) 46%, transparent calc(46% + 1px),
+    transparent calc(73% - 1px), rgb(255 255 255 / .1) 73%, transparent calc(73% + 1px),
+    transparent calc(99% - 1px), rgb(255 255 255 / .08) 99%, transparent 100%);
+  content: "";
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 380ms ease;
+}
+.rl-forming .rl-word::before { opacity: 0; }
+
+.rl-line { transition: transform 320ms ease-out; will-change: transform; }
 
 .rl-line {
   display: block;
   height: max(2px, .06em);
   border-radius: 2px;
   background: var(--rl-accent);
-  transform-origin: left center;
+  transform-origin: center;
 }
 
 .rl-status {
@@ -72,7 +105,7 @@ html.rl-locked { overflow: hidden; }
 }
 
 @media (forced-colors: active) {
-  .rl-loader { border: 1px solid CanvasText; color: CanvasText; background: Canvas; }
+  .rl-loader { border: 1px solid CanvasText; color: CanvasText; background: Canvas; backdrop-filter: none; }
   .rl-glyph--dot { color: Highlight; }
   .rl-line { background: Highlight; }
 }

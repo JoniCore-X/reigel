@@ -323,20 +323,6 @@
   color: #a9bbe8;
 }
 
-.ia-back-link {
-  display: inline-flex;
-  gap: 6px;
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #ffb36b;
-  text-decoration: none;
-}
-
-.ia-back-link:hover {
-  color: #ffd0a1;
-}
-
 /* Main --------------------------------------------------------------------- */
 .ia-main {
   display: flex;
@@ -1184,4 +1170,48 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ia-suggestion { transition: none; }
+}
+
+/* Móvil: 16 px evita el zoom de iOS al enfocar; 44 px da un objetivo táctil cómodo. */
+@media (max-width: 900px) {
+  .ia-body #ia-text,
+  .ia-body .ia-search input { font-size: 16px; }
+  .ia-body #ia-text { min-height: 44px; }
+  .ia-body .ia-search input,
+  .ia-body .ia-new,
+  .ia-body .ia-send,
+  .ia-body .ia-plus,
+  .ia-body .ia-actions-item,
+  .ia-body .ia-prompts button,
+  .ia-body .ia-suggestion { min-height: 44px; }
+  .ia-body .ia-icon-btn,
+  .ia-body .ia-plus,
+  .ia-body .ia-send { min-width: 44px; }
+  .ia-body .ia-icon-btn { min-height: 44px; }
+  .ia-body .ia-wordmark,
+  .ia-body .ia-team,
+  .ia-body .ia-back,
+  .ia-body .ia-topbar .ui-theme-switch {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .ia-body .ia-history a,
+  .ia-body .ia-history button,
+  .ia-body .ia-notice button { min-height: 44px; }
+}
+
+/* En teléfono queda el logo: el nombre sigue disponible en el h1 para lectores de pantalla. */
+@media (max-width: 600px) {
+  .ia-body .ia-title > div { display: none; }
+  .ia-body .ia-title { flex: 0 0 auto; }
+}
+
+/* Teléfonos muy estrechos: la barra conserva todos sus controles sin desbordarse. */
+@media (max-width: 360px) {
+  .ia-body .ia-topbar { gap: 4px; padding-inline: 8px; }
+  .ia-body .ia-topbar .ui-theme-switch + .ia-team { margin-left: 2px; }
+  .ia-body .ia-team,
+  .ia-body .ia-back { padding-inline: 8px; font-size: 11.5px; }
+  .ia-body .ia-title { display: none; }
 }

@@ -11,7 +11,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
   <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/ia.css?v=15">
+  <link rel="stylesheet" href="/static/css/ia.css?v=19">
+  <link rel="stylesheet" href="/static/css/reigel-loader.css?v=5">
+  <link rel="stylesheet" href="/static/css/site-loader.css?v=10">
+  <script src="/static/js/reigel-loader.js?v=6"></script>
+  <script src="/static/js/site-loader.js?v=8"></script>
   <script src="/static/js/ia.js?v=15" defer></script>
   <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
   <link rel="stylesheet" href="/static/css/theme-switch.css?v=1">
@@ -19,6 +23,17 @@
   <script src="/static/js/theme.js?v=1"></script>
 </head>
 <body class="ia-body">
+  <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
+    <div class="ps-stage rl-mark" aria-hidden="true"><div class="rl-word"><span class="rl-glyph rl-glyph--letter">R</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">I</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">G</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">L</span><span class="rl-glyph rl-glyph--dot">.</span></div><span class="rl-line"></span></div>
+    <div class="ps-error" hidden>
+      <p class="ps-error-text" role="alert"></p>
+      <div class="ps-error-actions">
+        <button class="ps-retry" type="button">Reintentar</button>
+        <button class="ps-continue" type="button">Continuar al sitio</button>
+      </div>
+    </div>
+    <p class="ps-sr-only">Cargando Power Solar. La página estará lista en un momento.</p>
+  </div>
   <a class="skip-link" href="#ia-text">Saltar al campo de mensaje</a>
   <h1 class="ia-sr-only">Conversación con R.E.I.G.E.L.</h1>
   <div class="ia-shell" id="ia-shell" data-sidebar="open">
@@ -43,7 +58,6 @@
       <footer class="ia-sidebar-foot">
         <p class="ia-owner" id="ia-owner">Sesión temporal</p>
         <p class="ia-retention" id="ia-retention">Las conversaciones de visitantes se conservan siete días desde la última actividad.</p>
-        <a class="ia-back-link" href="/captacion">Volver al sitio <span aria-hidden="true">↗</span></a>
       </footer>
     </aside>
     <button class="ia-scrim" id="ia-scrim" type="button" aria-label="Cerrar el historial" hidden></button>
@@ -69,7 +83,7 @@
             <p class="ia-empty-kicker">CONVERSACIÓN</p>
             <h2>¿Qué quieres resolver hoy?</h2>
             <p>Pregunta sobre energía solar, el proceso de evaluación o Power Solar. R.E.I.G.E.L. responde con el modelo local del equipo.</p>
-            <p class="ia-empty-note">Para reservar una evaluación, hablar con una persona, dejar de recibir mensajes o hacer una solicitud sobre tus datos, usa <a href="/chat">Citas y equipo</a>: esta conversación no registra esas solicitudes. No escribas tu correo ni tu teléfono aquí: se ocultan al guardar la conversación.</p>
+            <p class="ia-empty-note">Reservas, atención humana, bajas y privacidad van por <a href="/chat">Citas y equipo</a>: este chat no registra esas solicitudes. No escribas tu correo ni tu teléfono: se ocultan al guardar.</p>
             <section class="ia-system" aria-labelledby="ia-system-title">
               <h3 id="ia-system-title">Cómo funciona un sistema solar con batería</h3>
               <div class="ia-system-grid">

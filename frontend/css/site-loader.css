@@ -7,9 +7,10 @@ html.ps-booting { overflow: hidden; }
 .ps-loader { display: none; }
 
 html.ps-booting .ps-loader {
-  --rl-blue: #1f4297;
+  --rl-scrim: rgb(6 13 28 / .74);
+  --rl-scrim-solid: rgb(7 15 31 / .95);
   --rl-ink: #fff;
-  --rl-accent: #ff6b2c;
+  --rl-accent: #ff8a3d;
   display: flex !important;
   position: fixed;
   inset: 0;
@@ -26,7 +27,7 @@ html.ps-booting .ps-loader {
   padding: max(22px, env(safe-area-inset-top)) 22px max(22px, env(safe-area-inset-bottom));
   overflow: hidden;
   color: #fff;
-  background: var(--rl-blue);
+  background: var(--rl-scrim-solid);
   font-family: "Segoe UI", system-ui, sans-serif;
   opacity: 1;
   transition: opacity .36s ease;
@@ -40,6 +41,14 @@ html.ps-booting .ps-loader {
   }
 }
 
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html.ps-booting .ps-loader:not(.rl-lite) {
+    background: var(--rl-scrim);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    backdrop-filter: blur(20px) saturate(1.15);
+  }
+}
 
 html.ps-booting .ps-loader.ps-leaving {
   opacity: 0;

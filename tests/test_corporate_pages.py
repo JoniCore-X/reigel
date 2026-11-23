@@ -187,34 +187,34 @@ def test_page_loader_promotes_the_solar_sun_with_local_assets(corporate_app):
             assert loader.get("role") == "status", path
             assert loader.get("aria-live") == "polite", path
             assert page.text.count('class="rl-glyph ') == 12, path
-            assert "/static/css/reigel-loader.css?v=2" in page.text, path
-            assert page.text.index("/static/js/reigel-loader.js?v=3") < page.text.index("/static/js/site-loader.js?v=7"), path
+            assert "/static/css/reigel-loader.css?v=5" in page.text, path
+            assert page.text.index("/static/js/reigel-loader.js?v=6") < page.text.index("/static/js/site-loader.js?v=8"), path
             assert "Cargando Power Solar" in page.text, path
             assert 'class="ps-error"' in page.text, path
             assert 'role="alert"' in page.text, path
             assert "Reintentar" in page.text and "Continuar al sitio" in page.text, path
             assert 'class="ps-retry"' in page.text, path
             assert 'class="ps-continue"' in page.text, path
-            assert "/static/css/site-loader.css?v=9" in page.text, path
-            assert "/static/js/site-loader.js?v=7" in page.text, path
+            assert "/static/css/site-loader.css?v=10" in page.text, path
+            assert "/static/js/site-loader.js?v=8" in page.text, path
             scripts = [attrs for tag, attrs in document.tags if tag == "script"]
             assert all(attrs.get("src") for attrs in scripts), path
 
-        css = client.get("/static/css/site-loader.css?v=9")
+        css = client.get("/static/css/site-loader.css?v=10")
         assert css.status_code == 200
-        for token in ("--rl-blue", "background: var(--rl-blue)", "ps-error", "ps-failed",
+        for token in ("--rl-scrim", "backdrop-filter", "ps-error", "ps-failed",
                       ":popover-open", "prefers-reduced-motion", "forced-colors"):
             assert token in css.text, token
-        mark = client.get("/static/css/reigel-loader.css?v=2")
+        mark = client.get("/static/css/reigel-loader.css?v=5")
         assert mark.status_code == 200
         for token in ("rl-glyph", "rl-line", "prefers-reduced-motion", "forced-colors"):
             assert token in mark.text, token
-        engine = client.get("/static/js/reigel-loader.js?v=3")
+        engine = client.get("/static/js/reigel-loader.js?v=6")
         assert engine.status_code == 200
-        for token in ("drive", "requestAnimationFrame", "prefers-reduced-motion", "effectiveType", "document.hidden"):
+        for token in ("drive", "glyph.animate", "prefers-reduced-motion", "effectiveType", "document.hidden"):
             assert token in engine.text, token
 
-        script = client.get("/static/js/site-loader.js?v=7")
+        script = client.get("/static/js/site-loader.js?v=8")
         assert script.status_code == 200
         for token in ("showPopover", "hidePopover", "ps-loader-seen", "MIN_FIRST", "Escape",
                       "SLOW_MS", "FAILURES_ALLOWED", "navigator.onLine", "location.reload",

@@ -14,6 +14,9 @@
 
   var MIN_FIRST = 450;
   var MIN_NEXT = 250;
+  // How long the letters orbit before they can assemble.
+  var CYCLE_FIRST = 2800;
+  var CYCLE_NEXT = 1600;
   var EXIT_MS = 380;
   // The overlay follows the real page load instead of a fixed maximum.
   // These limits only decide when the connection counts as failing.
@@ -257,7 +260,7 @@
     started = performance.now();
     if (document.body) document.body.setAttribute("aria-busy", "true");
     var mark = loader.querySelector(".rl-mark");
-    if (mark && window.ReigelLoader) engine = window.ReigelLoader.drive(mark, pageProgress);
+    if (mark && window.ReigelLoader) engine = window.ReigelLoader.drive(mark, pageProgress, { cycle: seen ? CYCLE_NEXT : CYCLE_FIRST, align: true });
 
     errorBox = loader.querySelector(".ps-error");
     errorText = loader.querySelector(".ps-error-text");

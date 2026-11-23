@@ -143,6 +143,14 @@ body.public-body .chat-launcher:active { transform: translateY(0); box-shadow: 0
   }
 }
 
+/* launcher-yield.js lo aparta sin sacarlo del orden de foco: con teclado siempre reaparece. */
+body.public-body .chat-launcher { transition: transform .22s ease, opacity .18s ease, border-color .15s ease; }
+body.public-body.launcher-away .chat-launcher:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(100% + 18px));
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.public-body .chat-launcher { animation: none; transition: none; }
   body.public-body .chat-launcher:hover,
