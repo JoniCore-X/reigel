@@ -1,0 +1,154 @@
+/* Header y acceso flotante de las páginas públicas servidas desde landing.html.
+   Solo presentación: header-menu.js, chat.js y los mecanismos de ocultación
+   (es-launcher-yield, intent-selector-visible) siguen intactos. */
+
+/* Los fondos de portada usan 100vw y sobresalen el ancho de la barra de desplazamiento. */
+body.corporate-body main { overflow-x: clip; }
+
+/* Header */
+body.corporate-body .public-header {
+  --psh-height: 66px;
+  height: var(--psh-height); /* styles.css fija una altura mayor */
+  min-height: var(--psh-height);
+  border-bottom: 0;
+  background: var(--sol-navy, #071d43);
+}
+body.corporate-body .public-header::after { height: 1px; background: #ff7900; }
+body.corporate-body .public-header .brand-lockup { min-height: 44px; gap: 10px; }
+body.corporate-body .public-header .brand-lockup .brand-symbol { width: 46px; height: 36px; }
+body.corporate-body .public-header .brand-lockup .brand-wordmark .wordmark-power,
+body.corporate-body .public-header .brand-lockup .brand-wordmark .wordmark-solar { font-size: 18px; }
+body.corporate-body .public-header .brand-lockup .brand-wordmark small { margin-top: 4px; font-size: 8.5px; }
+body.corporate-body .public-header .public-nav { gap: 2px; }
+body.corporate-body .public-header .public-nav > a:not(.button) {
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 2px;
+  box-shadow: none;
+  font-size: 13.5px;
+}
+body.corporate-body .public-header .public-nav > a:not(.button)::before { display: none; }
+body.corporate-body .public-header .public-nav > a:not(.button)::after {
+  bottom: 7px;
+  height: 1px;
+  border-radius: 0;
+  background: #ff7900;
+  box-shadow: none;
+}
+body.corporate-body .public-header .public-nav > a:not(.button):is(:hover, :focus-visible) { background: transparent; box-shadow: none; transform: none; }
+body.corporate-body .public-header .public-nav > a[aria-current="page"] { color: #fff; background: transparent; box-shadow: none; }
+body.corporate-body .public-header .nav-chat {
+  margin-left: 10px;
+  padding: 8px 13px;
+  border: 1px solid #ffffff59;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+}
+body.corporate-body .public-header .nav-chat:is(:hover, :focus-visible) { border-color: #ff7900; background: transparent; box-shadow: none; transform: none; }
+body.corporate-body .public-header .menu-toggle { border-radius: 3px; background: transparent; }
+
+@media (max-width: 1240px) {
+  body.corporate-body .public-header { --psh-height: 62px; }
+  body.corporate-body .public-header .public-nav {
+    top: 100%;
+    max-height: calc(100vh - var(--psh-height) - 12px);
+    max-height: calc(100dvh - var(--psh-height) - 12px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 0 0 3px 3px;
+  }
+  body.corporate-body .public-header .public-nav > a:not(.button) { width: 100%; padding: 12px 14px; }
+  body.corporate-body .public-header .public-nav > a[aria-current="page"] { color: #fff; background: #ffffff12; box-shadow: inset 2px 0 #ff7900; }
+  body.corporate-body .public-header .nav-chat { width: 100%; margin: 8px 0 0; padding: 12px 14px; }
+}
+
+@media (max-width: 600px) {
+  body.corporate-body .public-header { --psh-height: 58px; }
+  body.corporate-body .public-header .brand-lockup { gap: 8px; }
+  body.corporate-body .public-header .brand-lockup .brand-symbol { width: 40px; height: 32px; }
+  body.corporate-body .public-header .brand-lockup .brand-wordmark .wordmark-power,
+  body.corporate-body .public-header .brand-lockup .brand-wordmark .wordmark-solar { font-size: 16px; }
+  body.corporate-body .public-header .brand-lockup .brand-wordmark small { font-size: 8px; }
+  body.corporate-body .public-header .menu-toggle { width: 44px; height: 44px; flex-basis: 44px; }
+  /* El modal móvil de power-solar-identity.css conserva su geometría fija. */
+  body.corporate-body .public-header .public-nav { top: auto; max-height: none; overflow-y: auto; border-radius: 16px; }
+  /* Los CTA comerciales terminan antes de la franja del acceso flotante. */
+  body.corporate-body main .ui-hero-actions { margin-right: 48px; }
+  /* El pie reserva sitio para que el acceso flotante no tape su último enlace. */
+  body.corporate-body .corp-footer { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); }
+}
+
+/* Acceso flotante a R.E.I.G.E.L. */
+body.public-body .chat-launcher {
+  height: 48px;
+  min-height: 48px;
+  gap: 10px;
+  padding: 0 16px 0 0;
+  border: 1px solid #ffffff59;
+  border-radius: 3px;
+  background: var(--sol-navy, #071d43);
+  box-shadow: 0 4px 14px #020b1a59;
+  animation-fill-mode: backwards;
+}
+body.public-body .chat-launcher::before { display: none; }
+body.public-body .chat-launcher-symbol {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  flex: 0 0 46px;
+  border: 0;
+  border-right: 1px solid #ffffff3d;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #ff8a1f;
+}
+body.public-body .chat-launcher-symbol svg { display: block; width: 24px; height: 24px; }
+body.public-body .chat-launcher strong { font-size: 13.5px; font-weight: 650; letter-spacing: 0; }
+/* «small» sigue en el nombre accesible, pero no ocupa espacio visual. */
+body.public-body .chat-launcher small {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+body.public-body .chat-launcher:hover { transform: translateY(-1px); border-color: #ff7900; box-shadow: 0 4px 14px #020b1a59; }
+body.public-body .chat-launcher:hover .chat-launcher-symbol { transform: none; box-shadow: none; }
+body.public-body .chat-launcher:focus-visible { outline: 3px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 5px #071d43; }
+body.public-body .chat-launcher:active { transform: translateY(0); box-shadow: 0 2px 8px #020b1a59; }
+
+@media (max-width: 600px) {
+  body.public-body .chat-launcher {
+    width: 48px;
+    max-width: 48px;
+    min-width: 48px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+  body.public-body .chat-launcher-symbol { border-right: 0; }
+  body.public-body .chat-launcher > span:not(.chat-launcher-symbol) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.public-body .chat-launcher { animation: none; transition: none; }
+  body.public-body .chat-launcher:hover,
+  body.public-body .chat-launcher:active { transform: none; }
+}
+
+@media (forced-colors: active) {
+  body.public-body .chat-launcher-symbol { color: ButtonText; }
+}

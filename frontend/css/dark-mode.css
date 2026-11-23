@@ -100,7 +100,7 @@
 
 /* The login card stays light in dark mode; keep its text legible. */
 :root[data-theme="dark"] .workspace-body .login-card :is(.muted, .login-help) { color: #4f5f76; }
-:root[data-theme="dark"] .workspace-body .login-card a.text-link:not(.button) { color: var(--blue); }
+:root[data-theme="dark"] .workspace-body .login-card .text-link:not(.button) { color: var(--blue); }
 :root[data-theme="dark"] .workspace-body .login-card .form-error { color: #b42318; }
 :root[data-theme="dark"] .workspace-body .login-card input { background: #0f1a2e; color: var(--ink); border-color: #3a4d72; }
 :root[data-theme="dark"] .workspace-body .login-card input::placeholder { color: #b4c1d4; }

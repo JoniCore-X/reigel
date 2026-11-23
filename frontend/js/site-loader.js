@@ -12,9 +12,9 @@
 
   root.classList.add("ps-booting");
 
-  var MIN_FIRST = 1600;
-  var MIN_NEXT = 650;
-  var EXIT_MS = 520;
+  var MIN_FIRST = 450;
+  var MIN_NEXT = 250;
+  var EXIT_MS = 380;
   // The overlay follows the real page load instead of a fixed maximum.
   // These limits only decide when the connection counts as failing.
   var SLOW_MS = 15000;
@@ -27,6 +27,10 @@
   };
   var started = 0;
   var loader = null;
+  var engine = null;
+  var finishing = false;
+  var assetsAt = -1000;
+  var assetsReady = 0;
   var errorBox = null;
   var errorText = null;
   var exitTimer = null;
@@ -79,8 +83,42 @@
     window.clearTimeout(offlineTimer);
   }
 
-  function exit() {
+  function assetIsReady(element) {
+    if (element.tagName === "IMG") return element.complete;
+    if (element.tagName === "LINK") return element.sheet !== null;
+    return true; // Parser and deferred scripts have run once the document is interactive.
+  }
+
+  // Real page progress: the share of critical files already loaded. A small
+  // connection-paced drift keeps the letters alive while one large file downloads.
+  function pageProgress(now) {
+    if (document.readyState === "complete") return 1;
+    if (now - assetsAt > 200) {
+      assetsAt = now;
+      var assets = document.querySelectorAll('img:not([loading="lazy"]),link[rel="stylesheet"],script[src]');
+      var ready = 0;
+      for (var index = 0; index < assets.length; index += 1) {
+        if (assetIsReady(assets[index])) ready += 1;
+      }
+      assetsReady = assets.length ? ready / assets.length : 1;
+    }
+    var seconds = (now - started) / 1000;
+    var drift = 0.1 * (1 - Math.exp(-seconds / window.ReigelLoader.pace()));
+    return Math.min(0.94, 0.25 + 0.6 * assetsReady + drift);
+  }
+
+  function exit(immediate) {
     if (done) return;
+    if (immediate !== true && engine) {
+      if (finishing) return;
+      finishing = true;
+      engine.finish().then(function () {
+        finishing = false;
+        if (!failed) exit(true);
+      });
+      return;
+    }
+    if (engine) engine.settle();
     done = true;
     failed = false;
     clearTimers();
@@ -115,7 +153,9 @@
     var elapsed = performance.now() - started;
     var wait = immediate ? 0 : Math.max(0, minimum - elapsed);
     window.clearTimeout(exitTimer);
-    exitTimer = window.setTimeout(exit, wait);
+    exitTimer = window.setTimeout(function () {
+      exit(immediate);
+    }, wait);
   }
 
   function skip() {
@@ -129,6 +169,7 @@
     failed = true;
     clearTimers();
     if (!loader) return;
+    if (engine) engine.settle();
     loader.classList.add("ps-failed");
     if (errorText) errorText.textContent = MESSAGES[kind] || MESSAGES.network;
     if (errorBox) errorBox.hidden = false;
@@ -215,6 +256,8 @@
     // so a slow parse never truncates the entrance sequence.
     started = performance.now();
     if (document.body) document.body.setAttribute("aria-busy", "true");
+    var mark = loader.querySelector(".rl-mark");
+    if (mark && window.ReigelLoader) engine = window.ReigelLoader.drive(mark, pageProgress);
 
     errorBox = loader.querySelector(".ps-error");
     errorText = loader.querySelector(".ps-error-text");
@@ -268,6 +311,7 @@
 
   window.addEventListener("pageshow", function (event) {
     if (!event.persisted) return;
+    if (engine) engine.settle();
     done = true;
     failed = false;
     clearTimers();

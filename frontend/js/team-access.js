@@ -1,13 +1,11 @@
 (() => {
   const $ = id => document.getElementById(id);
-  const passkey = window.ReigelPasskey;
-  const state = {csrf: '', profile: null};
-  const statusLabel = {approved: 'Aprobada', pending: 'Pendiente de aprobación'};
+  const state = {csrf: '', profile: null, withGrant: false};
 
   async function api(path, {method = 'GET', body} = {}) {
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    if (method !== 'GET') headers['X-Reigel-CSRF'] = state.csrf;
+    if (method !== 'GET' && state.csrf) headers['X-Reigel-CSRF'] = state.csrf;
     const response = await fetch(path, {method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body)});
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw Object.assign(new Error(data.detail || 'No se pudo completar la operación.'), {status: response.status});
@@ -25,37 +23,10 @@
     try {
       await work();
     } catch (error) {
-      notify(passkey.message(error));
+      notify(error.message);
     } finally {
       if (button) button.disabled = false;
     }
-  }
-
-  function row(title, detail, ...actions) {
-    const item = document.createElement('li');
-    item.className = 'id-row';
-    const text = document.createElement('span');
-    text.textContent = title;
-    const small = document.createElement('small');
-    small.textContent = detail;
-    text.append(small);
-    item.append(text);
-    if (actions.length) {
-      const box = document.createElement('span');
-      box.className = 'id-actions';
-      box.append(...actions);
-      item.append(box);
-    }
-    return item;
-  }
-
-  function action(label, handler) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'id-button quiet compact';
-    button.textContent = label;
-    button.addEventListener('click', () => run(button, handler));
-    return button;
   }
 
   function options(select, users) {
@@ -67,27 +38,34 @@
     }));
   }
 
+  function showSetup(setup) {
+    $('setup-secret').textContent = setup.secret.match(/.{1,4}/g).join(' ');
+    $('setup-secret').dataset.secret = setup.secret;
+    $('setup-link').href = setup.otpauth_uri;
+    $('setup-qr').src = setup.qr;
+    $('setup-view').hidden = false;
+    $('guest-view').hidden = true;
+    $('member-view').hidden = true;
+    $('confirm-form').elements.code.focus();
+  }
+
+  function hideSetup() {
+    $('setup-secret').textContent = '';
+    delete $('setup-secret').dataset.secret;
+    $('setup-link').href = '#';
+    $('setup-qr').removeAttribute('src');
+    $('setup-view').hidden = true;
+  }
+
   async function renderMember() {
     state.profile = await api('/api/team-identity/me');
     state.csrf = state.profile.csrf;
-    const {user, passkeys, passkey_required: required} = state.profile;
+    const {user, totp_enabled: enabled, totp_required: required} = state.profile;
     $('member-name').textContent = `${user.name} · ${user.team_role}`;
-    $('key-list').replaceChildren(...(passkeys.length ? passkeys.map(key => row(key.label, statusLabel[key.status] || key.status, action('Quitar', async () => {
-      await api(`/api/team-identity/passkeys/${encodeURIComponent(key.id)}`, {method: 'DELETE'});
-      await renderMember();
-    }))) : [row('Sin llaves registradas', 'Añade una para entrar sin contraseña.')]));
-
-    const canReview = user.team_role !== 'consultor';
-    $('pending-section').hidden = !canReview;
-    if (canReview) {
-      const {items} = await api('/api/team-identity/devices/pending');
-      const decide = (id, approve) => async () => {
-        await api(`/api/team-identity/devices/${encodeURIComponent(id)}/decision`, {method: 'POST', body: {approve}});
-        await renderMember();
-      };
-      $('pending-list').replaceChildren(...(items.length ? items.map(item => row(`${item.user_name} · ${item.label}`, item.team_role,
-        action('Aprobar', decide(item.id, true)), action('Rechazar', decide(item.id, false)))) : [row('Sin solicitudes', 'No hay dispositivos pendientes.')]));
-    }
+    $('totp-state').textContent = enabled ? 'Activo: al entrar se te pedirá un código de 6 dígitos.' : 'Inactivo: tu cuenta entra solo con contraseña.';
+    $('enable-totp').hidden = enabled;
+    $('manage-totp-form').hidden = !enabled;
+    $('disable-totp').hidden = required;
 
     const isAdmin = user.team_role === 'administrador';
     $('admin-section').hidden = !isAdmin;
@@ -98,8 +76,8 @@
       options($('role-user'), others.filter(item => item.role !== 'admin'));
     }
     $('policy-section').hidden = !user.is_owner;
-    $('policy-state').textContent = required ? 'Todo el equipo debe entrar con llave de acceso.' : 'Transición gradual: quien aún no tenga llave puede usar su contraseña.';
-    $('policy-toggle').textContent = required ? 'Volver a transición gradual' : 'Exigir llave de acceso a todo el equipo';
+    $('policy-state').textContent = required ? 'Todo el equipo debe usar Google Authenticator.' : 'Transición gradual: quien aún no lo active puede entrar con contraseña.';
+    $('policy-toggle').textContent = required ? 'Volver a transición gradual' : 'Exigir Google Authenticator a todo el equipo';
     $('member-view').hidden = false;
     $('guest-view').hidden = true;
   }
@@ -108,28 +86,50 @@
     $(id).addEventListener('submit', event => {
       event.preventDefault();
       const form = event.currentTarget;
-      run(form.querySelector('[type=submit]'), () => work(Object.fromEntries(new FormData(form)), form));
+      const button = event.submitter || form.querySelector('[type=submit]');
+      run(button, () => work(Object.fromEntries(new FormData(form)), form, button));
     });
   }
 
-  const supported = passkey.supported();
-  $('team-unsupported').hidden = supported;
-  for (const button of [$('verify-identity'), $('enroll-form').querySelector('[type=submit]'), $('add-key-form').querySelector('[type=submit]')]) button.disabled = !supported;
-
-  $('verify-identity').addEventListener('click', event => run(event.currentTarget, async () => {
-    await passkey.login();
-    location.assign('/app');
+  $('enable-totp').addEventListener('click', event => run(event.currentTarget, async () => {
+    state.withGrant = false;
+    showSetup((await api('/api/team-identity/totp/setup', {method: 'POST', body: {}})).setup);
   }));
-  submit('enroll-form', async (data, form) => {
-    const result = await passkey.register({email: data.email, code: data.code, label: data.label});
+  $('copy-secret').addEventListener('click', event => run(event.currentTarget, async () => {
+    await navigator.clipboard.writeText($('setup-secret').dataset.secret);
+    notify('Clave copiada.', true);
+  }));
+  submit('grant-setup-form', async (data, form) => {
+    state.withGrant = true;
+    const {setup} = await api('/api/team-identity/totp/setup', {method: 'POST', body: data});
     form.reset();
-    notify(result.passkey.status === 'approved' ? 'Llave registrada. Ya puedes verificar tu identidad.' : 'Llave registrada. Espera la aprobación.', true);
+    showSetup(setup);
   });
-  submit('add-key-form', async (data, form) => {
-    const result = await passkey.register({csrf: state.csrf, label: data.label});
+  submit('confirm-form', async (data, form) => {
+    await api('/api/team-identity/totp/confirm', {method: 'POST', body: {code: data.code, with_grant: state.withGrant}});
     form.reset();
+    hideSetup();
+    if (state.withGrant) {
+      state.withGrant = false;
+      $('guest-view').hidden = false;
+      notify('Listo. Entra con tu contraseña y el siguiente código de la app.', true);
+      return;
+    }
     await renderMember();
-    notify(result.passkey.status === 'approved' ? 'Llave registrada.' : 'Llave registrada. Debe aprobarla un responsable.', true);
+    notify('Google Authenticator activado.', true);
+  });
+  submit('manage-totp-form', async (data, form, button) => {
+    if (button.value === 'disable') {
+      await api('/api/team-identity/totp/disable', {method: 'POST', body: {code: data.code}});
+      form.reset();
+      await renderMember();
+      notify('Google Authenticator desactivado.', true);
+      return;
+    }
+    state.withGrant = false;
+    const {setup} = await api('/api/team-identity/totp/setup', {method: 'POST', body: {current_code: data.code}});
+    form.reset();
+    showSetup(setup);
   });
   submit('grant-form', async (data, form) => {
     const result = await api(`/api/team-identity/users/${encodeURIComponent(data.user_id)}/grant`, {method: 'POST', body: {purpose: data.purpose, reason: data.reason}});
@@ -143,7 +143,7 @@
     notify('Rol actualizado.', true);
   });
   $('policy-toggle').addEventListener('click', event => run(event.currentTarget, async () => {
-    await api('/api/team-identity/policy', {method: 'PUT', body: {passkey_required: !state.profile.passkey_required}});
+    await api('/api/team-identity/policy', {method: 'PUT', body: {totp_required: !state.profile.totp_required}});
     await renderMember();
   }));
 

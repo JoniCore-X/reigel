@@ -1,19 +1,19 @@
+import base64
 import hashlib
 import json
-import secrets
+import time
 import sqlite3
 from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
+import segno
 from fastapi.testclient import TestClient
 
 from reigel.api import COOKIE, create_app
 from reigel.core import password_matches
 from reigel.identity_api import CUSTOMER_COOKIE
-from reigel.webauthn import b64url, from_b64url
+from reigel import totp
 
 PASSWORD = "Prueba-Identidad-2026!"
 BASE = "http://localhost"
@@ -29,56 +29,6 @@ class Delivery:
     def send(self, kind, destination, code, purpose):
         self.sent.append((kind, destination, code, purpose))
         return True
-
-
-def cbor(value):
-    def head(major, number):
-        if number < 24:
-            return bytes([major << 5 | number])
-        if number < 256:
-            return bytes([major << 5 | 24, number])
-        return bytes([major << 5 | 25]) + number.to_bytes(2, "big")
-    if isinstance(value, int):
-        return head(0, value) if value >= 0 else head(1, -1 - value)
-    if isinstance(value, bytes):
-        return head(2, len(value)) + value
-    if isinstance(value, str):
-        return head(3, len(value.encode())) + value.encode()
-    return head(5, len(value)) + b"".join(cbor(k) + cbor(v) for k, v in value.items())
-
-
-class Authenticator:
-    def __init__(self, rp_id="localhost", origin=BASE):
-        self.key = ec.generate_private_key(ec.SECP256R1())
-        self.credential_id = secrets.token_bytes(32)
-        self.count = 0
-        self.rp_id, self.origin = rp_id, origin
-        self.handle = None
-
-    def cose(self):
-        numbers = self.key.public_key().public_numbers()
-        return cbor({1: 2, 3: -7, -1: 1, -2: numbers.x.to_bytes(32, "big"), -3: numbers.y.to_bytes(32, "big")})
-
-    def client(self, kind, challenge):
-        return json.dumps({"type": kind, "challenge": challenge, "origin": self.origin, "crossOrigin": False}).encode()
-
-    def create(self, options, flags=0x45):
-        self.handle = options["user"]["id"]
-        attested = bytes(16) + len(self.credential_id).to_bytes(2, "big") + self.credential_id + self.cose()
-        data = hashlib.sha256(self.rp_id.encode()).digest() + bytes([flags]) + (0).to_bytes(4, "big") + attested
-        attestation = cbor({"fmt": "none", "attStmt": {}, "authData": data})
-        cid = b64url(self.credential_id)
-        return {"id": cid, "rawId": cid, "type": "public-key", "response": {
-            "clientDataJSON": b64url(self.client("webauthn.create", options["challenge"])), "attestationObject": b64url(attestation), "transports": ["internal"]}}
-
-    def get(self, options, flags=0x05, count=None):
-        self.count = self.count + 1 if count is None else count
-        data = hashlib.sha256(self.rp_id.encode()).digest() + bytes([flags]) + self.count.to_bytes(4, "big")
-        client = self.client("webauthn.get", options["challenge"])
-        signature = self.key.sign(data + hashlib.sha256(client).digest(), ec.ECDSA(hashes.SHA256()))
-        cid = b64url(self.credential_id)
-        return {"id": cid, "rawId": cid, "type": "public-key", "response": {
-            "clientDataJSON": b64url(client), "authenticatorData": b64url(data), "signature": b64url(signature), "userHandle": self.handle}}
 
 
 @pytest.fixture
@@ -131,18 +81,28 @@ def verify_all(app, browser, customer):
         assert browser.post("/api/customer/verify/finish", json={"identifier_id": item["id"], "code": code}).status_code == 200
 
 
-def enroll(browser, authenticator=None, label="Laptop"):
-    authenticator = authenticator or Authenticator()
-    options = browser.post("/api/team-identity/passkeys/register/options", json={}).json()["publicKey"]
-    response = browser.post("/api/team-identity/passkeys/register/verify", json={"credential": authenticator.create(options), "label": label})
-    assert response.status_code == 201, response.text
-    return authenticator, response.json()["passkey"]
+def secret_of(setup):
+    value = setup["secret"]
+    return base64.b32decode(value + "=" * (-len(value) % 8))
 
 
-def passkey_login(app, authenticator, **kwargs):
+def step_code(secret, offset=0):
+    return totp.code_at(secret, int(time.time() // totp.PERIOD) + offset)
+
+
+def enable_totp(browser):
+    setup = browser.post("/api/team-identity/totp/setup", json={}).json()["setup"]
+    secret = secret_of(setup)
+    assert browser.post("/api/team-identity/totp/confirm", json={"code": step_code(secret, -1)}).status_code == 200
+    return secret
+
+
+def password_step(app, email):
     browser = client(app)
-    options = browser.post("/api/team-identity/passkeys/login/options", json={}).json()["publicKey"]
-    return browser, browser.post("/api/team-identity/passkeys/login/verify", json={"credential": authenticator.get(options, **kwargs)})
+    response = browser.post("/api/auth/login", json={"email": email, "password": PASSWORD})
+    assert response.status_code == 200 and response.json() == {"mfa_required": True}
+    assert COOKIE not in browser.cookies
+    return browser
 
 
 def test_customer_passwords_use_argon2id_and_never_leave_the_server(world):
@@ -270,7 +230,7 @@ def test_oauth_uses_pkce_state_binding_and_does_not_merge_by_email(world, monkey
     response, query, seen = oauth_round(app, browser, "google-subject")
     assert response.status_code == 303 and response.headers["location"] == "/cuenta"
     assert query["code_challenge_method"] == ["S256"]
-    assert hashlib.sha256(seen["token"]["code_verifier"][0].encode()).digest() == from_b64url(query["code_challenge"][0])
+    assert base64.urlsafe_b64encode(hashlib.sha256(seen["token"]["code_verifier"][0].encode()).digest()).rstrip(b"=").decode() == query["code_challenge"][0]
     assert browser.get("/api/customer/me").json()["customer"]["id"] != existing_data["id"]
     with sqlite3.connect(app.state.store.path) as db:
         assert "provider-token" not in " ".join(str(row) for row in db.execute("SELECT * FROM customer_oauth_accounts"))
@@ -312,103 +272,124 @@ def test_no_public_team_registration_route(world):
     browser = client(app)
     for path in ("/api/team/register", "/api/team-identity/register", "/api/auth/register"):
         assert browser.post(path, json={"email": "x@example.test", "password": PASSWORD}).status_code in {404, 405}
-    denied = browser.post("/api/team-identity/passkeys/register/options", json={"email": "consultor@example.test", "code": "inventado"})
+    denied = browser.post("/api/team-identity/totp/setup", json={"email": "consultor@example.test", "grant_code": "inventado"})
     assert denied.status_code == 401
+    assert browser.post("/api/team-identity/totp/setup", json={}).status_code == 401
 
 
-def test_passkey_login_replaces_password_for_that_account(world):
+def test_totp_matches_rfc6238_vector():
+    assert totp.code_at(b"12345678901234567890", 1) == "287082"
+    assert totp.code_at(b"12345678901234567890", 37037036) == "081804"
+
+
+def test_otpauth_uri_is_google_authenticator_compatible():
+    uri = totp.otpauth_uri(b"12345678901234567890", "ana@example.test")
+    parsed = urlparse(uri)
+    query = parse_qs(parsed.query)
+    assert parsed.scheme == "otpauth" and parsed.netloc == "totp"
+    assert query["secret"] == ["GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"] and query["digits"] == ["6"] and query["period"] == ["30"] and query["algorithm"] == ["SHA1"]
+
+
+def test_setup_returns_a_qr_for_the_same_otpauth_uri(world):
     app, _, _, consultant, _ = world
-    browser = team_login(app, consultant["email"])
-    authenticator, passkey = enroll(browser)
-    assert passkey["status"] == "approved"
-    assert client(app).post("/api/auth/login", json={"email": consultant["email"], "password": PASSWORD}).status_code == 403
-    session, response = passkey_login(app, authenticator)
+    setup = team_login(app, consultant["email"]).post("/api/team-identity/totp/setup", json={}).json()["setup"]
+    assert setup["qr"].startswith("data:image/svg+xml")
+    expected = segno.make(setup["otpauth_uri"], error="m", micro=False).svg_data_uri(scale=6, border=4, dark="#000", light="#fff")
+    assert setup["qr"] == expected
+
+
+def test_password_alone_opens_no_session_once_totp_is_enabled(world):
+    app, _, _, consultant, _ = world
+    secret = enable_totp(team_login(app, consultant["email"]))
+    browser = password_step(app, consultant["email"])
+    assert browser.get("/api/auth/me").status_code == 401
+    assert browser.post("/api/team-identity/totp/login", json={"code": "000000" if step_code(secret, 1) != "000000" else "111111"}).status_code == 401
+    response = browser.post("/api/team-identity/totp/login", json={"code": step_code(secret)})
     assert response.status_code == 200 and response.json()["user"]["id"] == consultant["id"]
-    assert session.get("/api/auth/me").json()["user"]["id"] == consultant["id"]
+    assert browser.get("/api/auth/me").json()["user"]["id"] == consultant["id"]
 
 
-@pytest.mark.parametrize("change", ["origin", "rp", "no_uv"])
-def test_passkey_rejects_wrong_origin_rp_or_missing_verification(world, change):
+def test_code_requires_prior_password_and_cannot_be_replayed(world):
+    app, _, _, consultant, _ = world
+    secret = enable_totp(team_login(app, consultant["email"]))
+    assert client(app).post("/api/team-identity/totp/login", json={"code": step_code(secret)}).status_code == 401
+    code = step_code(secret)
+    assert password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": code}).status_code == 200
+    assert password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": code}).status_code == 401
+
+
+def test_repeated_wrong_codes_lock_across_new_password_steps(world):
+    app, _, _, consultant, _ = world
+    secret = enable_totp(team_login(app, consultant["email"]))
+    valid = {step_code(secret, offset) for offset in (-1, 0, 1)}
+    wrong = next(f"{value:06d}" for value in range(1000000) if f"{value:06d}" not in valid)
+    for _ in range(5):
+        password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": wrong})
+    assert password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": step_code(secret)}).status_code == 429
+
+
+def test_secret_is_encrypted_and_bound_to_its_user(world):
+    app, _, _, consultant, other = world
+    browser = team_login(app, consultant["email"])
+    setup = browser.post("/api/team-identity/totp/setup", json={}).json()["setup"]
+    secret = secret_of(setup)
+    assert browser.post("/api/team-identity/totp/confirm", json={"code": step_code(secret)}).status_code == 200
+    with sqlite3.connect(app.state.store.path) as db:
+        row = db.execute("SELECT secret_nonce,secret_cipher FROM team_totp").fetchone()
+        dump = "\n".join(str(item) for item in db.iterdump())
+    assert secret not in row[1] and setup["secret"] not in dump
+    with pytest.raises(Exception):
+        app.state.identity._open(row[0], row[1], other["id"])
+
+
+def test_replacing_or_disabling_totp_needs_current_code(world):
     app, _, _, consultant, _ = world
     browser = team_login(app, consultant["email"])
-    authenticator, _ = enroll(browser)
-    kwargs = {}
-    if change == "origin":
-        authenticator.origin = "https://evil.example"
-    elif change == "rp":
-        authenticator.rp_id = "evil.example"
-    else:
-        kwargs["flags"] = 0x01
-    assert passkey_login(app, authenticator, **kwargs)[1].status_code == 401
+    secret = enable_totp(browser)
+    assert browser.post("/api/team-identity/totp/setup", json={}).status_code == 401
+    assert browser.post("/api/team-identity/totp/disable", json={"code": "abc"}).status_code == 401
+    assert browser.post("/api/team-identity/totp/disable", json={"code": step_code(secret)}).status_code == 200
 
 
-def test_challenge_is_single_use_and_counter_regression_revokes(world):
-    app, _, _, consultant, _ = world
-    team = team_login(app, consultant["email"])
-    authenticator, _ = enroll(team)
-    browser = client(app)
-    options = browser.post("/api/team-identity/passkeys/login/options", json={}).json()["publicKey"]
-    assertion = authenticator.get(options)
-    challenge = browser.cookies.get("reigel_webauthn")
-    assert browser.post("/api/team-identity/passkeys/login/verify", json={"credential": assertion}).status_code == 200
-    replay = client(app)
-    replay.cookies.set("reigel_webauthn", challenge, path="/api/team-identity/passkeys")
-    assert replay.post("/api/team-identity/passkeys/login/verify", json={"credential": assertion}).status_code == 401
-    assert passkey_login(app, authenticator, count=1)[1].status_code == 401
-    assert passkey_login(app, authenticator)[1].status_code == 401
-
-
-def test_additional_device_needs_authorized_approval(world):
-    app, owner, admin, consultant, other = world
-    browser = team_login(app, consultant["email"])
-    first, _ = enroll(browser)
-    second, pending = enroll(browser, label="Teléfono")
-    assert pending["status"] == "pending"
-    assert passkey_login(app, second)[1].status_code == 401
-    assert browser.post(f"/api/team-identity/devices/{pending['id']}/decision", json={"approve": True}).status_code == 403
-    peer = team_login(app, other["email"])
-    assert peer.get("/api/team-identity/devices/pending").status_code == 403
-    assert peer.post(f"/api/team-identity/devices/{pending['id']}/decision", json={"approve": True}).status_code == 403
-    administrator = team_login(app, admin["email"])
-    assert administrator.put(f"/api/team-identity/users/{other['id']}/role", json={"role": "supervisor"}).status_code == 200
-    assert [item["id"] for item in peer.get("/api/team-identity/devices/pending").json()["items"]] == [pending["id"]]
-    assert peer.post(f"/api/team-identity/devices/{pending['id']}/decision", json={"approve": True}).status_code == 200
-    assert passkey_login(app, second)[1].status_code == 200
-    assert passkey_login(app, first)[1].status_code == 200
+def test_setup_of_one_user_cannot_be_confirmed_by_another(world):
+    app, _, _, consultant, other = world
+    victim = team_login(app, consultant["email"])
+    setup = victim.post("/api/team-identity/totp/setup", json={}).json()["setup"]
+    ticket = victim.cookies.get("reigel_totp_setup")
+    attacker = team_login(app, other["email"])
+    attacker.cookies.set("reigel_totp_setup", ticket, path="/api/team-identity/totp")
+    assert attacker.post("/api/team-identity/totp/confirm", json={"code": step_code(secret_of(setup))}).status_code == 401
 
 
 def test_supervisor_gains_no_admin_or_data_privileges(world):
     app, _, admin, consultant, other = world
     administrator = team_login(app, admin["email"])
-    administrator.put(f"/api/team-identity/users/{other['id']}/role", json={"role": "supervisor"})
+    assert administrator.put(f"/api/team-identity/users/{other['id']}/role", json={"role": "supervisor"}).status_code == 200
     supervisor = team_login(app, other["email"])
     assert supervisor.get("/api/auth/me").json()["user"]["role"] == "advisor"
+    assert supervisor.get("/api/team-identity/me").json()["user"]["team_role"] == "supervisor"
     assert supervisor.post(f"/api/team-identity/users/{consultant['id']}/grant", json={"purpose": "recovery", "reason": "x"}).status_code == 403
     assert supervisor.put(f"/api/team-identity/users/{consultant['id']}/role", json={"role": "supervisor"}).status_code == 403
     assert supervisor.put(f"/api/team-identity/users/{other['id']}/role", json={"role": "administrador"}).status_code == 403
-    assert supervisor.put("/api/team-identity/policy", json={"passkey_required": True}).status_code == 403
+    assert supervisor.put("/api/team-identity/policy", json={"totp_required": True}).status_code == 403
 
 
-def test_recovery_is_admin_only_audited_single_use_and_replaces_keys(world):
+def test_recovery_is_admin_only_audited_single_use_and_replaces_secret(world):
     app, owner, admin, consultant, _ = world
     team = team_login(app, consultant["email"])
-    lost, _ = enroll(team)
+    lost = enable_totp(team)
     administrator = team_login(app, admin["email"])
     assert administrator.post(f"/api/team-identity/users/{admin['id']}/grant", json={"purpose": "recovery", "reason": "propio"}).status_code == 403
     assert administrator.post(f"/api/team-identity/users/{owner['id']}/grant", json={"purpose": "recovery", "reason": "dueño"}).status_code == 403
-    issued = administrator.post(f"/api/team-identity/users/{consultant['id']}/grant", json={"purpose": "recovery", "reason": "teléfono perdido"})
-    code = issued.json()["code"]
+    code = administrator.post(f"/api/team-identity/users/{consultant['id']}/grant", json={"purpose": "recovery", "reason": "teléfono perdido"}).json()["code"]
     device = client(app)
-    wrong = device.post("/api/team-identity/passkeys/register/options", json={"email": "otro@example.test", "code": code})
-    assert wrong.status_code == 401
-    options = device.post("/api/team-identity/passkeys/register/options", json={"email": consultant["email"], "code": code}).json()["publicKey"]
-    fresh = Authenticator()
-    saved = device.post("/api/team-identity/passkeys/register/verify", json={"credential": fresh.create(options), "label": "Nuevo", "with_code": True})
-    assert saved.status_code == 201 and saved.json()["passkey"]["status"] == "approved"
+    assert device.post("/api/team-identity/totp/setup", json={"email": "otro@example.test", "grant_code": code}).status_code == 401
+    setup = device.post("/api/team-identity/totp/setup", json={"email": consultant["email"], "grant_code": code}).json()["setup"]
+    fresh = secret_of(setup)
+    assert device.post("/api/team-identity/totp/confirm", json={"code": step_code(fresh), "with_grant": True}).status_code == 200
     assert team.get("/api/auth/me").status_code == 401
-    assert passkey_login(app, lost)[1].status_code == 401
-    assert passkey_login(app, fresh)[1].status_code == 200
-    assert client(app).post("/api/team-identity/passkeys/register/options", json={"email": consultant["email"], "code": code}).status_code == 401
+    assert password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": step_code(lost, 1)}).status_code == 401
+    assert client(app).post("/api/team-identity/totp/setup", json={"email": consultant["email"], "grant_code": code}).status_code == 401
     with sqlite3.connect(app.state.store.path) as db:
         actions = {row[0] for row in db.execute("SELECT action FROM identity_audit WHERE realm='team'")}
         stored = db.execute("SELECT token_hash FROM team_access_grants").fetchone()[0]
@@ -419,9 +400,9 @@ def test_recovery_is_admin_only_audited_single_use_and_replaces_keys(world):
 def test_policy_blocks_password_only_accounts_without_locking_out_owner(world):
     app, owner, _, consultant, _ = world
     owner_browser = team_login(app, owner["email"])
-    assert owner_browser.put("/api/team-identity/policy", json={"passkey_required": True}).status_code == 409
-    enroll(owner_browser)
-    assert owner_browser.put("/api/team-identity/policy", json={"passkey_required": True}).status_code == 200
+    assert owner_browser.put("/api/team-identity/policy", json={"totp_required": True}).status_code == 409
+    enable_totp(owner_browser)
+    assert owner_browser.put("/api/team-identity/policy", json={"totp_required": True}).status_code == 200
     assert client(app).post("/api/auth/login", json={"email": consultant["email"], "password": PASSWORD}).status_code == 403
 
 

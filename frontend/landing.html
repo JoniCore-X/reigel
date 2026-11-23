@@ -22,41 +22,26 @@
   <link rel="stylesheet" href="/static/css/power-solar-identity.css?v=2">
   <link rel="stylesheet" href="/static/css/corporate.css?v=7">
   <link rel="stylesheet" href="/static/css/uiverse-components.css?v=4">
-  <link rel="stylesheet" href="/static/css/site-loader.css?v=7">
+  <link rel="stylesheet" href="/static/css/reigel-loader.css?v=2">
+  <link rel="stylesheet" href="/static/css/site-loader.css?v=9">
   <link rel="stylesheet" href="/static/css/coordination-chat.css?v=3">
-  <script src="/static/js/site-loader.js?v=5"></script>
+  <script src="/static/js/reigel-loader.js?v=3"></script>
+  <script src="/static/js/site-loader.js?v=7"></script>
   <script src="/static/js/chat.js?v=10" defer></script>
   <script src="/static/js/header-menu.js?v=2" defer></script>
   <script src="/static/js/public-intents.js" defer></script>
   <script src="/static/js/corporate.js?v=1" defer></script>
   <script src="/static/js/energy-scene.js?v=7" defer></script>
+  <script src="/static/js/tesla-experience.js?v=1" defer></script>
   <link rel="stylesheet" href="/static/css/energy-scene.css?v=7">
+  <link rel="stylesheet" href="/static/css/energy-view.css?v=6">
+  <link rel="stylesheet" href="/static/css/tesla-experience.css?v=5">
+  <link rel="stylesheet" href="/static/css/public-shell.css?v=6">
   <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
 </head>
 <body class="public-body corporate-body">
   <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
-    <div class="ps-stage" aria-hidden="true">
-      <div class="ps-aura"></div>
-      <div class="ps-rays"></div>
-      <div class="ps-rays ps-rays--far"></div>
-      <div class="ps-gyro">
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-        <div class="ps-sphere"><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i><i class="ps-item"></i></div>
-      </div>
-      <div class="ps-corona"></div>
-      <div class="ps-dust"></div>
-      <div class="ps-dust ps-dust--reverse"></div>
-      <div class="ps-flare"></div>
-      <div class="ps-flare ps-flare--b"></div>
-      <div class="ps-core"></div>
-    </div>
+    <div class="ps-stage rl-mark" aria-hidden="true"><div class="rl-word"><span class="rl-glyph rl-glyph--letter">R</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">I</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">G</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">L</span><span class="rl-glyph rl-glyph--dot">.</span></div><span class="rl-line"></span></div>
     <div class="ps-error" hidden>
       <p class="ps-error-text" role="alert"></p>
       <div class="ps-error-actions">
@@ -109,7 +94,114 @@
         <p class="corp-lead">Conoce las opciones de energía para tu hogar en Puerto Rico y los aspectos que conviene evaluar antes de tomar una decisión.</p>
         <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/empresa">Conoce nuestro enfoque <span aria-hidden="true">→</span></a></div>
       </div>
-      <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico.jpg" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
+      <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico-1384.webp" width="1384" height="1030" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
+    </section>
+    <section class="corp-energy-view corp-container" aria-labelledby="energy-view-title">
+      <div class="corp-energy-copy">
+        <p class="corp-eyebrow">TU ENERGÍA, A LA VISTA</p>
+        <h2 id="energy-view-title">Mira cómo tu casa<br>aprovecha el sol.</h2>
+        <p class="corp-energy-lead">Un sistema solar reparte la energía entre las placas, tu hogar y la red. Te explicamos cómo funcionaría en tu casa antes de que decidas.</p>
+        <ul class="corp-energy-points">
+          <li><strong>Solar</strong><span>Lo que producen tus placas.</span></li>
+          <li><strong>Hogar</strong><span>Lo que consume tu casa.</span></li>
+          <li><strong>Red</strong><span>La energía que entra o sale.</span></li>
+        </ul>
+        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/soluciones">Ver cómo funciona <span aria-hidden="true">→</span></a></div>
+      </div>
+      <figure class="corp-energy-phone">
+        <img src="/static/assets/power-solar/app-energia-hogar-hd.webp" width="1161" height="1548" loading="lazy" decoding="async" alt="Aplicación de monitoreo con una casa con placas solares: 4.8 kW de solar, 0.4 kW para el hogar y 4.4 kW hacia la red.">
+        <figcaption>Imagen ilustrativa. Las cifras son un ejemplo y no representan la producción ni el ahorro de tu hogar. La aplicación y sus funciones dependen del equipo instalado.</figcaption>
+      </figure>
+    </section>
+    <section class="corp-tesla-panel tx" aria-labelledby="tesla-panel-title">
+      <div class="tx-hero" data-tx-reveal>
+        <figure class="tx-hero-media">
+          <img src="/static/assets/power-solar/placa-tesla-410w-hd.webp" width="1536" height="1152" loading="lazy" decoding="async" alt="Conjunto de placas solares negras, instaladas con perfil bajo sobre un techo de tejas">
+          <figcaption>Imagen de referencia. El equipo y el montaje se definen en tu evaluación.</figcaption>
+        </figure>
+        <div class="tx-wrap tx-hero-copy">
+          <p class="tx-kicker tx-r" style="--i:0">Tecnología Tesla · Instalador certificado</p>
+          <h2 id="tesla-panel-title"><span class="tx-title-line tx-r tx-mask" style="--i:1">Placas solares Tesla de</span> <span class="tx-figure tx-r tx-mask" style="--i:2">410 <small>W</small></span> <span class="tx-title-line tx-r tx-mask" style="--i:3">por placa. Negras y de perfil bajo.</span></h2>
+          <span class="tx-energy tx-r" style="--i:4" aria-hidden="true"></span>
+          <p class="tx-body tx-r" style="--i:5">Power Solar instala placas solares Tesla con acabado completamente negro.</p>
+          <div class="tx-actions tx-r" style="--i:6"><a class="tx-cta" href="/contacto#evaluacion">Evaluar mi techo <span aria-hidden="true">↗</span></a><a class="tx-link" href="/soluciones">Ver soluciones <span aria-hidden="true">→</span></a></div>
+        </div>
+      </div>
+      <div class="tx-wrap tx-surface" data-tx-reveal>
+        <div>
+          <p class="tx-kicker tx-r" style="--i:0">De cerca</p>
+          <h3 class="tx-r tx-mask" style="--i:1">Una superficie sobria, cerca del techo.</h3>
+          <p class="tx-body tx-r" style="--i:2">Acabado completamente negro y perfil bajo, con una apariencia limpia sobre el techo.</p>
+        </div>
+        <figure class="tx-r" style="--i:2">
+          <div class="tx-surface-stage">
+            <div class="tx-frame">
+              <img src="/static/assets/power-solar/placa-tesla-410w-hd.webp" width="1536" height="1152" loading="lazy" decoding="async" alt="Acercamiento a la superficie negra de las placas y a su borde, sobre las tejas">
+              <span class="tx-dot" style="--x:36%;--y:26%" aria-hidden="true">1</span>
+              <span class="tx-dot" style="--x:32.4%;--y:70%" aria-hidden="true">2</span>
+            </div>
+            <ul class="tx-marks">
+              <li style="--x:36%;--y:26%"><i aria-hidden="true">1</i><strong>Superficie negra</strong><span>Acabado uniforme.</span></li>
+              <li style="--x:32.4%;--y:70%"><i aria-hidden="true">2</i><strong>Perfil bajo</strong><span>Montaje cercano al techo.</span></li>
+            </ul>
+          </div>
+          <figcaption>Acercamiento de la misma imagen de referencia.</figcaption>
+        </figure>
+      </div>
+      <div class="tx-zones-band">
+        <div class="tx-wrap tx-z" data-tx-reveal>
+          <div class="tx-z-copy">
+            <p class="tx-kicker tx-r" style="--i:0">Power Zones</p>
+            <h3 class="tx-r tx-mask" style="--i:1">Si cae una sombra, afecta una parte más pequeña.</h3>
+            <p class="tx-body tx-r" style="--i:2">La placa Tesla se divide en 18 zonas; una placa estándar, en 6. Compara qué parte alcanza la misma sombra.</p>
+          </div>
+          <fieldset class="tx-z-control tx-r" style="--i:3">
+            <legend>Comparar placas</legend>
+            <div class="tx-z-option"><input type="radio" name="tx-zones" id="tx-z18" value="18" checked><label for="tx-z18"><strong>18 zonas</strong>Placa Tesla</label></div>
+            <div class="tx-z-option"><input type="radio" name="tx-zones" id="tx-z6" value="6"><label for="tx-z6"><strong>6 zonas</strong>Placa estándar</label></div>
+          </fieldset>
+          <figure class="tx-z-figure tx-r" style="--i:2">
+            <svg viewBox="0 0 460 600" aria-hidden="true" focusable="false">
+              <defs><pattern id="tx-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="tx-svg-hatch" x1="0" y1="0" x2="0" y2="10"/></pattern></defs>
+              <g transform="translate(70 30)">
+                <rect class="tx-svg-frame" x="-6" y="-6" width="372" height="552"/>
+                <g class="tx-only18"><g class="tx-move-cell"><rect class="tx-svg-off" width="120" height="90"/><rect width="120" height="90" fill="url(#tx-hatch)"/></g></g>
+                <g class="tx-only6"><g class="tx-move-zone"><rect class="tx-svg-off" width="120" height="270"/><rect width="120" height="270" fill="url(#tx-hatch)"/></g></g>
+                <path class="tx-svg-zone tx-only18" d="M0 0H360V540H0ZM120 0V540M240 0V540M0 90H360M0 180H360M0 270H360M0 360H360M0 450H360"/>
+                <path class="tx-svg-zone tx-only6" d="M0 0H360V540H0ZM120 0V540M240 0V540M0 270H360"/>
+                <g class="tx-move-cell"><path class="tx-svg-cloud" d="M16 62C6 44 24 30 40 36C48 14 84 14 92 36C110 34 116 58 100 66C86 76 30 76 16 62Z"/></g>
+                <path class="tx-svg-cota" d="M-34 0V540M-40 0H-28M-40 540H-28"/>
+                <g class="tx-only18"><g class="tx-move-cota18"><path class="tx-svg-bracket" d="M-34 0V90M-42 0H-26M-42 90H-26"/></g></g>
+                <g class="tx-only6"><g class="tx-move-cota6"><path class="tx-svg-bracket" d="M-34 0V270M-42 0H-26M-42 270H-26"/></g></g>
+              </g>
+            </svg>
+            <figcaption class="tx-fine">Esquema ilustrativo. No representa el cableado real ni la distribución exacta de las zonas.</figcaption>
+          </figure>
+          <div class="tx-z-result tx-r" style="--i:4">
+            <p class="tx-z-read" role="status"><span class="tx-t18">Con 18 zonas, la sombra alcanza solo un bloque pequeño.</span><span class="tx-t6">Con 6 zonas, la misma sombra alcanza un bloque grande.</span></p>
+            <div class="tx-z-tools">
+              <ul class="tx-z-legend"><li><i aria-hidden="true"></i>Zona sin sombra</li><li><i aria-hidden="true"></i>Zona afectada</li></ul>
+              <button class="tx-z-pause" type="button" hidden>Pausar la sombra</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tx-wrap" data-tx-reveal>
+        <ul class="tx-specs tx-r" style="--i:0">
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M15.5 3 6 16h7l-1 9 10-14h-7z"/></svg><strong>410 W por placa</strong><span>Potencia indicada por placa. El modelo se confirma en tu evaluación.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M4 5h20v18H4zM4 11h20M4 17h20M11 5v18M17 5v18"/></svg><strong>Negro uniforme</strong><span>Una superficie sobria que acompaña tu techo.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 21h22M5 17h18v4H5zM8 13v-3M20 13v-3M5 10l3-3 3 3M17 10l3-3 3 3"/></svg><strong>Perfil bajo</strong><span>Cerca del techo, para una apariencia limpia.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 5h9v7H3zM16 5h9v7h-9zM9 18h10v6H9zM7.5 12v3H14m6.5-3v3H14m0 0v3"/></svg><strong>Ecosistema Tesla</strong><span>Placas, inversores y baterías Powerwall.</span></li>
+        </ul>
+      </div>
+      <div class="tx-wrap tx-close" data-tx-reveal>
+        <div>
+          <p class="tx-kicker tx-r" style="--i:0">Tu próximo paso</p>
+          <h3 class="tx-r tx-mask" style="--i:1">Veamos cómo se ajusta a tu techo.</h3>
+          <div class="tx-actions tx-r" style="--i:2"><a class="tx-cta" href="/contacto#evaluacion">Evaluar mi techo <span aria-hidden="true">↗</span></a><a class="tx-link" href="/soluciones">Ver soluciones <span aria-hidden="true">→</span></a></div>
+        </div>
+        <p class="tx-fine tx-r" style="--i:3">La producción real depende de la orientación, la sombra, el clima y el tamaño del sistema. El modelo y la disponibilidad se confirman en tu evaluación.</p>
+      </div>
     </section>
     <section class="corp-directory corp-container" aria-labelledby="directory-title">
       <div class="corp-section-label"><p class="corp-eyebrow">NUESTRO SITIO</p><h2 id="directory-title">Encuentra la información<br>que necesitas.</h2></div>
@@ -122,6 +214,23 @@
         <a class="corp-directory-item ui-corner-card" href="/preguntas" id="preguntas"><span class="corp-index" aria-hidden="true">06</span><span><strong>Preguntas frecuentes</strong><small>Respaldo, evaluación y próximos pasos.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
       </div>
     </section>
+    <section class="corp-roof-cta corp-container" aria-labelledby="roof-cta-title">
+      <figure class="corp-roof-photo">
+        <img src="/static/assets/power-solar/techo-paneles-solares-hd.webp" width="1356" height="904" loading="lazy" decoding="async" alt="Paneles solares sobre el techo oscuro de una vivienda en un día soleado">
+        <figcaption>Imagen ilustrativa. Una evaluación no implica garantía de ahorro ni aprobación de financiación.</figcaption>
+      </figure>
+      <div class="corp-roof-copy">
+        <p class="corp-eyebrow">TU TECHO, TU PRÓXIMO PASO</p>
+        <h2 id="roof-cta-title">Tu techo ya recibe el sol.<br>Descubre qué puede hacer por tu hogar.</h2>
+        <p class="corp-roof-lead">Revisamos tu consumo, tu propiedad, el espacio disponible y tus necesidades de respaldo para orientarte con información clara.</p>
+        <ol class="corp-roof-steps">
+          <li>Comparte tus prioridades</li>
+          <li>Coordina la evaluación</li>
+          <li>Comprende la propuesta</li>
+        </ol>
+        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/proceso">Ver el proceso <span aria-hidden="true">→</span></a></div>
+      </div>
+    </section>
     <div class="corp-container corp-home-note"><p>Cada hogar requiere una evaluación de sus condiciones, consumo y prioridades. Los resultados y las condiciones de una propuesta se revisan por separado.</p><a href="/contacto#privacidad" id="privacidad">Privacidad y uso de datos</a></div>
 <!--corporate:content:end-->
   </main>
@@ -129,7 +238,7 @@
     <div class="corp-container corp-footer-top"><a href="/captacion" class="wordmark light brand-lockup" aria-label="Power Solar, inicio"><img class="brand-symbol" src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="brand-wordmark"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>TEAM CAGUAS · PUERTO RICO</small></span></a><p>Orientación sobre energía solar<br>para hogares en Puerto Rico.</p><nav aria-label="Información y acceso"><a href="/equipo">Equipo</a><a href="/preguntas">Preguntas frecuentes</a><a href="/contacto#privacidad">Privacidad</a><a href="/app">Acceso del equipo <span aria-hidden="true">↗</span></a></nav></div>
     <div class="corp-container corp-footer-bottom"><span>POWER SOLAR · TEAM CAGUAS</span><a href="/">Abrir el chat de R.E.I.G.E.L. <span aria-hidden="true">↗</span></a></div>
   </footer>
-  <button class="chat-launcher" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="chat-launcher-symbol" aria-hidden="true">↗</span><span><strong>Habla con R.E.I.G.E.L.</strong><small>Tus preguntas. Tu evaluación.</small></span></button>
+  <button class="chat-launcher" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="chat-launcher-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" focusable="false"><path d="M3.5 4.5h17v12H10l-4.5 3.8v-3.8h-2z"/><path d="M8 9h8M8 12.5h5"/></svg></span><span><strong>Habla con R.E.I.G.E.L.</strong><small>Tus preguntas. Tu evaluación.</small></span></button>
   <dialog class="reigel-chat" id="reigel-chat" aria-labelledby="chat-title">
     <header class="chat-header"><div class="chat-identity"><img class="rc-logo" src="/static/assets/power-solar/reigel-logo.png" alt="" width="48" height="48" decoding="async"><div class="rc-identity-copy"><h2 id="chat-title">R.E.I.G.E.L.</h2><p class="rc-subtitle">Coordinación de Power Solar · Team Caguas</p><p class="rc-mode"><span class="rc-mode-dot" aria-hidden="true"></span><span id="chat-mode">Asistente automático<span class="rc-mode-detail"> · el equipo puede intervenir</span></span></p></div></div><button class="icon-button rc-icon-button" id="chat-close" type="button" aria-label="Cerrar conversación"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></header>
     <div class="chat-scroll"><section class="rc-welcome" aria-labelledby="rc-welcome-title"><p class="rc-kicker">COORDINACIÓN SOLAR · PUERTO RICO</p><h3 id="rc-welcome-title">Cuéntanos qué quieres resolver.</h3><p class="rc-welcome-lead">Elige un tema para empezar. Puedes coordinar una evaluación o pedir a una persona del equipo cuando quieras.</p><ul class="rc-intents" aria-label="Temas para empezar"><li><button type="button" class="rc-intent" data-chat-prompt="Quiero entender cómo reducir mi dependencia de la red eléctrica en casa."><span class="rc-intent-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico.jpg" alt="" width="600" height="355" loading="lazy" decoding="async"></span><span class="rc-intent-copy"><strong>Bajar lo que pago de luz</strong><small>Consumo y opciones solares para tu casa</small></span><span class="rc-intent-go" aria-hidden="true">→</span></button></li><li><button type="button" class="rc-intent" data-chat-prompt="Quiero explorar qué opciones de respaldo existen para cuando se va la luz."><span class="rc-intent-photo"><img src="/static/assets/power-solar/respaldo-apartamento.jpg" alt="" width="600" height="355" loading="lazy" decoding="async"></span><span class="rc-intent-copy"><strong>Respaldo en apagones</strong><small>Baterías y continuidad cuando se va la luz</small></span><span class="rc-intent-go" aria-hidden="true">→</span></button></li><li><button type="button" class="rc-intent" data-chat-prompt="Quiero orientación sobre energía solar para mi negocio."><span class="rc-intent-photo"><img src="/static/assets/power-solar/paneles-solares-edificio-comercial-puerto-rico.jpg" alt="" width="600" height="355" loading="lazy" decoding="async"></span><span class="rc-intent-copy"><strong>Para mi negocio</strong><small>Techos y operación comercial</small></span><span class="rc-intent-go" aria-hidden="true">→</span></button></li></ul></section><div class="chat-messages" id="chat-messages" role="log" aria-label="Tu conversación con Power Solar" aria-live="polite" aria-relevant="additions text"></div><p class="chat-human-note" id="chat-human-note" hidden>El equipo puede leer y responder esta conversación desde su bandeja. Su respuesta aparecerá aquí; mantén la conversación abierta o vuelve desde este navegador.</p><p class="chat-human-note" id="chat-optout-note" hidden>La atención comercial automática está detenida por tu solicitud. Para volver a recibir atención en este chat, escribe /start. También puedes contactar al equipo por otro medio.</p><div class="chat-suggestions" aria-label="Ideas para empezar"><button type="button" data-chat-prompt="¿Cómo funciona una evaluación solar?">¿Cómo funciona?</button><button type="button" data-chat-prompt="¿Tendré respaldo si se va la luz?">¿Y si se va la luz?</button><button type="button" data-chat-prompt="Me preocupa el costo del sistema solar.">Me preocupa el costo</button></div><div class="chat-sources" id="chat-sources" aria-label="Fuentes de información"></div><p class="chat-thinking" id="chat-thinking" role="status" hidden><span class="rc-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>R.E.I.G.E.L. está preparando tu respuesta…</span></p><section class="chat-appointment" id="chat-appointment" aria-label="Confirmación de tu cita" tabindex="-1" hidden></section><section class="chat-booking" id="chat-booking" aria-labelledby="chat-booking-title" hidden><div class="chat-booking-heading"><div><span class="chat-step">TU PRÓXIMO PASO</span><h3 id="chat-booking-title">Coordina tu evaluación</h3></div><button class="icon-button rc-icon-button" id="chat-booking-close" aria-label="Cerrar formulario de reserva" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></div><p class="field-help" id="chat-booking-status" role="status"></p><form id="chat-book-form"><div class="rc-progress" id="chat-book-progress" hidden><svg class="rc-arc" viewBox="0 0 240 72" aria-hidden="true" focusable="false"><path class="rc-arc-track" d="M14 62 A160 160 0 0 1 226 62"/><path class="rc-arc-fill" id="chat-book-arc" d="M14 62 A160 160 0 0 1 226 62" pathLength="100"/><circle class="rc-arc-sun" id="chat-book-sun" cx="14" cy="62" r="8"/></svg><ol class="rc-progress-steps" aria-label="Pasos para coordinar tu evaluación"><li data-book-marker="1" aria-current="step"><span class="rc-progress-num" aria-hidden="true">1</span><span>Horario</span></li><li data-book-marker="2"><span class="rc-progress-num" aria-hidden="true">2</span><span>Tus datos</span></li><li data-book-marker="3"><span class="rc-progress-num" aria-hidden="true">3</span><span>Confirmar</span></li></ol></div><fieldset class="rc-step" data-book-step="1"><legend class="rc-step-title" tabindex="-1">Elige tu horario</legend><div class="form-grid"><label>Asesor<select id="chat-advisor" name="advisor_id" required><option value="">Selecciona un asesor</option></select></label><label>Fecha<input type="date" id="chat-date" required></label><div class="span-2"><span class="chat-field-label">Horarios disponibles</span><input type="hidden" name="start_at" id="chat-start"><div class="slots" id="chat-slots" role="group" aria-label="Horarios disponibles"><p class="slot-empty">Selecciona un asesor y una fecha.</p></div><p class="calendar-zone" id="chat-zone"></p></div></div></fieldset><fieldset class="rc-step" data-book-step="2"><legend class="rc-step-title" tabindex="-1">Tus datos de contacto</legend><div class="form-grid"><label class="span-2">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label><label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email"></label><label>Teléfono<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+1 787…"></label><label>Municipio<input name="municipality" maxlength="100" autocomplete="address-level2"></label><label>Factura mensual aproximada (USD)<input name="monthly_bill" type="number" min="0" max="100000" step="0.01" placeholder="Opcional, la declaras tú"></label></div><p class="field-help">Incluye al menos un correo o teléfono. No compartas documentos, cuentas ni información bancaria.</p></fieldset><fieldset class="rc-step" data-book-step="3"><legend class="rc-step-title" tabindex="-1">Revisa y confirma</legend><dl class="rc-summary" id="chat-book-summary" hidden></dl><label class="checkbox ui-consent"><input name="consent" type="checkbox" required><span class="ui-consent-mark" aria-hidden="true">✓</span><span class="ui-consent-copy">Autorizo a Power Solar a guardar estos datos, contactarme y coordinar esta evaluación. <a href="/contacto#privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.</span></label></fieldset><p class="form-error rc-alert" id="chat-book-error" role="alert"></p><div class="rc-step-nav"><button type="button" class="rc-step-back" id="chat-book-back" hidden><span aria-hidden="true">←</span> Atrás</button><button type="button" class="rc-step-next" id="chat-book-next" hidden>Continuar <span aria-hidden="true">→</span></button><button class="button primary full ui-action" id="chat-book-confirm" type="submit">Confirmar mi cita ↗</button></div></form></section></div>

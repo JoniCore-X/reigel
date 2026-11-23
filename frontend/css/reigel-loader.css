@@ -1,0 +1,78 @@
+/* R.E.I.G.E.L. loader. The script moves letters with transform and opacity only;
+   without it, or with reduced motion, the finished mark stays still. */
+.rl-loader {
+  --rl-blue: #1f4297;
+  --rl-ink: #fff;
+  --rl-accent: #ff6b2c;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--rl-ink);
+  background: var(--rl-blue);
+  contain: layout paint;
+}
+
+.rl-loader[hidden] { display: none; }
+
+.rl-loader--overlay {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+.rl-loader--overlay.rl-leaving { opacity: 0; }
+.rl-loader--inline { width: 100%; min-height: 220px; border-radius: 12px; }
+html.rl-locked { overflow: hidden; }
+
+.rl-mark {
+  display: inline-grid;
+  gap: .22em;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(30px, 7vw, 58px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rl-word { display: flex; justify-content: center; white-space: nowrap; }
+.rl-glyph { display: inline-block; }
+.rl-glyph--letter { padding-inline: .025em; }
+.rl-glyph--dot { color: var(--rl-accent); }
+.rl-active .rl-glyph,
+.rl-active .rl-line { will-change: transform, opacity; }
+
+.rl-line {
+  display: block;
+  height: max(2px, .06em);
+  border-radius: 2px;
+  background: var(--rl-accent);
+  transform-origin: left center;
+}
+
+.rl-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-loader--overlay { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .rl-loader { border: 1px solid CanvasText; color: CanvasText; background: Canvas; }
+  .rl-glyph--dot { color: Highlight; }
+  .rl-line { background: Highlight; }
+}

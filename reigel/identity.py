@@ -5,30 +5,35 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-import json
 import os
 import re
 import secrets
 import sqlite3
 from datetime import timedelta
+from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from . import webauthn
+from . import totp
 from .core import DomainError, email_address, missing_password_hash, now, password_hash, password_matches, stamp, text, uid
 
 CUSTOMER_SESSION_DAYS = 14
 CODE_MINUTES = 15
 CODE_ATTEMPTS = 5
 GRANT_MINUTES = 60
-CHALLENGE_MINUTES = 5
+MFA_MINUTES = 5
+TOTP_SETUP_MINUTES = 10
+TOTP_ATTEMPTS = 5
+TOTP_LOCK_MINUTES = 15
 OAUTH_MINUTES = 10
 USERNAME = re.compile(r"^[a-z][a-z0-9_.]{2,29}$")
 PHONE = re.compile(r"^\+[1-9]\d{7,14}$")
 RESERVED = {"admin", "administrador", "root", "soporte", "support", "reigel", "powersolar", "team", "teamcaguas"}
 TEAM_ROLES = {"administrador", "supervisor", "consultor"}
-POLICY_KEY = "team_passkey_required"
+POLICY_KEY = "team_totp_required"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS customers (
@@ -80,22 +85,23 @@ CREATE TABLE IF NOT EXISTS customer_entitlements (
  id TEXT PRIMARY KEY, customer_id TEXT NOT NULL REFERENCES customers(id), product_id TEXT NOT NULL REFERENCES commerce_products(id),
  permission TEXT NOT NULL, source TEXT NOT NULL, expires_at TEXT, created_at TEXT NOT NULL, UNIQUE(customer_id, product_id, permission)
 );
-CREATE TABLE IF NOT EXISTS team_identities (
- user_id TEXT PRIMARY KEY REFERENCES users(id), team_role TEXT NOT NULL CHECK(team_role IN ('administrador','supervisor','consultor')),
- webauthn_handle TEXT NOT NULL UNIQUE, updated_at TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS team_roles (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), team_role TEXT NOT NULL CHECK(team_role IN ('administrador','supervisor','consultor')), updated_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS team_passkeys (
- id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), credential_id TEXT NOT NULL UNIQUE, public_key BLOB NOT NULL,
- sign_count INTEGER NOT NULL DEFAULT 0, transports TEXT NOT NULL DEFAULT '[]', label TEXT NOT NULL DEFAULT '',
- status TEXT NOT NULL CHECK(status IN ('pending','approved','revoked')), approved_by TEXT, approved_at TEXT, last_used_at TEXT, created_at TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS team_totp (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), secret_nonce BLOB NOT NULL, secret_cipher BLOB NOT NULL, last_step INTEGER NOT NULL DEFAULT -1,
+ failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT, confirmed_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS team_totp_setups (
+ token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE REFERENCES users(id), grant_id TEXT REFERENCES team_access_grants(id),
+ secret_nonce BLOB NOT NULL, secret_cipher BLOB NOT NULL, expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS team_mfa_challenges (
+ token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS team_access_grants (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), purpose TEXT NOT NULL CHECK(purpose IN ('enroll','recovery')),
  token_hash TEXT NOT NULL UNIQUE, issued_by TEXT, reason TEXT NOT NULL, expires_at TEXT NOT NULL, consumed_at TEXT, created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS webauthn_challenges (
- id TEXT PRIMARY KEY, purpose TEXT NOT NULL CHECK(purpose IN ('register','login')), user_id TEXT REFERENCES users(id),
- grant_id TEXT REFERENCES team_access_grants(id), challenge_hash TEXT NOT NULL, expires_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS identity_audit (
  id TEXT PRIMARY KEY, realm TEXT NOT NULL CHECK(realm IN ('customer','team')), actor_id TEXT, action TEXT NOT NULL, subject_id TEXT, created_at TEXT NOT NULL
@@ -119,6 +125,10 @@ def migrate_identity(db) -> None:
     db.executescript(SCHEMA)
     db.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version TEXT PRIMARY KEY,applied_at TEXT NOT NULL)")
     db.execute("INSERT OR IGNORE INTO schema_migrations VALUES('reigel_identity_v1',?)", (stamp(),))
+    # Roles assigned while passkeys existed stay valid; old passkey tables are left untouched.
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='team_identities'").fetchone():
+        db.execute("INSERT OR IGNORE INTO team_roles SELECT user_id,team_role,updated_at FROM team_identities")
+    db.execute("INSERT OR IGNORE INTO schema_migrations VALUES('reigel_identity_totp_v2',?)", (stamp(),))
 
 
 def token_hash(token) -> str:
@@ -155,13 +165,13 @@ def identifier_kind(value: str) -> str:
     return "phone" if re.fullmatch(r"[+\d\s().-]{8,24}", value) else "username"
 
 
-def password_login_block(db, user_id: str) -> str:
-    """Return the reason a correct Team password may not open a session."""
-    if db.execute("SELECT 1 FROM team_passkeys WHERE user_id=? AND status='approved' LIMIT 1", (user_id,)).fetchone():
-        return "Esta cuenta entra con su llave de acceso."
+def password_login_gate(db, user_id: str) -> str:
+    """Decide what a correct Team password still needs: "", "totp" or a refusal."""
+    if db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
+        return "totp"
     row = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
     if row and row["value"] == "1":
-        return "El equipo requiere llave de acceso. Solicita a un administrador un código de registro."
+        return "El equipo requiere Google Authenticator. Solicita a un administrador un código de registro."
     return ""
 
 
@@ -179,6 +189,7 @@ class Identity:
     def __init__(self, store, delivery=None):
         self.store = store
         self.delivery = delivery or NoDelivery()
+        self._totp_key = None
 
     @staticmethod
     def audit(db, realm, actor_id, action, subject_id=None):
@@ -480,17 +491,47 @@ class Identity:
         return self.customer_by_id(customer["id"])
 
     # Team realm -----------------------------------------------------------
+    def _cipher(self) -> AESGCM:
+        """The key lives outside the database, so a copy of the database cannot read secrets."""
+        if self._totp_key is None:
+            configured = os.environ.get("REIGEL_TOTP_KEY", "").strip()
+            if configured:
+                key = base64.urlsafe_b64decode(configured + "=" * (-len(configured) % 4))
+            else:
+                path = Path(f"{self.store.path}.totp.key")
+                try:
+                    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                    with os.fdopen(descriptor, "wb") as handle:
+                        handle.write(secrets.token_bytes(32))
+                except FileExistsError:
+                    pass
+                key = path.read_bytes()
+            if len(key) != 32:
+                raise DomainError("La protección de códigos no está configurada correctamente.", 503)
+            self._totp_key = key
+        return AESGCM(self._totp_key)
+
+    def _seal(self, secret: bytes, user_id: str):
+        nonce = secrets.token_bytes(12)
+        return nonce, self._cipher().encrypt(nonce, secret, user_id.encode())
+
+    def _open(self, nonce: bytes, cipher: bytes, user_id: str) -> bytes:
+        try:
+            return self._cipher().decrypt(nonce, cipher, user_id.encode())
+        except InvalidTag:
+            raise DomainError("No se pudo validar el código. Contacta a un administrador.", 503) from None
+
     @staticmethod
     def _team_row(db, user_id):
-        row = db.execute("SELECT * FROM team_identities WHERE user_id=?", (user_id,)).fetchone()
+        row = db.execute("SELECT * FROM team_roles WHERE user_id=?", (user_id,)).fetchone()
         if row:
             return row
         user = db.execute("SELECT role FROM users WHERE id=?", (user_id,)).fetchone()
         if not user:
             raise DomainError("Usuario no encontrado.", 404)
         role = "administrador" if user["role"] == "admin" else "consultor"
-        db.execute("INSERT INTO team_identities VALUES(?,?,?,?)", (user_id, role, webauthn.b64url(secrets.token_bytes(32)), stamp()))
-        return db.execute("SELECT * FROM team_identities WHERE user_id=?", (user_id,)).fetchone()
+        db.execute("INSERT INTO team_roles VALUES(?,?,?)", (user_id, role, stamp()))
+        return db.execute("SELECT * FROM team_roles WHERE user_id=?", (user_id,)).fetchone()
 
     @classmethod
     def _effective_role(cls, db, user_id) -> str:
@@ -500,20 +541,72 @@ class Identity:
             raise DomainError("Usuario no encontrado.", 404)
         if user["role"] == "admin":
             return "administrador"
-        role = cls._team_row(db, user_id)["team_role"]
-        return "supervisor" if role == "supervisor" else "consultor"
-
-    @staticmethod
-    def _passkey_public(row) -> dict:
-        return {"id": row["id"], "label": row["label"], "status": row["status"], "created_at": row["created_at"], "last_used_at": row["last_used_at"]}
+        return "supervisor" if cls._team_row(db, user_id)["team_role"] == "supervisor" else "consultor"
 
     def team_profile(self, user) -> dict:
         with self.store.connect() as db:
             role = self._effective_role(db, user["id"])
-            keys = db.execute("SELECT * FROM team_passkeys WHERE user_id=? AND status<>'revoked' ORDER BY created_at", (user["id"],)).fetchall()
+            enabled = db.execute("SELECT confirmed_at FROM team_totp WHERE user_id=?", (user["id"],)).fetchone()
             policy = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
             return {"user": {"id": user["id"], "name": user["name"], "email": user["email"], "team_role": role, "is_owner": bool(user.get("is_owner"))},
-                    "passkeys": [self._passkey_public(row) for row in keys], "passkey_required": bool(policy and policy["value"] == "1")}
+                    "totp_enabled": bool(enabled), "totp_confirmed_at": enabled["confirmed_at"] if enabled else None, "totp_required": bool(policy and policy["value"] == "1")}
+
+    def _check_stored_code(self, db, user_id, code):
+        """Verify and record the attempt; the caller raises after this transaction commits."""
+        row = db.execute("SELECT * FROM team_totp WHERE user_id=?", (user_id,)).fetchone()
+        if not row:
+            return None, "invalid"
+        if row["locked_until"] and row["locked_until"] > stamp():
+            return None, "locked"
+        step = totp.matching_step(self._open(row["secret_nonce"], row["secret_cipher"], user_id), code, row["last_step"])
+        if step is None:
+            failures = row["failed_attempts"] + 1
+            locked = later(minutes=TOTP_LOCK_MINUTES) if failures >= TOTP_ATTEMPTS else None
+            db.execute("UPDATE team_totp SET failed_attempts=?,locked_until=? WHERE user_id=?", (0 if locked else failures, locked, user_id))
+            self.audit(db, "team", user_id, "team.totp_locked" if locked else "team.totp_failed", user_id)
+            return None, "locked" if locked else "invalid"
+        db.execute("UPDATE team_totp SET last_step=?,failed_attempts=0,locked_until=NULL WHERE user_id=?", (step, user_id))
+        return step, ""
+
+    @staticmethod
+    def _raise_code_error(reason):
+        if reason == "locked":
+            raise DomainError("Demasiados códigos incorrectos. Espera 15 minutos o contacta a un administrador.", 429)
+        raise DomainError("El código no es correcto.", 401)
+
+    def begin_mfa(self, user_id) -> str:
+        ticket = secrets.token_urlsafe(32)
+        with self.store.connect() as db:
+            db.execute("DELETE FROM team_mfa_challenges WHERE expires_at<? OR user_id=?", (stamp(), user_id))
+            db.execute("INSERT INTO team_mfa_challenges VALUES(?,?,?)", (token_hash(ticket), user_id, later(minutes=MFA_MINUTES)))
+        return ticket
+
+    def totp_login(self, ticket, code):
+        from .core import user_dict
+        if not ticket:
+            raise DomainError("Vuelve a iniciar sesión.", 401)
+        session = None
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            challenge = db.execute("SELECT * FROM team_mfa_challenges WHERE token_hash=? AND expires_at>?", (token_hash(ticket), stamp())).fetchone()
+            active = challenge and db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (challenge["user_id"],)).fetchone()
+            if not active:
+                reason = "expired"
+            else:
+                step, reason = self._check_stored_code(db, challenge["user_id"], code)
+                if step is not None:
+                    session = secrets.token_urlsafe(36)
+                    db.execute("DELETE FROM team_mfa_challenges WHERE token_hash=?", (token_hash(ticket),))
+                    db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
+                    db.execute("INSERT INTO sessions VALUES(?,?,?)", (token_hash(session), challenge["user_id"], later(hours=12)))
+                    self.store.audit(db, {"id": challenge["user_id"]}, "auth.login", challenge["user_id"])
+                    self.audit(db, "team", challenge["user_id"], "team.totp_login", challenge["user_id"])
+                    user = user_dict(db.execute("SELECT * FROM users WHERE id=?", (challenge["user_id"],)).fetchone())
+        if reason == "expired":
+            raise DomainError("Vuelve a iniciar sesión.", 401)
+        if not session:
+            self._raise_code_error(reason)
+        return session, user
 
     def _valid_grant(self, db, email, code):
         if not isinstance(code, str) or not code or len(code) > 128:
@@ -526,151 +619,78 @@ class Identity:
                              WHERE g.token_hash=? AND g.consumed_at IS NULL AND g.expires_at>? AND u.email=? COLLATE NOCASE AND u.active=1""",
                           (token_hash(code), stamp(), email)).fetchone()
 
-    def register_options(self, rp_id, rp_name, user=None, email=None, code=None):
+    def totp_setup(self, user=None, email=None, grant_code=None, current_code=None) -> tuple[str, dict]:
+        reason = ""
         with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             grant = None
             if user:
                 user_id = user["id"]
+                if db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
+                    step, reason = self._check_stored_code(db, user_id, current_code)
             else:
-                grant = self._valid_grant(db, email, code)
+                grant = self._valid_grant(db, email, grant_code)
                 if not grant:
                     raise DomainError("El código de registro no es válido o venció.", 401)
                 user_id = grant["user_id"]
-            account = db.execute("SELECT id,name,email FROM users WHERE id=? AND active=1", (user_id,)).fetchone()
-            if not account:
-                raise DomainError("Usuario no encontrado.", 404)
-            identity = self._team_row(db, user_id)
-            excluded = [] if grant and grant["purpose"] == "recovery" else [
-                {"type": "public-key", "id": row["credential_id"]}
-                for row in db.execute("SELECT credential_id FROM team_passkeys WHERE user_id=? AND status<>'revoked'", (user_id,))]
-            challenge = secrets.token_bytes(32)
-            challenge_id = secrets.token_urlsafe(24)
-            db.execute("DELETE FROM webauthn_challenges WHERE expires_at<?", (stamp(),))
-            db.execute("INSERT INTO webauthn_challenges VALUES(?,?,?,?,?,?)",
-                       (token_hash(challenge_id), "register", user_id, grant["id"] if grant else None, hashlib.sha256(challenge).hexdigest(), later(minutes=CHALLENGE_MINUTES)))
-            options = {"challenge": webauthn.b64url(challenge), "rp": {"id": rp_id, "name": rp_name},
-                       "user": {"id": identity["webauthn_handle"], "name": account["email"], "displayName": account["name"]},
-                       "pubKeyCredParams": [{"type": "public-key", "alg": webauthn.ES256}, {"type": "public-key", "alg": webauthn.RS256}],
-                       "timeout": 120000, "attestation": "none", "excludeCredentials": excluded,
-                       "authenticatorSelection": {"residentKey": "required", "requireResidentKey": True, "userVerification": "required"}}
-            return challenge_id, options
+                if grant["purpose"] == "enroll" and db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
+                    raise DomainError("Esta cuenta ya tiene Google Authenticator. Solicita un código de recuperación.", 409)
+            if not reason:
+                account = db.execute("SELECT email FROM users WHERE id=? AND active=1", (user_id,)).fetchone()
+                if not account:
+                    raise DomainError("Usuario no encontrado.", 404)
+                secret, ticket = totp.new_secret(), secrets.token_urlsafe(32)
+                nonce, cipher = self._seal(secret, user_id)
+                db.execute("DELETE FROM team_totp_setups WHERE user_id=? OR expires_at<?", (user_id, stamp()))
+                db.execute("INSERT INTO team_totp_setups VALUES(?,?,?,?,?,?)",
+                           (token_hash(ticket), user_id, grant["id"] if grant else None, nonce, cipher, later(minutes=TOTP_SETUP_MINUTES)))
+        if reason:
+            self._raise_code_error(reason)
+        uri = totp.otpauth_uri(secret, account["email"])
+        return ticket, {"secret": totp.display_secret(secret), "otpauth_uri": uri, "qr": totp.qr_data_uri(uri), "digits": totp.DIGITS, "period": totp.PERIOD}
 
-    @staticmethod
-    def _take_challenge(db, challenge_id, purpose):
-        row = db.execute("DELETE FROM webauthn_challenges WHERE id=? AND purpose=? RETURNING *", (token_hash(challenge_id), purpose)).fetchone()
-        if not row or row["expires_at"] <= stamp():
-            return None
-        return row
-
-    def register_finish(self, challenge_id, credential, label, rp_id, origin, session_user=None) -> dict:
-        label = text(label, "nombre del dispositivo", limit=60) or "Dispositivo"
-        with self.store.connect() as db:
-            saved = self._take_challenge(db, challenge_id, "register")
-        if not saved or (session_user and saved["user_id"] != session_user["id"]) or (not session_user and not saved["grant_id"]):
-            raise webauthn.invalid()
-        verified = webauthn.verify_registration(credential, saved["challenge_hash"], rp_id, origin)
-        key_id, current = uid(), stamp()
-        try:
-            with self.store.connect() as db:
-                db.execute("BEGIN IMMEDIATE")
-                grant = None
-                if saved["grant_id"]:
-                    grant = db.execute("SELECT * FROM team_access_grants WHERE id=? AND consumed_at IS NULL AND expires_at>?", (saved["grant_id"], current)).fetchone()
-                    if not grant:
-                        raise webauthn.invalid()
-                    db.execute("UPDATE team_access_grants SET consumed_at=? WHERE id=?", (current, grant["id"]))
-                if not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (saved["user_id"],)).fetchone():
-                    raise webauthn.invalid()
-                if grant and grant["purpose"] == "recovery":
-                    db.execute("UPDATE team_passkeys SET status='revoked' WHERE user_id=? AND status<>'revoked'", (saved["user_id"],))
-                    db.execute("DELETE FROM sessions WHERE user_id=?", (saved["user_id"],))
-                    self.audit(db, "team", grant["issued_by"], "team.recovery_completed", saved["user_id"])
-                has_approved = db.execute("SELECT 1 FROM team_passkeys WHERE user_id=? AND status='approved' LIMIT 1", (saved["user_id"],)).fetchone()
-                status = "pending" if has_approved else "approved"
-                db.execute("""INSERT INTO team_passkeys(id,user_id,credential_id,public_key,sign_count,transports,label,status,approved_at,created_at)
-                              VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                           (key_id, saved["user_id"], verified["credential_id"], verified["public_key"], verified["sign_count"], json.dumps(verified["transports"]),
-                            label, status, current if status == "approved" else None, current))
-                self.audit(db, "team", saved["user_id"], f"team.passkey_registered.{status}", key_id)
-                return self._passkey_public(db.execute("SELECT * FROM team_passkeys WHERE id=?", (key_id,)).fetchone())
-        except sqlite3.IntegrityError:
-            raise DomainError("Esta llave de acceso ya está registrada.", 409) from None
-
-    def login_options(self, rp_id):
-        challenge, challenge_id = secrets.token_bytes(32), secrets.token_urlsafe(24)
-        with self.store.connect() as db:
-            db.execute("DELETE FROM webauthn_challenges WHERE expires_at<?", (stamp(),))
-            db.execute("INSERT INTO webauthn_challenges VALUES(?,?,NULL,NULL,?,?)",
-                       (token_hash(challenge_id), "login", hashlib.sha256(challenge).hexdigest(), later(minutes=CHALLENGE_MINUTES)))
-        return challenge_id, {"challenge": webauthn.b64url(challenge), "rpId": rp_id, "timeout": 120000, "userVerification": "required", "allowCredentials": []}
-
-    def login_finish(self, challenge_id, credential, rp_id, origin):
-        from .core import user_dict
-        credential_id = credential.get("rawId") if isinstance(credential, dict) else None
-        with self.store.connect() as db:
-            saved = self._take_challenge(db, challenge_id, "login")
-            key = db.execute("""SELECT k.*,i.webauthn_handle FROM team_passkeys k JOIN team_identities i ON i.user_id=k.user_id JOIN users u ON u.id=k.user_id
-                                WHERE k.credential_id=? AND k.status='approved' AND u.active=1""", (credential_id if isinstance(credential_id, str) else "",)).fetchone()
-        if not saved or not key:
-            raise webauthn.invalid()
-        try:
-            count = webauthn.verify_assertion(credential, key["public_key"], key["sign_count"], key["webauthn_handle"], saved["challenge_hash"], rp_id, origin)
-        except DomainError as error:
-            if "bloqueada" in error.detail:
-                with self.store.connect() as db:
-                    db.execute("UPDATE team_passkeys SET status='revoked' WHERE id=?", (key["id"],))
-                    self.audit(db, "team", key["user_id"], "team.passkey_clone_detected", key["id"])
-            raise
-        token = secrets.token_urlsafe(36)
-        with self.store.connect() as db:
-            updated = db.execute("UPDATE team_passkeys SET sign_count=?,last_used_at=? WHERE id=? AND status='approved' AND sign_count=?",
-                                 (count, stamp(), key["id"], key["sign_count"])).rowcount
-            if not updated:
-                raise webauthn.invalid()
-            db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
-            db.execute("INSERT INTO sessions VALUES(?,?,?)", (token_hash(token), key["user_id"], later(hours=12)))
-            self.store.audit(db, {"id": key["user_id"]}, "auth.passkey_login", key["user_id"])
-            self.audit(db, "team", key["user_id"], "team.passkey_login", key["id"])
-            return token, user_dict(db.execute("SELECT * FROM users WHERE id=?", (key["user_id"],)).fetchone())
-
-    def pending_devices(self, actor) -> list:
-        with self.store.connect() as db:
-            role = self._effective_role(db, actor["id"])
-            if role == "consultor":
-                raise DomainError("Esta acción requiere supervisión.", 403)
-            rows = db.execute("""SELECT k.id,k.label,k.created_at,k.user_id,u.name,u.role FROM team_passkeys k JOIN users u ON u.id=k.user_id
-                                 WHERE k.status='pending' AND u.active=1 AND k.user_id<>? ORDER BY k.created_at""", (actor["id"],)).fetchall()
-            return [{"id": r["id"], "label": r["label"], "created_at": r["created_at"], "user_id": r["user_id"], "user_name": r["name"], "team_role": self._effective_role(db, r["user_id"])}
-                    for r in rows if role == "administrador" and (r["role"] != "admin" or actor.get("is_owner")) or role == "supervisor" and self._effective_role(db, r["user_id"]) == "consultor"]
-
-    def decide_device(self, device_id, approve: bool, actor) -> dict:
+    def totp_confirm(self, ticket, code, session_user=None) -> dict:
+        if not ticket:
+            raise DomainError("La configuración venció. Empieza de nuevo.", 401)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            actor_role = self._effective_role(db, actor["id"])
-            row = db.execute("SELECT * FROM team_passkeys WHERE id=? AND status='pending'", (device_id,)).fetchone()
-            if not row:
-                raise DomainError("Dispositivo no encontrado.", 404)
-            target_role = self._effective_role(db, row["user_id"])
-            allowed = actor_role == "administrador" and (target_role != "administrador" or actor.get("is_owner")) or actor_role == "supervisor" and target_role == "consultor"
-            if row["user_id"] == actor["id"] or not allowed:
-                raise DomainError("No puedes decidir sobre este dispositivo.", 403)
-            status = "approved" if approve else "revoked"
-            db.execute("UPDATE team_passkeys SET status=?,approved_by=?,approved_at=? WHERE id=?", (status, actor["id"], stamp(), device_id))
-            self.audit(db, "team", actor["id"], f"team.device_{status}", device_id)
-            return self._passkey_public(db.execute("SELECT * FROM team_passkeys WHERE id=?", (device_id,)).fetchone())
+            setup = db.execute("SELECT * FROM team_totp_setups WHERE token_hash=? AND expires_at>?", (token_hash(ticket), stamp())).fetchone()
+            if not setup or (session_user and setup["user_id"] != session_user["id"]) or (not session_user and not setup["grant_id"]):
+                raise DomainError("La configuración venció. Empieza de nuevo.", 401)
+            secret = self._open(setup["secret_nonce"], setup["secret_cipher"], setup["user_id"])
+            step = totp.matching_step(secret, code)
+            if step is None:
+                raise DomainError("El código no es correcto. Revisa la hora de tu teléfono.", 401)
+            current = stamp()
+            if setup["grant_id"]:
+                grant = db.execute("SELECT * FROM team_access_grants WHERE id=? AND consumed_at IS NULL AND expires_at>?", (setup["grant_id"], current)).fetchone()
+                if not grant:
+                    raise DomainError("El código de registro no es válido o venció.", 401)
+                db.execute("UPDATE team_access_grants SET consumed_at=? WHERE id=?", (current, grant["id"]))
+                if grant["purpose"] == "recovery":
+                    db.execute("DELETE FROM sessions WHERE user_id=?", (setup["user_id"],))
+                    db.execute("DELETE FROM team_mfa_challenges WHERE user_id=?", (setup["user_id"],))
+                    self.audit(db, "team", grant["issued_by"], "team.recovery_completed", setup["user_id"])
+            db.execute("""INSERT INTO team_totp(user_id,secret_nonce,secret_cipher,last_step,confirmed_at) VALUES(?,?,?,?,?)
+                          ON CONFLICT(user_id) DO UPDATE SET secret_nonce=excluded.secret_nonce,secret_cipher=excluded.secret_cipher,
+                          last_step=excluded.last_step,failed_attempts=0,locked_until=NULL,confirmed_at=excluded.confirmed_at""",
+                       (setup["user_id"], setup["secret_nonce"], setup["secret_cipher"], step, current))
+            db.execute("DELETE FROM team_totp_setups WHERE user_id=?", (setup["user_id"],))
+            self.audit(db, "team", setup["user_id"], "team.totp_enabled", setup["user_id"])
+        return {"totp_enabled": True}
 
-    def revoke_own_passkey(self, device_id, actor) -> None:
+    def totp_disable(self, code, actor) -> None:
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM team_passkeys WHERE id=? AND user_id=? AND status<>'revoked'", (device_id, actor["id"])).fetchone()
-            if not row:
-                raise DomainError("Dispositivo no encontrado.", 404)
-            others = db.execute("SELECT count(*) FROM team_passkeys WHERE user_id=? AND status='approved' AND id<>?", (actor["id"], device_id)).fetchone()[0]
             policy = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
-            if row["status"] == "approved" and not others and policy and policy["value"] == "1":
-                raise DomainError("No puedes quitar tu única llave de acceso.", 409)
-            db.execute("UPDATE team_passkeys SET status='revoked' WHERE id=?", (device_id,))
-            self.audit(db, "team", actor["id"], "team.passkey_revoked", device_id)
+            if policy and policy["value"] == "1":
+                raise DomainError("El equipo requiere Google Authenticator.", 409)
+            step, reason = self._check_stored_code(db, actor["id"], code)
+            if step is not None:
+                db.execute("DELETE FROM team_totp WHERE user_id=?", (actor["id"],))
+                self.audit(db, "team", actor["id"], "team.totp_disabled", actor["id"])
+        if step is None:
+            self._raise_code_error(reason)
 
     def issue_grant(self, user_id, purpose, reason, actor) -> dict:
         self.store.require_admin(actor)
@@ -691,8 +711,7 @@ class Identity:
         current = stamp()
         db.execute("UPDATE team_access_grants SET consumed_at=? WHERE user_id=? AND consumed_at IS NULL", (current, user_id))
         code, expires = secrets.token_urlsafe(24), later(minutes=GRANT_MINUTES)
-        grant_id = uid()
-        db.execute("INSERT INTO team_access_grants VALUES(?,?,?,?,?,?,?,?,?)", (grant_id, user_id, purpose, token_hash(code), issuer, reason, expires, None, current))
+        db.execute("INSERT INTO team_access_grants VALUES(?,?,?,?,?,?,?,?,?)", (uid(), user_id, purpose, token_hash(code), issuer, reason, expires, None, current))
         self.audit(db, "team", issuer, f"team.grant_issued.{purpose}", user_id)
         return {"code": code, "expires_at": expires, "purpose": purpose}
 
@@ -719,17 +738,17 @@ class Identity:
             if target["role"] == "admin":
                 raise DomainError("Los administradores se gestionan desde Equipo.", 409)
             self._team_row(db, user_id)
-            db.execute("UPDATE team_identities SET team_role=?,updated_at=? WHERE user_id=?", (role, stamp(), user_id))
+            db.execute("UPDATE team_roles SET team_role=?,updated_at=? WHERE user_id=?", (role, stamp(), user_id))
             self.audit(db, "team", actor["id"], f"team.role_set.{role}", user_id)
         return {"id": user_id, "team_role": role}
 
-    def set_passkey_policy(self, required: bool, actor) -> dict:
+    def set_totp_policy(self, required: bool, actor) -> dict:
         self.store.require_owner(actor)
         if not isinstance(required, bool):
             raise DomainError("Valor no válido.", 422)
         with self.store.connect() as db:
-            if required and not db.execute("SELECT 1 FROM team_passkeys WHERE user_id=? AND status='approved'", (actor["id"],)).fetchone():
-                raise DomainError("Registra primero tu llave de acceso para no quedarte fuera.", 409)
+            if required and not db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (actor["id"],)).fetchone():
+                raise DomainError("Activa primero tu Google Authenticator para no quedarte fuera.", 409)
             db.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (POLICY_KEY, "1" if required else "0"))
-            self.audit(db, "team", actor["id"], f"team.passkey_policy.{int(required)}")
-        return {"passkey_required": required}
+            self.audit(db, "team", actor["id"], f"team.totp_policy.{int(required)}")
+        return {"totp_required": required}

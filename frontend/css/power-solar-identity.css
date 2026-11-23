@@ -674,22 +674,13 @@ a.brand-lockup > span.brand-wordmark {
   animation: login-spin 700ms linear infinite;
 }
 
-.workspace-body .login-card .passkey-login {
-  width: 100%;
-  min-height: 42px;
-  margin-top: 10px;
-  border: 1px solid #c5d0df;
-  border-radius: 7px;
-  color: var(--blue);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  transition: border-color 160ms ease, background-color 160ms ease;
+.workspace-body .login-card[hidden] {
+  display: none;
 }
 
-.workspace-body .login-card .passkey-login:hover:not(:disabled) {
-  border-color: var(--blue);
-  background: var(--blue-light);
+.workspace-body .login-card .totp-back {
+  display: block;
+  margin-top: 16px;
 }
 
 .workspace-body .team-access-link {

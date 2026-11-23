@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hmac
-from urllib.parse import urlparse
 
 from fastapi import Depends, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -13,7 +12,9 @@ from .identity import Identity, csrf_for
 
 CUSTOMER_COOKIE = "reigel_customer"
 OAUTH_COOKIE = "reigel_oauth"
-WEBAUTHN_COOKIE = "reigel_webauthn"
+MFA_COOKIE = "reigel_team_mfa"
+TOTP_SETUP_COOKIE = "reigel_totp_setup"
+TOTP_PATH = "/api/team-identity/totp"
 
 
 def register_identity(app, *, production, team_cookie, team_actor, payload):
@@ -21,15 +22,6 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
     app.state.oauth_transport = None
     identity = lambda: app.state.identity
     limit = lambda request, key, maximum, seconds: app.state.limiter.check(request, key, maximum, seconds)
-
-    def origin_config(request):
-        site = app.state.store.settings().get("site_url", "")
-        if site:
-            parsed = urlparse(site)
-            return parsed.hostname, f"{parsed.scheme}://{parsed.netloc}"
-        if not production and request.url.hostname == "localhost":
-            return "localhost", str(request.base_url).rstrip("/")
-        raise DomainError("Las llaves de acceso requieren un dominio HTTPS o localhost.", 503)
 
     def require_csrf(request, cookie):
         token = request.cookies.get(cookie, "")
@@ -53,13 +45,18 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         response.set_cookie(CUSTOMER_COOKIE, token, max_age=14 * 86400, httponly=True, secure=production, samesite="strict", path="/")
         return response
 
-    def with_challenge(response, challenge_id):
-        response.set_cookie(WEBAUTHN_COOKIE, challenge_id, max_age=300, httponly=True, secure=production, samesite="strict", path="/api/team-identity/passkeys")
+    def with_totp_cookie(response, name, value, seconds):
+        response.set_cookie(name, value, max_age=seconds, httponly=True, secure=production, samesite="strict", path=TOTP_PATH)
         return response
 
-    def clear_challenge(response):
-        response.delete_cookie(WEBAUTHN_COOKIE, path="/api/team-identity/passkeys", httponly=True, secure=production, samesite="strict")
+    def clear_totp_cookie(response, name):
+        response.delete_cookie(name, path=TOTP_PATH, httponly=True, secure=production, samesite="strict")
         return response
+
+    def team_mfa_response(user_id):
+        return with_totp_cookie(JSONResponse({"mfa_required": True}), MFA_COOKIE, identity().begin_mfa(user_id), 300)
+
+    app.state.team_mfa_response = team_mfa_response
 
     def customer_body(token, customer):
         return {"customer": customer, "csrf": csrf_for(token)}
@@ -183,58 +180,37 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
     async def team_me(request: Request, user=Depends(team_actor)):
         return identity().team_profile(user) | {"csrf": csrf_for(request.cookies.get(team_cookie))}
 
-    @app.post("/api/team-identity/passkeys/register/options")
-    async def team_register_options(request: Request):
-        limit(request, "team_passkey_register", 12, 900)
+    @app.post("/api/team-identity/totp/login")
+    async def team_totp_login(request: Request):
+        limit(request, "team_totp_login", 20, 900)
         data = await payload(request)
-        rp_id, _ = origin_config(request)
-        user = None
-        if request.cookies.get(team_cookie) and not data.get("code"):
-            user = team_write(request)
-        challenge_id, options = identity().register_options(rp_id, "R.E.I.G.E.L. Team Access", user=user, email=data.get("email"), code=data.get("code"))
-        return with_challenge(JSONResponse({"publicKey": options}), challenge_id)
-
-    @app.post("/api/team-identity/passkeys/register/verify", status_code=201)
-    async def team_register_verify(request: Request):
-        limit(request, "team_passkey_register", 12, 900)
-        data = await payload(request)
-        rp_id, origin = origin_config(request)
-        user = team_write(request) if request.cookies.get(team_cookie) and not data.get("with_code") else None
-        passkey = identity().register_finish(request.cookies.get(WEBAUTHN_COOKIE, ""), data.get("credential"), data.get("label"), rp_id, origin, session_user=user)
-        return clear_challenge(JSONResponse({"passkey": passkey}, status_code=201))
-
-    @app.post("/api/team-identity/passkeys/login/options")
-    async def team_login_options(request: Request):
-        limit(request, "team_passkey_login", 30, 900)
-        rp_id, _ = origin_config(request)
-        challenge_id, options = identity().login_options(rp_id)
-        return with_challenge(JSONResponse({"publicKey": options}), challenge_id)
-
-    @app.post("/api/team-identity/passkeys/login/verify")
-    async def team_login_verify(request: Request):
-        limit(request, "team_passkey_login", 30, 900)
-        data = await payload(request)
-        rp_id, origin = origin_config(request)
-        token, user = identity().login_finish(request.cookies.get(WEBAUTHN_COOKIE, ""), data.get("credential"), rp_id, origin)
-        response = clear_challenge(JSONResponse({"user": user}))
+        token, user = identity().totp_login(request.cookies.get(MFA_COOKIE), data.get("code"))
+        response = clear_totp_cookie(JSONResponse({"user": user}), MFA_COOKIE)
         response.set_cookie(team_cookie, token, max_age=43200, httponly=True, secure=production, samesite="strict", path="/")
         return response
 
-    @app.delete("/api/team-identity/passkeys/{device_id}")
-    async def team_revoke_passkey(device_id: str, user=Depends(team_write)):
-        identity().revoke_own_passkey(device_id, user)
-        return {"ok": True}
-
-    @app.get("/api/team-identity/devices/pending")
-    async def team_pending_devices(user=Depends(team_actor)):
-        return {"items": identity().pending_devices(user)}
-
-    @app.post("/api/team-identity/devices/{device_id}/decision")
-    async def team_device_decision(device_id: str, request: Request, user=Depends(team_write)):
+    @app.post("/api/team-identity/totp/setup")
+    async def team_totp_setup(request: Request):
+        limit(request, "team_totp_setup", 12, 900)
         data = await payload(request)
-        if not isinstance(data.get("approve"), bool):
-            raise DomainError("Decisión no válida.", 422)
-        return {"passkey": identity().decide_device(device_id, data["approve"], user)}
+        user = team_write(request) if not data.get("grant_code") else None
+        ticket, setup = identity().totp_setup(user=user, email=data.get("email"), grant_code=data.get("grant_code"), current_code=data.get("current_code"))
+        return with_totp_cookie(JSONResponse({"setup": setup}), TOTP_SETUP_COOKIE, ticket, 600)
+
+    @app.post("/api/team-identity/totp/confirm")
+    async def team_totp_confirm(request: Request):
+        limit(request, "team_totp_confirm", 12, 900)
+        data = await payload(request)
+        user = team_write(request) if not data.get("with_grant") else None
+        result = identity().totp_confirm(request.cookies.get(TOTP_SETUP_COOKIE), data.get("code"), session_user=user)
+        return clear_totp_cookie(JSONResponse(result), TOTP_SETUP_COOKIE)
+
+    @app.post("/api/team-identity/totp/disable")
+    async def team_totp_disable(request: Request, user=Depends(team_write)):
+        limit(request, "team_totp_disable", 6, 900)
+        data = await payload(request)
+        identity().totp_disable(data.get("code"), user)
+        return {"ok": True}
 
     @app.post("/api/team-identity/users/{user_id}/grant")
     async def team_issue_grant(user_id: str, request: Request, user=Depends(team_write)):
@@ -250,4 +226,4 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
     @app.put("/api/team-identity/policy")
     async def team_policy(request: Request, user=Depends(team_write)):
         data = await payload(request)
-        return identity().set_passkey_policy(data.get("passkey_required"), user)
+        return identity().set_totp_policy(data.get("totp_required"), user)

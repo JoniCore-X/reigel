@@ -232,6 +232,8 @@ def create_app(db_path=None, *, load_env=None):
         app.state.limiter.check(request, failure_key, 8, 900)
         token, user = app.state.store.login(data.get("email"), data.get("password"))
         app.state.limiter.clear(request, failure_key)
+        if token is None:
+            return app.state.team_mfa_response(user["mfa_user_id"])
         response = JSONResponse({"user": user})
         response.set_cookie(COOKIE, token, max_age=43200, httponly=True, secure=production, samesite="strict", path="/")
         return response

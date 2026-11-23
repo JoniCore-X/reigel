@@ -399,12 +399,15 @@ class Store(OperationsMixin):
             matched = password_matches(password, encoded)
             if not row or not matched:
                 raise DomainError("Correo o contraseña incorrectos.", 401)
-            from .identity import password_login_block
-            blocked = password_login_block(db, row["id"])
-            if blocked:
-                raise DomainError(blocked, 403)
+            from .identity import password_login_gate
+            gate = password_login_gate(db, row["id"])
+            if gate and gate != "totp":
+                raise DomainError(gate, 403)
             if row["password_hash"].startswith("scrypt$"):
                 db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(password), row["id"]))
+            if gate == "totp":
+                # The password alone opens no session; the second factor must follow.
+                return None, {"mfa_user_id": row["id"]}
             token = secrets.token_urlsafe(36)
             db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
             db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), row["id"], (now() + timedelta(hours=12)).isoformat()))

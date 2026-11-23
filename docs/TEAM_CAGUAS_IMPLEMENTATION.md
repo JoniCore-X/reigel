@@ -2115,7 +2115,8 @@ solo se explica en texto. Sin commit ni publicación.
 
 ## R.E.I.G.E.L. Identity (2026-11-22)
 
-- Clientes (`/cuenta`) y Team (`/app`, `/app/acceso`) usan tablas, cookies y sesiones separadas. Migración aditiva `reigel_identity_v1`; se aplica al arrancar y no se ejecutó sobre la base comercial.
-- Comprobado con pruebas locales y un autenticador por software. Sin probar: passkeys en dispositivos reales y OAuth con proveedores reales.
+- Clientes (`/cuenta`) y Team (`/app`, `/app/acceso`) usan tablas, cookies y sesiones separadas. Migraciones aditivas `reigel_identity_v1` y `reigel_identity_totp_v2`; se aplican al arrancar y no se ejecutaron sobre la base comercial.
+- El segundo factor del Team es TOTP compatible con Google Authenticator. El secreto se cifra con `REIGEL_TOTP_KEY` o con `<base>.totp.key`, junto a la base y fuera del repositorio. `scripts/backup.py` no copia esa clave: sin ella, cada cuenta debe reconfigurarse con un código de recuperación (`scripts/team_recovery.py`).
+- Comprobado con pruebas locales, vectores RFC 6238 y un escaneo del QR con Google Authenticator en un teléfono real sobre la demo sintética (2026-11-22). Sin probar: OAuth con proveedores reales.
 - Bloqueado hasta configurar: credenciales OAuth y un canal autorizado de correo/SMS. Sin canal, correo y teléfono no se pueden verificar ni recuperar; el acceso por usuario sí funciona.
-- Transición del Team: la contraseña sigue activa hasta que la persona registra una passkey; el propietario puede exigirla a todos desde `/app/acceso`.
+- Transición del Team: la contraseña sola sigue activa hasta que la persona activa Google Authenticator; el propietario puede exigirlo a todos desde `/app/acceso`.
