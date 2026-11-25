@@ -5,3 +5,4 @@ tzdata>=2025.1
 argon2-cffi>=25.1,<26
 cryptography>=50,<51
 segno>=1.6.6,<2
+pypdf>=7.1.1,<8

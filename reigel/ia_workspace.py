@@ -19,6 +19,9 @@ MAX_CONVERSATIONS = 100
 MAX_MESSAGES = 200
 DEFAULT_TITLE = "Nueva conversación"
 MESSAGE_STATES = {"complete", "streaming", "stopped", "error", "rejected"}
+# Extracted document text: visitors follow their seven-day retention, team
+# accounts keep it thirty days. The original file is never stored.
+ATTACHMENT_DAYS = {"visitor": VISITOR_DAYS, "user": 30}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS ai_conversations (
@@ -40,6 +43,24 @@ CREATE TABLE IF NOT EXISTS ai_messages (
  created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ai_messages_conversation ON ai_messages(conversation_id,created_at);
+CREATE TABLE IF NOT EXISTS ai_attachments (
+ id TEXT PRIMARY KEY,
+ conversation_id TEXT NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+ owner_kind TEXT NOT NULL CHECK(owner_kind IN ('user','visitor')),
+ owner_id TEXT NOT NULL,
+ message_id TEXT,
+ name TEXT NOT NULL,
+ kind TEXT NOT NULL CHECK(kind IN ('pdf','txt','md')),
+ size_bytes INTEGER NOT NULL,
+ pages INTEGER,
+ chars INTEGER NOT NULL,
+ truncated INTEGER NOT NULL DEFAULT 0,
+ content TEXT NOT NULL,
+ created_at TEXT NOT NULL,
+ expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ai_attachments_conversation ON ai_attachments(conversation_id,created_at);
+CREATE INDEX IF NOT EXISTS ai_attachments_expiry ON ai_attachments(expires_at);
 CREATE TABLE IF NOT EXISTS ai_visitors (
  token_hash TEXT PRIMARY KEY,
  expires_at TEXT NOT NULL,
@@ -57,6 +78,18 @@ CREATE TABLE IF NOT EXISTS ai_visitors (
 _EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 _PHONE = re.compile(r"(?<!\w)\+?\(?\d(?:[\s().-]*\d){6,14}(?!\w)")
 MAX_INCOMING = 4000
+
+
+def _attachment(row) -> dict:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "kind": row["kind"],
+        "size_bytes": row["size_bytes"],
+        "pages": row["pages"],
+        "chars": row["chars"],
+        "truncated": bool(row["truncated"]),
+    }
 
 
 def hide_contacts(value: str) -> str:
@@ -159,6 +192,7 @@ class AIWorkspace:
                 for row in db.execute("SELECT token_hash FROM ai_visitors WHERE expires_at<=?", (now,)).fetchall()
             ]
             for key in expired:
+                db.execute("DELETE FROM ai_attachments WHERE owner_kind='visitor' AND owner_id=?", (key,))
                 db.execute(
                     "DELETE FROM ai_conversations WHERE owner_kind='visitor' AND owner_id=?",
                     (key,),
@@ -241,6 +275,7 @@ class AIWorkspace:
             ).fetchone()
             if busy:
                 raise DomainError("Espera a que termine la respuesta para eliminar la conversación.", 409)
+            db.execute("DELETE FROM ai_attachments WHERE conversation_id=?", (conversation["id"],))
             db.execute("DELETE FROM ai_messages WHERE conversation_id=?", (conversation["id"],))
             db.execute("DELETE FROM ai_conversations WHERE id=?", (conversation["id"],))
         return {"deleted": conversation["id"]}
@@ -288,12 +323,86 @@ class AIWorkspace:
                 "SELECT count(*) FROM ai_messages WHERE conversation_id=?",
                 (conversation["id"],),
             ).fetchone()[0]
+            files = db.execute(
+                "SELECT * FROM ai_attachments WHERE conversation_id=? AND expires_at>? ORDER BY created_at",
+                (conversation["id"], stamp()),
+            ).fetchall()
+        linked = {row["message_id"]: _attachment(row) for row in files if row["message_id"]}
+        pending = [_attachment(row) for row in files if not row["message_id"]]
+        messages = []
+        for row in rows:
+            message = self._message(row)
+            if row["id"] in linked:
+                message["attachment"] = linked[row["id"]]
+            messages.append(message)
         return {
             "conversation": _summary(conversation) | {"message_count": count},
-            "messages": [self._message(row) for row in rows],
+            "messages": messages,
+            "pending_attachment": pending[-1] if pending else None,
         }
 
-    def begin_turn(self, owner, conversation_id, value):
+    # --- Attached documents (extracted text only) ---------------------------
+
+    def purge_attachments(self):
+        """Delete document text whose retention ended. Cheap; runs on each use."""
+        with self.store.connect() as db:
+            return db.execute("DELETE FROM ai_attachments WHERE expires_at<=?", (stamp(),)).rowcount
+
+    def add_attachment(self, owner, conversation_id, document):
+        """Store one extracted document as the conversation's pending attachment.
+
+        One file per message: a new upload replaces the pending one that was not
+        sent yet. ``document`` comes from documents.extract (already redacted).
+        """
+        days = ATTACHMENT_DAYS[owner["kind"]]
+        now = datetime.now(UTC)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            conversation = self._conversation(db, owner, conversation_id)
+            db.execute(
+                "DELETE FROM ai_attachments WHERE conversation_id=? AND message_id IS NULL",
+                (conversation["id"],),
+            )
+            attachment_id = uid()
+            db.execute(
+                """INSERT INTO ai_attachments(id,conversation_id,owner_kind,owner_id,message_id,name,kind,
+                size_bytes,pages,chars,truncated,content,created_at,expires_at)
+                VALUES(?,?,?,?,NULL,?,?,?,?,?,?,?,?,?)""",
+                (
+                    attachment_id, conversation["id"], owner["kind"], owner["id"], document["name"],
+                    document["kind"], int(document["size_bytes"]), document["pages"], len(document["text"]),
+                    1 if document["truncated"] else 0, document["text"], now.isoformat(),
+                    (now + timedelta(days=days)).isoformat(),
+                ),
+            )
+            row = db.execute("SELECT * FROM ai_attachments WHERE id=?", (attachment_id,)).fetchone()
+        return _attachment(row)
+
+    def remove_attachment(self, owner, conversation_id, attachment_id):
+        """Remove a pending (not yet sent) attachment of the owner's conversation."""
+        current = text(attachment_id, "documento", limit=64, required=True)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            conversation = self._conversation(db, owner, conversation_id)
+            removed = db.execute(
+                "DELETE FROM ai_attachments WHERE id=? AND conversation_id=? AND message_id IS NULL",
+                (current, conversation["id"]),
+            ).rowcount
+        if not removed:
+            raise DomainError("Documento no encontrado.", 404)
+        return {"removed": current}
+
+    def document_for(self, conversation_id):
+        """The latest sent document of a conversation, for the model, or None."""
+        with self.store.connect() as db:
+            row = db.execute(
+                """SELECT * FROM ai_attachments WHERE conversation_id=? AND message_id IS NOT NULL
+                AND expires_at>? ORDER BY created_at DESC,rowid DESC LIMIT 1""",
+                (conversation_id, stamp()),
+            ).fetchone()
+        return _attachment(row) | {"text": row["content"]} if row else None
+
+    def begin_turn(self, owner, conversation_id, value, attachment_id=None):
         """Store the visitor's message and the reply placeholder in one transaction.
 
         The limit counts both rows, so a conversation never exceeds
@@ -301,15 +410,16 @@ class AIWorkspace:
         BEGIN IMMEDIATE serializes the count and both inserts.
         Returns (conversation summary, user message, assistant placeholder).
         """
-        return self._insert_turn(owner, conversation_id, value, with_reply=True)
+        return self._insert_turn(owner, conversation_id, value, with_reply=True, attachment_id=attachment_id)
 
     def append_user(self, owner, conversation_id, value):
         """Store a user message without a reply slot. The HTTP route uses begin_turn."""
         conversation, message, _ = self._insert_turn(owner, conversation_id, value, with_reply=False)
         return conversation, message
 
-    def _insert_turn(self, owner, conversation_id, value, with_reply):
+    def _insert_turn(self, owner, conversation_id, value, with_reply, attachment_id=None):
         incoming = hide_contacts(text(value, "mensaje", limit=MAX_INCOMING, required=True))
+        attachment_id = text(attachment_id, "documento", limit=64) if attachment_id else ""
         needed = 2 if with_reply else 1
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -328,6 +438,18 @@ class AIWorkspace:
                 "INSERT INTO ai_messages VALUES(?,?,?,?,?,?)",
                 (message_id, conversation["id"], "user", incoming, "complete", now),
             )
+            attachment = None
+            if attachment_id:
+                linked = db.execute(
+                    """UPDATE ai_attachments SET message_id=? WHERE id=? AND conversation_id=?
+                    AND message_id IS NULL AND expires_at>?""",
+                    (message_id, attachment_id, conversation["id"], now),
+                ).rowcount
+                if not linked:
+                    raise DomainError("El documento adjunto ya no está disponible. Adjúntalo de nuevo.", 409)
+                attachment = _attachment(
+                    db.execute("SELECT * FROM ai_attachments WHERE id=?", (attachment_id,)).fetchone()
+                )
             reply = None
             if with_reply:
                 reply_id = uid()
@@ -345,7 +467,10 @@ class AIWorkspace:
             )
             message = db.execute("SELECT * FROM ai_messages WHERE id=?", (message_id,)).fetchone()
             updated = self._conversation(db, owner, conversation["id"])
-        return _summary(updated), self._message(message), self._message(reply) if reply else None
+        stored = self._message(message)
+        if attachment:
+            stored["attachment"] = attachment
+        return _summary(updated), stored, self._message(reply) if reply else None
 
     def prepare_regeneration(self, owner, conversation_id, assistant_id):
         with self.store.connect() as db:

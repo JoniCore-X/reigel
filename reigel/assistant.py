@@ -117,6 +117,17 @@ def validate_draft(value):
         raise RuntimeError('El borrador contiene marcadores sin completar; vuelve a generarlo o redacta uno manualmente.')
     if re.search(r'(?:\d|\$|%|https?://|www\.|(?:cita\s+(?:está|esta|queda|ha quedado)\s+(?:confirmada|reservada|agendada|cancelada))|(?:he|hemos)\s+(?:reservado|confirmado|agendado|cancelado|enviado)|garantiz\w*|oferta\s+exclusiva|últim[oa]s?\s+(?:cupos|horas)|financiamiento\s+aprobado)', value, re.I):
         raise RuntimeError('El borrador contiene cifras o afirmaciones que requieren verificación humana.')
+    from .ai_chat import claimed_action, coaches_installation, mixes_portuguese
+    if coaches_installation(value):
+        raise RuntimeError('El borrador indica al cliente cómo colocar o instalar placas; ese trabajo lo hace el equipo de Power Solar.')
+    # A draft can reach a customer unreviewed in a channel's ``ai`` mode. Staff can
+    # really hand off or call there, so only claims of completed bookings, opt-outs
+    # and deletions are refused, plus Portuguese mixed into the text.
+    problem = claimed_action(value, calls=False, handoff=False)
+    if problem:
+        raise RuntimeError('El borrador afirma una gestión que nadie realizó; revísalo antes de usarlo.')
+    if mixes_portuguese(value):
+        raise RuntimeError('El borrador no está en español; vuelve a generarlo.')
     return value.strip()
 
 

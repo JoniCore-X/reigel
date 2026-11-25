@@ -72,15 +72,18 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         page = client.get("/")
         assert page.status_code == 200
         assert page.headers["x-robots-tag"] == "noindex, nofollow"
+        assert page.headers["cache-control"] == "no-store"
         assert '<meta name="robots" content="noindex,nofollow">' in page.text
         assert 'id="ia-shell"' in page.text
         assert 'id="ia-thread"' in page.text
         assert 'id="ia-form"' in page.text
-        assert 'src="/static/js/ia.js?v=15"' in page.text
-        assert 'src="/static/assets/power-solar/reigel-logo.png"' in page.text
+        assert 'src="/static/js/ia.js?v=19"' in page.text
+        assert '<svg class="ia-title-mark"' in page.text and '<svg class="ia-empty-logo"' in page.text
         assert 'id="ia-plus"' in page.text
         assert 'data-ia-menu="new"' in page.text
         assert 'data-ia-menu="copy"' in page.text
+        assert 'data-ia-menu="export-pdf"' in page.text and 'data-ia-menu="export-txt"' in page.text
+        assert 'data-ia-menu="docs"' not in page.text
         assert "Aún no disponible" in page.text
         assert 'href="/captacion"' in page.text
         assert 'id="reigel-chat"' not in page.text

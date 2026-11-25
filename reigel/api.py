@@ -7,6 +7,7 @@ import asyncio
 import logging
 import json
 import os
+import re
 import sqlite3
 import time
 from collections import defaultdict, deque
@@ -25,6 +26,9 @@ from .ia_workspace import AIWorkspace, VISITOR_DAYS
 COOKIE = "powersolar_session"
 CHAT_COOKIE = "reigel_webchat"
 IA_COOKIE = "reigel_ia"
+# Raw document uploads in /ia: the only route whose body is streamed by the
+# endpoint itself, so each owner's size limit applies before the file is read.
+IA_ATTACHMENT_PATH = re.compile(r"/api/ia/conversations/[^/]+/attachments")
 
 
 def load_environment(path=None):
@@ -49,8 +53,11 @@ class RateLimiter:
     def __init__(self):
         self.buckets = defaultdict(deque)
 
-    def check(self, request, key, maximum, seconds):
-        client = request.client.host if request.client else "unknown"
+    def check(self, request, key, maximum, seconds, client=None):
+        # ``client`` scopes a bucket to something other than the address (an
+        # /ia visitor session, for instance); by default it is the address.
+        if client is None:
+            client = request.client.host if request.client else "unknown"
         current = time.monotonic()
         # Bound memory for opportunistic public traffic; do not trust X-Forwarded-For.
         if len(self.buckets) > 10000:
@@ -126,6 +133,14 @@ def create_app(db_path=None, *, load_env=None):
     app.state.knowledge = KnowledgeBase(app.state.store)
     app.state.webchat = WebChat(app.state.store, app.state.knowledge)
     app.state.ia = AIWorkspace(app.state.store)
+    # At most two PDF extraction workers at a time; others wait their turn.
+    app.state.document_slots = asyncio.Semaphore(2)
+    from .learning import LearningQueue
+    # Additive, idempotent migration on this app's database; tests and previews
+    # pass their own temporary path. The 90-day retention runs at most daily.
+    app.state.learning = LearningQueue(app.state.store)
+    app.state.learning.maybe_purge()
+    app.state.learning_eval = {"task": None, "error": "", "started_at": None}
     business = app.state.store.settings()
     environment_url = os.environ.get("SITE_URL", "").rstrip("/")
     if environment_url and environment_url != business.get("site_url"):
@@ -182,10 +197,17 @@ def create_app(db_path=None, *, load_env=None):
                 size = int(request.headers.get("content-length", "0"))
             except ValueError:
                 return JSONResponse({"detail": "Solicitud no válida."}, status_code=400, headers=headers)
-            maximum = 1024 * 1024 if request.url.path.startswith("/webhooks/") else 65536
+            attachment = request.method == "POST" and IA_ATTACHMENT_PATH.fullmatch(request.url.path)
+            if attachment:
+                from .documents import TEAM
+                if "content-length" not in request.headers:
+                    return JSONResponse({"detail": "Falta el tamaño del archivo."}, status_code=411, headers=headers)
+                maximum = TEAM.max_bytes
+            else:
+                maximum = 1024 * 1024 if request.url.path.startswith("/webhooks/") else 65536
             if size > maximum:
                 return JSONResponse({"detail": "La solicitud es demasiado grande."}, status_code=413, headers=headers)
-            if not request.url.path.startswith("/webhooks/"):
+            if not request.url.path.startswith("/webhooks/") and not attachment:
                 body = bytearray()
                 async for chunk in request.stream():
                     if len(body) + len(chunk) > maximum:
@@ -196,13 +218,28 @@ def create_app(db_path=None, *, load_env=None):
         response = await call_next(request)
         for key, value in headers.items():
             response.headers[key] = value
-        if request.url.path.startswith("/api/") or request.url.path in {"/app", "/ia"}:
+        if request.url.path.startswith("/api/") or request.url.path in {"/", "/app", "/ia"}:
             response.headers["Cache-Control"] = "no-store"
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
         return response
 
     def actor(request: Request):
         return app.state.store.session_user(request.cookies.get(COOKIE))
+
+    def record_gap(route, reason, question):
+        """Learning capture never blocks or breaks a reply, and logs no content."""
+        try:
+            app.state.learning.record_gap(route, reason, question)
+        except Exception:
+            logging.getLogger(__name__).warning("No se pudo registrar un hueco de aprendizaje (%s, %s).", route, reason)
+
+    def reviewed(question, route):
+        """Approved team answers for the prompt, or {} so callers keep their old signature."""
+        try:
+            items = app.state.learning.reviewed_for(question, route)
+        except Exception:
+            items = []
+        return {"reviewed": items} if items else {}
 
     def integrations():
         from .channels import integration_status
@@ -410,11 +447,20 @@ def create_app(db_path=None, *, load_env=None):
         ai_reply = None
         if brief:
             app.state.limiter.check(request, "chat_ai", 20, 60)
-            ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"])
-        return app.state.webchat.message(
+            ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"],
+                                           **reviewed(brief["incoming"], "chat"))
+        gaps = []
+        result = app.state.webchat.message(
             token, data.get("text"), data.get("request_id"),
-            ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None,
+            ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None, gaps=gaps,
         )
+        if brief and ai_reply is None:
+            # The model was asked and its draft was missing or withdrawn: the fallback was used.
+            record_gap("chat", "fallback", brief["incoming"])
+        else:
+            for reason, question in gaps[:1]:
+                record_gap("chat", reason, question)
+        return result
 
     @app.post("/api/public/chat/book")
     async def public_chat_book(request: Request):
@@ -460,16 +506,15 @@ def create_app(db_path=None, *, load_env=None):
             set_visitor_cookie(response, token)
         return response
 
-    def ia_events(request, owner, conversation, incoming, history, assistant, regenerate=False):
+    def ia_events(request, owner, conversation, incoming, history, assistant, regenerate=False, document=None):
         async def events():
             from . import ai_chat, safety
             # Output boundary: model text reaches the client, the database and
-            # later prompts only after the validator accepted it. `buffer` holds
-            # everything received; `emitted` marks the validated prefix already
-            # sent. Text past `emitted` is never exposed or persisted.
-            buffer = ""
-            emitted = 0
-            verified = ""
+            # later prompts only after the validator accepted it. The boundary
+            # is ai_chat.WorkspaceOutput, shared with the question bank
+            # (learning_eval.publish); text past `output.validated` is never
+            # exposed or persisted.
+            output = None
             previous = assistant["content"] if regenerate else ""
             saved = False
             counter = 0
@@ -480,12 +525,13 @@ def create_app(db_path=None, *, load_env=None):
                 return app.state.ia.finish_assistant(assistant["id"], value, status)
 
             def reject():
+                record_gap("ia", "blocked", incoming)
                 return persist(ai_chat.SAFE_REPLACEMENT, "rejected"), {
                     "detail": "La respuesta se retiró por seguridad y se muestra un mensaje alternativo.",
                 }
 
             def preserve_partial(keep_empty=False):
-                validated = buffer[:emitted].strip()
+                validated = output.validated.strip() if output else ""
                 if validated:
                     return persist(validated, "stopped")
                 if regenerate and previous:
@@ -506,8 +552,6 @@ def create_app(db_path=None, *, load_env=None):
                 # Safety topics get a fixed reply and never reach the model.
                 fixed = safety.reply_for(incoming)
                 if fixed:
-                    buffer = fixed
-                    emitted = len(fixed)
                     yield sse("delta", {"text": fixed})
                     item = persist(fixed, "complete")
                     yield sse("done", {
@@ -517,51 +561,37 @@ def create_app(db_path=None, *, load_env=None):
                     return
                 answer = app.state.knowledge.answer(incoming)
                 verified = answer.get("text", "") if isinstance(answer, dict) else ""
-                has_source = bool(str(verified).strip())
-                stream = ai_chat.stream_workspace(ai_chat.safe_history(history), incoming, verified)
-                # «¡Perfecto!» only acknowledges an answer to our own question.
-                strip_ack = not ai_chat.answering_our_question(history)
+                output = ai_chat.WorkspaceOutput(incoming, history, verified)
+                # A document reaches the model only as delimited, untrusted data.
+                extra = {"document": document} if document else {}
+                stream = ai_chat.stream_workspace(ai_chat.safe_history(history), incoming, verified,
+                                                  **reviewed(incoming, "ia"), **extra)
                 try:
-                    async for piece in stream:
-                        counter += 1
-                        if counter % 8 == 0 and await request.is_disconnected():
-                            preserve_partial(keep_empty=True)
-                            return
-                        buffer += piece
-                        if strip_ack and emitted == 0:
-                            state, end = ai_chat.opening_ack(buffer)
-                            if state == "wait":
-                                continue
-                            if state == "strip":
-                                buffer = buffer[end:]
-                                buffer = buffer[:1].upper() + buffer[1:]
-                            strip_ack = False
-                        if len(buffer) > ai_chat.MAX_WORKSPACE_REPLY:
-                            break
-                        cut = ai_chat.sentence_boundary(buffer, emitted)
-                        if cut <= emitted:
-                            continue
-                        try:
-                            # Validate the whole prefix, not only the new
-                            # sentence, so context from earlier text counts.
-                            ai_chat.validate_workspace_reply(buffer[:cut], has_source)
-                        except ValueError:
-                            item, extra = reject()
-                            yield sse("replace", {"assistant": item, **extra})
-                            return
-                        yield sse("delta", {"text": buffer[emitted:cut]})
-                        emitted = cut
-                finally:
-                    await stream.aclose()
-                try:
-                    final = ai_chat.validate_workspace_reply(buffer, has_source)
-                except ValueError:
+                    try:
+                        async for piece in stream:
+                            counter += 1
+                            if counter % 8 == 0 and await request.is_disconnected():
+                                preserve_partial(keep_empty=True)
+                                return
+                            text_ready = output.feed(piece)
+                            if output.overflow:
+                                break
+                            if text_ready:
+                                yield sse("delta", {"text": text_ready})
+                    finally:
+                        await stream.aclose()
+                    tail, closing, final = output.finish()
+                except ai_chat.WorkspaceRejected:
                     item, extra = reject()
                     yield sse("replace", {"assistant": item, **extra})
                     return
-                if len(buffer) > emitted:
-                    yield sse("delta", {"text": buffer[emitted:]})
-                    emitted = len(buffer)
+                if tail:
+                    yield sse("delta", {"text": tail})
+                # Fixed text, not model output: /ia cannot book, hand off or
+                # register requests, so roof, installation, booking, handoff,
+                # opt-out and privacy answers end by pointing to «Citas y equipo».
+                if closing:
+                    yield sse("delta", {"text": closing})
                 item = persist(final, "complete")
                 yield sse("done", {
                     "assistant": item,
@@ -576,6 +606,7 @@ def create_app(db_path=None, *, load_env=None):
                     item = preserve_partial()
                 else:
                     item = None
+                record_gap("ia", "model_error", incoming)
                 import httpx
                 detail = (
                     "El modelo local tardó demasiado en responder. Inténtalo de nuevo."
@@ -593,13 +624,16 @@ def create_app(db_path=None, *, load_env=None):
     @app.get("/api/ia/bootstrap")
     async def ia_bootstrap(request: Request, response: Response):
         from .ai_chat import status as chat_ai_status
+        from .documents import limits_for
         app.state.limiter.check(request, "ia_bootstrap", 60, 60)
         app.state.ia.purge_expired_visitors()
+        app.state.ia.purge_attachments()
         owner, user = ia_owner(request, response)
         return {
             "owner": owner["kind"],
             "user": {"name": user["name"]} if user else None,
             "retention_days": VISITOR_DAYS,
+            "attachments": limits_for(owner).public(),
             "conversations": app.state.ia.list(owner),
             "model": await chat_ai_status(),
         }
@@ -658,6 +692,57 @@ def create_app(db_path=None, *, load_env=None):
         owner, _ = ia_owner(request)
         return app.state.ia.detail(owner, conversation_id)
 
+    @app.post("/api/ia/conversations/{conversation_id}/attachments", status_code=201)
+    async def ia_attach(conversation_id: str, request: Request):
+        """Attach one document (PDF, .txt, .md) to the next message.
+
+        Team accounts and /ia visitors alike, each with their own limits. The
+        body is the raw file, read here in bounded chunks after the owner,
+        conversation and rate limits are known; only redacted text is stored.
+        """
+        from . import documents
+        owner, user = ia_owner(request)
+        limits = documents.limits_for(owner)
+        if owner["kind"] == "user":
+            app.state.limiter.check(request, "ia_attach_user", 10, 3600, client=owner["id"])
+        else:
+            app.state.limiter.check(request, "ia_attach_session", 5, 3600, client=owner["id"])
+            app.state.limiter.check(request, "ia_attach_session_day", 20, 86400, client=owner["id"])
+            app.state.limiter.check(request, "ia_attach_ip", 5, 3600)
+            app.state.limiter.check(request, "ia_attach_ip_day", 20, 86400)
+        name = documents.file_name(request.headers.get("x-attachment-name"))
+        documents.kind_for(name)
+        app.state.ia.conversation_summary(owner, conversation_id)
+        too_big = DomainError(f"El archivo supera el máximo de {limits.max_bytes // (1024 * 1024)} MB.", 413)
+        try:
+            declared = int(request.headers.get("content-length", ""))
+        except ValueError:
+            raise DomainError("Falta el tamaño del archivo.", 411) from None
+        if declared > limits.max_bytes:
+            raise too_big
+        body = bytearray()
+        async for chunk in request.stream():
+            if len(body) + len(chunk) > limits.max_bytes:
+                raise too_big
+            body.extend(chunk)
+        async with app.state.document_slots:
+            document = await asyncio.to_thread(documents.extract, bytes(body), name, limits)
+        del body
+        app.state.ia.purge_attachments()
+        attachment = app.state.ia.add_attachment(owner, conversation_id, document)
+        with app.state.store.connect() as db:
+            app.state.store.audit(db, user, "ia.attachment.added", attachment["id"])
+        return {"attachment": attachment}
+
+    @app.delete("/api/ia/conversations/{conversation_id}/attachments/{attachment_id}")
+    def ia_detach(conversation_id: str, attachment_id: str, request: Request):
+        app.state.limiter.check(request, "ia_manage", 60, 60)
+        owner, user = ia_owner(request)
+        result = app.state.ia.remove_attachment(owner, conversation_id, attachment_id)
+        with app.state.store.connect() as db:
+            app.state.store.audit(db, user, "ia.attachment.removed", result["removed"])
+        return result
+
     @app.post("/api/ia/conversations/{conversation_id}/messages")
     async def ia_message(conversation_id: str, request: Request):
         from . import ai_chat
@@ -668,12 +753,16 @@ def create_app(db_path=None, *, load_env=None):
         if not ai_chat.enabled():
             raise DomainError("La IA local no está habilitada en este servidor.", 503)
         owner, _ = ia_owner(request)
-        conversation, user_message, assistant = app.state.ia.begin_turn(owner, conversation_id, incoming)
+        app.state.ia.purge_attachments()
+        conversation, user_message, assistant = app.state.ia.begin_turn(
+            owner, conversation_id, incoming, data.get("attachment_id") or None,
+        )
         # The model and the knowledge lookup receive the stored text, with
         # contact data already hidden, never the raw request body.
         incoming = user_message["content"]
         history = app.state.ia.history(conversation["id"], exclude_id=user_message["id"])
-        streaming = ia_events(request, owner, conversation, incoming, history, assistant)
+        document = app.state.ia.document_for(conversation["id"])
+        streaming = ia_events(request, owner, conversation, incoming, history, assistant, document=document)
         return renew_visitor(request, streaming) if owner["kind"] == "visitor" else streaming
 
     @app.post("/api/ia/conversations/{conversation_id}/regenerate")
@@ -687,7 +776,9 @@ def create_app(db_path=None, *, load_env=None):
         conversation, assistant, incoming, history = app.state.ia.prepare_regeneration(
             owner, conversation_id, data.get("message_id")
         )
-        streaming = ia_events(request, owner, conversation, incoming, history, assistant, regenerate=True)
+        document = app.state.ia.document_for(conversation["id"])
+        streaming = ia_events(request, owner, conversation, incoming, history, assistant, regenerate=True,
+                              document=document)
         return renew_visitor(request, streaming) if owner["kind"] == "visitor" else streaming
 
     @app.get("/api/knowledge")
@@ -783,6 +874,105 @@ def create_app(db_path=None, *, load_env=None):
             raise DomainError("El modelo local no generó un borrador verificable. Revisa la solicitud o usa las plantillas.", 502) from None
         return {"text": value, "engine": "ollama_local", "review_required": True}
 
+    # --- Aprendizaje: cola con aprobación humana (asesor propone, administrador decide) ---
+    def learning_limit(request, user, key, maximum, seconds):
+        app.state.limiter.check(request, f"learning_{key}", maximum, seconds)
+        app.state.limiter.check(request, f"learning_{key}:{user['id']}", maximum, seconds)
+
+    @app.get("/api/learning/gaps")
+    def learning_gaps(request: Request, status: str = "", route: str = "", reason: str = "", topic: str = "",
+                      limit: int = 100, offset: int = 0, user=Depends(actor)):
+        learning_limit(request, user, "read", 240, 60)
+        app.state.learning.maybe_purge()
+        result = app.state.learning.list(user, status=status, route=route, reason=reason, topic=topic, limit=limit, offset=offset)
+        return {**result, "can_review": user["role"] == "admin"}
+
+    @app.get("/api/learning/gaps/{gap_id}/proposals")
+    def learning_proposals(gap_id: str, request: Request, user=Depends(actor)):
+        learning_limit(request, user, "read", 240, 60)
+        return {"proposals": app.state.learning.proposals(user, text(gap_id, "hueco", limit=100))}
+
+    @app.post("/api/learning/gaps", status_code=201)
+    async def learning_flag(request: Request, user=Depends(actor)):
+        learning_limit(request, user, "flag", 60, 3600)
+        data = await payload(request)
+        route = text(data.get("route"), "ruta", limit=10, required=True)
+        question = text(data.get("question"), "pregunta", limit=2000, required=True)
+        gap = app.state.learning.record_gap(route, "staff_flag", question, actor=user)
+        if not gap:
+            raise DomainError("La pregunta quedó vacía al ocultar los datos personales.", 422)
+        return {"gap": gap}
+
+    @app.post("/api/learning/gaps/{gap_id}/proposals", status_code=201)
+    async def learning_propose(gap_id: str, request: Request, user=Depends(actor)):
+        learning_limit(request, user, "propose", 60, 3600)
+        return {"proposal": app.state.learning.propose(text(gap_id, "hueco", limit=100), await payload(request), user)}
+
+    @app.post("/api/learning/proposals/{proposal_id}/{decision}")
+    async def learning_decide(proposal_id: str, decision: str, request: Request, user=Depends(actor)):
+        app.state.store.require_admin(user)
+        learning_limit(request, user, "review", 120, 3600)
+        data = await payload(request)
+        proposal_id = text(proposal_id, "propuesta", limit=100)
+        if decision == "approve":
+            return {"proposal": app.state.learning.approve(proposal_id, user, data.get("note", ""))}
+        if decision == "reject":
+            return {"proposal": app.state.learning.reject(proposal_id, user, data.get("note", ""))}
+        raise DomainError("Decisión no válida.", 404)
+
+    @app.post("/api/learning/gaps/{gap_id}/{decision}")
+    async def learning_gap_decision(gap_id: str, decision: str, request: Request, user=Depends(actor)):
+        app.state.store.require_admin(user)
+        learning_limit(request, user, "review", 120, 3600)
+        data = await payload(request)
+        gap_id = text(gap_id, "hueco", limit=100)
+        if decision == "reject":
+            app.state.learning.reject_gap(gap_id, user, data.get("note", ""))
+        elif decision == "resolve":
+            app.state.learning.resolve(gap_id, user)
+        else:
+            raise DomainError("Decisión no válida.", 404)
+        return {"ok": True}
+
+    def eval_state():
+        job = app.state.learning_eval
+        task = job["task"]
+        return {"running": bool(task and not task.done()), "error": job["error"], "started_at": job["started_at"]}
+
+    @app.get("/api/learning/eval")
+    def learning_eval_latest(request: Request, user=Depends(actor)):
+        learning_limit(request, user, "read", 240, 60)
+        if user["role"] not in {"admin", "advisor"}:
+            raise DomainError("Esta acción requiere una cuenta del equipo.", 403)
+        return {"latest": app.state.learning.latest_run(), **eval_state(), "can_run": user["role"] == "admin"}
+
+    @app.post("/api/learning/eval", status_code=202)
+    async def learning_eval_run(request: Request, user=Depends(actor)):
+        from . import ai_chat, learning_eval
+        from .core import stamp
+        app.state.store.require_admin(user)
+        await payload(request)
+        if eval_state()["running"]:
+            raise DomainError("Ya hay una evaluación en curso. Espera a que termine.", 409)
+        app.state.limiter.check(request, "learning_eval", 4, 3600)
+        model = await ai_chat.status()
+        if not model.get("enabled"):
+            raise DomainError("La IA local no está habilitada en este servidor.", 503)
+        if model.get("status") != "available":
+            raise DomainError("El modelo local configurado no está disponible en Ollama. No se descarga ningún modelo.", 503)
+        job = app.state.learning_eval
+        job.update(error="", started_at=stamp())
+
+        async def work():
+            try:
+                await learning_eval.run_bank(app.state.learning, app.state.knowledge, actor=user)
+            except Exception:
+                logging.getLogger(__name__).exception("No se pudo completar el banco de preguntas")
+                job["error"] = "La evaluación no terminó. Revisa que Ollama siga en ejecución."
+
+        job["task"] = asyncio.create_task(work())
+        return {**eval_state(), "model": model.get("model")}
+
     from .channels import register_routes
     register_routes(app)
     from .energy import register_routes as register_energy_routes
@@ -809,7 +999,7 @@ def create_app(db_path=None, *, load_env=None):
 
     @app.get("/chat", include_in_schema=False)
     async def legacy_chat_page():
-        return FileResponse(ROOT / "frontend" / "chat.html", headers={"X-Robots-Tag": "noindex, nofollow"})
+        return FileResponse(ROOT / "frontend" / "chat.html", headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-cache"})
 
     app.mount("/static", StaticFiles(directory=ROOT / "frontend"), name="static")
     return app

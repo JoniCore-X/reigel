@@ -57,6 +57,8 @@ class Node {
   contains(node) { return node === this || this.children.some(child => child.contains(node)); }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name]; }
+  removeAttribute(name) { delete this.attributes[name]; }
+  click() { this.dispatch('click'); }
   addEventListener(type, handler) { (this.handlers[type] ||= []).push(handler); }
   dispatch(type, event = {}) { (this.handlers[type] || []).forEach(handler => handler({ target: this, preventDefault() {}, ...event })); }
   focus() {}
@@ -84,19 +86,31 @@ const messages = (id, reply) => [
 function harness(conversations, options = {}) {
   const ids = ['ia-thread', 'ia-empty', 'ia-scroll', 'ia-form', 'ia-text', 'ia-send', 'ia-send-label', 'ia-notice',
     'ia-counter', 'ia-history', 'ia-menu', 'ia-collapse', 'ia-scrim', 'ia-sidebar', 'ia-history-empty', 'ia-owner',
-    'ia-retention', 'ia-back', 'ia-actions-menu', 'ia-plus', 'ia-actions-copy', 'ia-actions-stop', 'ia-new', 'ia-search'];
+    'ia-retention', 'ia-back', 'ia-actions-menu', 'ia-plus', 'ia-actions-copy', 'ia-actions-stop', 'ia-new', 'ia-search',
+    'ia-actions-pdf', 'ia-actions-txt', 'ia-print-title', 'ia-print-date',
+    'ia-attach', 'ia-file', 'ia-attach-tray', 'ia-attach-chip', 'ia-attach-name', 'ia-attach-meta',
+    'ia-attach-remove', 'ia-attach-error', 'ia-actions-files', 'ia-actions-files-desc'];
   const elements = Object.fromEntries(ids.map(id => [id, new Node('div', id)]));
+  elements['ia-actions-pdf'].dataset.iaMenu = 'export-pdf';
+  elements['ia-actions-txt'].dataset.iaMenu = 'export-txt';
   elements['ia-thread'].append(elements['ia-empty']);
   elements['ia-actions-menu'].hidden = true;
   const shell = new Node('div', 'ia-shell');
   const routes = new Map();
   const copied = [];
+  const downloads = [];
+  const printed = [];
   const documentHandlers = {};
   const document = {
     referrer: '',
     querySelector: selector => (selector === '#ia-shell' ? shell : null),
     getElementById: id => elements[id] || null,
-    createElement: tag => new Node(tag),
+    createElement: tag => {
+      const node = new Node(tag);
+      // A download link records what it would save instead of saving it.
+      if (tag === 'a') node.click = () => downloads.push({ name: node.download, url: node.href });
+      return node;
+    },
     addEventListener: (type, handler) => { (documentHandlers[type] ||= []).push(handler); },
   };
   const fetch = (url, options = {}) => {
@@ -105,8 +119,16 @@ function harness(conversations, options = {}) {
     if (!route) return Promise.reject(new Error(`Ruta no preparada: ${key}`));
     return route(options);
   };
+  const blobs = new Map();
+  const FakeURL = Object.assign(function FakeURL(...args) { return new URL(...args); }, {
+    createObjectURL: blob => { const url = `blob:test/${blobs.size + 1}`; blobs.set(url, blob); return url; },
+    revokeObjectURL: url => { blobs.delete(url); },
+  });
   const context = vm.createContext({
-    document, fetch, AbortController, TextDecoder, TextEncoder, URL, URLSearchParams, Intl,
+    document, fetch, AbortController, TextDecoder, TextEncoder, URL: FakeURL, URLSearchParams, Intl, Blob,
+    print: () => printed.push({
+      title: elements['ia-print-title'].textContent, date: elements['ia-print-date'].textContent,
+    }),
     setTimeout, clearTimeout,
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     location: { origin: 'http://localhost', pathname: '/ia', search: options.search || '', href: `http://localhost/ia${options.search || ''}` },
@@ -117,12 +139,14 @@ function harness(conversations, options = {}) {
   routes.set('GET /api/ia/bootstrap', async () => json({
     owner: 'visitor', retention_days: 7, conversations,
     model: { enabled: true, status: 'available', model: 'sintetico' },
+    ...(options.attachments ? { attachments: options.attachments } : {}),
   }));
   const run = () => vm.runInContext(source, context);
   const historyRow = id => elements['ia-history'].children.find(row => row.dataset.id === id);
   const historyButton = id => historyRow(id)?.querySelector('.ia-history-open');
   const threadText = () => elements['ia-thread'].textContent;
-  return { elements, routes, copied, run, historyRow, historyButton, threadText };
+  const blobOf = url => blobs.get(url);
+  return { elements, routes, copied, downloads, printed, blobOf, run, historyRow, historyButton, threadText };
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -359,4 +383,171 @@ test('a connection error keeps the chosen question in the field', async () => {
   await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(setup.elements['ia-text'].value, '¿Qué es la medición neta?');
   assert.match(setup.elements['ia-notice'].textContent, /conexión|Sin/i);
+});
+
+// --- «Descargar conversación»: client-side export (text Blob and print to PDF) ---
+
+const openMenu = setup => setup.elements['ia-plus'].dispatch('click', { detail: 1 });
+const chooseItem = (setup, id) => {
+  const item = setup.elements[id];
+  setup.elements['ia-actions-menu'].dispatch('click', { target: { closest: () => item } });
+};
+
+test('export is unavailable while the conversation is empty', async () => {
+  const setup = harness([]);
+  setup.run();
+  await settle(); await settle();
+  openMenu(setup);
+  assert.equal(setup.elements['ia-actions-txt'].getAttribute('aria-disabled'), 'true');
+  assert.equal(setup.elements['ia-actions-pdf'].getAttribute('aria-disabled'), 'true');
+  chooseItem(setup, 'ia-actions-txt');
+  chooseItem(setup, 'ia-actions-pdf');
+  await settle();
+  assert.deepEqual(setup.downloads, []);
+  assert.deepEqual(setup.printed, []);
+});
+
+test('the text export holds the conversation as plain text, with header and notice', async () => {
+  const tricky = 'Mira <img src=x onerror=alert(1)> y\u0007 sigue.\r\nSegunda línea.';
+  const setup = harness([conversation('a', 'Batería <b>y</b> apagones')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({
+    conversation: conversation('a', 'Batería <b>y</b> apagones'),
+    messages: [
+      { id: 'a-u', role: 'user', content: '¿Cuánto dura?', status: 'complete' },
+      { id: 'a-a', role: 'assistant', content: tricky, status: 'stopped' },
+    ],
+  }));
+  setup.run();
+  await settle(); await settle();
+  openMenu(setup);
+  assert.equal(setup.elements['ia-actions-txt'].getAttribute('aria-disabled'), undefined);
+  chooseItem(setup, 'ia-actions-txt');
+  await settle();
+
+  assert.equal(setup.downloads.length, 1);
+  const [download] = setup.downloads;
+  assert.match(download.name, /^reigel-conversacion-\d{4}-\d{2}-\d{2}\.txt$/);
+  const blob = setup.blobOf(download.url);
+  assert.equal(blob.type, 'text/plain;charset=utf-8');
+  const text = await blob.text();
+  assert.ok(text.startsWith('Power Solar · R.E.I.G.E.L. · Conversación con IA\r\n'));
+  assert.match(text, /Conversación: Batería <b>y<\/b> apagones\r\n/);
+  assert.match(text, /Exportada: .+\(hora de Puerto Rico\)\r\n/);
+  assert.match(text, /Tú:\r\n¿Cuánto dura\?\r\n/);
+  // Plain text: kept literally (never interpreted), control characters removed.
+  assert.match(text, /R\.E\.I\.G\.E\.L\.:\r\nMira <img src=x onerror=alert\(1\)> y sigue\.\r\nSegunda línea\.\r\n/);
+  assert.doesNotMatch(text, /\u0007/);
+  assert.match(text, /\(Respuesta detenida antes de completarse\.\)/);
+  assert.match(text, /puede equivocarse\. Confirma los datos importantes con el equipo\.\r\n$/);
+  assert.doesNotMatch(text.replace(/\r\n/g, ''), /\n/, 'every line ends in CRLF');
+  assert.match(setup.elements['ia-notice'].textContent, /descargada como texto/);
+});
+
+test('saving as PDF fills the print header and opens the browser print dialog', async () => {
+  const setup = harness([conversation('a', 'Respaldo')]);
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Respaldo'), messages: messages('a', 'Respuesta A') }));
+  setup.run();
+  await settle(); await settle();
+  openMenu(setup);
+  chooseItem(setup, 'ia-actions-pdf');
+  await settle();
+  assert.equal(setup.printed.length, 1);
+  assert.equal(setup.printed[0].title, 'Respaldo');
+  assert.match(setup.printed[0].date, /^Exportada: .+\(hora de Puerto Rico\)$/);
+  assert.deepEqual(setup.downloads, [], 'the PDF path never creates a file itself');
+});
+
+// --- Adjuntar documento: the browser sends the raw file; the chip shows server metadata ---
+
+const LIMITS = { max_bytes: 3 * 1024 * 1024, max_pages: 15, max_chars: 12000, formats: ['PDF', '.txt', '.md'] };
+const doneStream = (id, text) => {
+  const encoder = new TextEncoder();
+  const chunks = [`event: done\ndata: ${JSON.stringify({ assistant: { id: `${id}-r`, role: 'assistant', content: text, status: 'complete' }, conversation: conversation(id, 'Doc') })}\n\n`];
+  return { ok: true, status: 200, body: { getReader: () => ({
+    read: () => Promise.resolve(chunks.length ? { value: encoder.encode(chunks.shift()), done: false } : { value: undefined, done: true }),
+  }) } };
+};
+
+test('without server support the attachment controls stay hidden and disabled', async () => {
+  const setup = harness([]);
+  setup.run();
+  await settle(); await settle();
+  assert.equal(setup.elements['ia-attach'].hidden, true);
+  assert.equal(setup.elements['ia-actions-files'].getAttribute('aria-disabled'), 'true');
+});
+
+test('a chosen document is uploaded raw, shown as a chip and sent with the next message', async () => {
+  const setup = harness([conversation('a', 'Doc')], { attachments: LIMITS });
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Doc'), messages: [] }));
+  const uploads = [];
+  setup.routes.set('POST /api/ia/conversations/a/attachments', async options => {
+    uploads.push(options);
+    return { ok: true, status: 201, json: async () => ({ attachment: { id: 'f1', name: 'factura <b>.pdf', kind: 'pdf', size_bytes: 2048, pages: 2, chars: 900, truncated: false } }) };
+  });
+  const sent = [];
+  setup.routes.set('POST /api/ia/conversations/a/messages', async options => { sent.push(JSON.parse(options.body)); return doneStream('a', 'Listo.'); });
+  setup.run();
+  await settle(); await settle();
+  assert.equal(setup.elements['ia-attach'].hidden, false);
+  assert.equal(setup.elements['ia-actions-files'].getAttribute('aria-disabled'), undefined);
+  assert.match(setup.elements['ia-actions-files-desc'].textContent, /PDF, \.txt o \.md · hasta 3 MB y 15 páginas/);
+
+  const file = { name: 'factura <b>.pdf', size: 2048 };
+  setup.elements['ia-file'].dispatch('change', { target: { files: [file] } });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(uploads.length, 1);
+  assert.equal(uploads[0].body, file, 'the raw file is the body');
+  assert.equal(uploads[0].headers['X-Attachment-Name'], encodeURIComponent('factura <b>.pdf'));
+  assert.equal(setup.elements['ia-attach-chip'].hidden, false);
+  assert.equal(setup.elements['ia-attach-name'].textContent, 'factura <b>.pdf', 'names are text, never HTML');
+  assert.match(setup.elements['ia-attach-meta'].textContent, /2 KB · 2 páginas/);
+  assert.equal(setup.elements['ia-text'].required, false, 'a document alone can be sent');
+
+  setup.elements['ia-text'].value = '¿Qué dice?';
+  setup.elements['ia-form'].dispatch('submit');
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.deepEqual(sent, [{ text: '¿Qué dice?', attachment_id: 'f1' }]);
+  assert.equal(setup.elements['ia-attach-chip'].hidden, true, 'the chip clears once sent');
+  assert.match(setup.threadText(), /Documento adjunto: factura <b>\.pdf/);
+});
+
+test('files that are too large or of another format are refused before uploading', async () => {
+  const setup = harness([conversation('a', 'Doc')], { attachments: LIMITS });
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({ conversation: conversation('a', 'Doc'), messages: [] }));
+  let uploads = 0;
+  setup.routes.set('POST /api/ia/conversations/a/attachments', async () => { uploads += 1; return json({}); });
+  setup.run();
+  await settle(); await settle();
+  setup.elements['ia-file'].dispatch('change', { target: { files: [{ name: 'foto.png', size: 10 }] } });
+  await settle();
+  assert.match(setup.elements['ia-attach-error'].textContent, /Formato no admitido/);
+  assert.equal(setup.elements['ia-attach-error'].hidden, false);
+  setup.elements['ia-file'].dispatch('change', { target: { files: [{ name: 'grande.pdf', size: 3 * 1024 * 1024 + 1 }] } });
+  await settle();
+  assert.match(setup.elements['ia-attach-error'].textContent, /supera el máximo de 3 MB/);
+  assert.equal(uploads, 0);
+});
+
+test('a server refusal is shown in the tray and a pending document can be removed', async () => {
+  const setup = harness([conversation('a', 'Doc')], { attachments: LIMITS });
+  setup.routes.set('GET /api/ia/conversations/a', async () => json({
+    conversation: conversation('a', 'Doc'), messages: [],
+    pending_attachment: { id: 'f9', name: 'notas.md', kind: 'md', size_bytes: 500, pages: null, chars: 500, truncated: false },
+  }));
+  setup.routes.set('POST /api/ia/conversations/a/attachments', async () => ({
+    ok: false, status: 422, json: async () => ({ detail: 'El PDF está protegido con contraseña o cifrado.' }),
+  }));
+  const removed = [];
+  setup.routes.set('DELETE /api/ia/conversations/a/attachments/f9', async () => { removed.push('f9'); return json({ removed: 'f9' }); });
+  setup.run();
+  await settle(); await settle();
+  assert.equal(setup.elements['ia-attach-name'].textContent, 'notas.md', 'a pending document is restored');
+  setup.elements['ia-file'].dispatch('change', { target: { files: [{ name: 'cifrado.pdf', size: 100 }] } });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.match(setup.elements['ia-attach-error'].textContent, /protegido con contraseña/);
+  assert.equal(setup.elements['ia-attach-name'].textContent, 'notas.md', 'the earlier document stays attached');
+  setup.elements['ia-attach-remove'].dispatch('click');
+  await settle();
+  assert.deepEqual(removed, ['f9']);
+  assert.equal(setup.elements['ia-attach-chip'].hidden, true);
 });

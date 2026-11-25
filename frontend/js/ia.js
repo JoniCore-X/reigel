@@ -24,6 +24,8 @@
     // reply that belongs to an earlier view only updates the history list.
     view: 0,
     search: '',
+    // Attached document (sent with the next message): server metadata, never the file.
+    attachment: null, attachLimits: null, uploading: null, attachError: '',
   };
   const nextView = () => ++state.view;
 
@@ -105,6 +107,7 @@
       sendButton.disabled = !state.modelReady;
     }
     if (!menu.hidden) syncMenu();
+    renderAttachment();
   }
 
   function setSidebar(open) {
@@ -301,14 +304,13 @@
     article.dataset.id = message.id;
     article.dataset.role = message.role;
     if (message.role !== 'user') {
-      const avatar = document.createElement('img');
-      avatar.className = 'ia-msg-avatar';
-      avatar.src = '/static/assets/power-solar/reigel-logo.png';
-      avatar.alt = 'R.E.I.G.E.L.';
-      avatar.width = 26;
-      avatar.height = 26;
-      article.append(avatar);
+      // Sin avatar fijo: el sol solo aparece como puntero mientras se genera.
+      const author = document.createElement('span');
+      author.className = 'ia-sr-only';
+      author.textContent = 'R.E.I.G.E.L.:';
+      article.append(author);
     }
+    if (message.attachment) article.append(fileBadge(message.attachment));
     const body = document.createElement('div');
     body.className = 'ia-msg-body';
     if (message.status === 'streaming') body.classList.add('is-streaming');
@@ -390,10 +392,11 @@
     if (nearEnd()) scrollToEnd();
   }
 
-  function appendUser(text) {
+  function appendUser(text, attachment = null) {
     const message = {
       id: `local-${Date.now()}`, role: 'user', content: text,
       status: 'complete', created_at: new Date().toISOString(),
+      ...(attachment ? { attachment } : {}),
     };
     state.messages.push(message);
     if (thread.contains(empty)) thread.replaceChildren();
@@ -494,6 +497,17 @@
     return node;
   }
 
+  // El puntero termina su recorrido al final del texto y se desvanece.
+  function retireCursor(body, cursor) {
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still || document.hidden || typeof cursor.addEventListener !== 'function') return;
+    const remove = () => cursor.remove();
+    cursor.classList.add('ia-sun--leaving');
+    body.append(cursor);
+    cursor.addEventListener('animationend', event => { if (event.target === cursor) remove(); });
+    setTimeout(remove, 700);
+  }
+
   function finalize(node, message) {
     if (!node) return;
     if (!message) {
@@ -503,8 +517,10 @@
     node.dataset.id = message.id;
     node.classList.remove('ia-msg--streaming');
     const body = node.querySelector('.ia-msg-body');
+    const cursor = body.querySelector?.('.ia-sun');
     body.classList.remove('is-streaming');
     body.textContent = message.content || '';
+    if (cursor) retireCursor(body, cursor);
     const note = node.querySelector('.ia-msg-state');
     const text = stateNote(message);
     note.hidden = !text;
@@ -570,6 +586,7 @@
       if (view !== state.view) return;
       state.activeId = data.conversation.id;
       state.messages = Array.isArray(data.messages) ? data.messages : [];
+      setAttachment(data.pending_attachment || null);
       upsertConversation(data.conversation);
       renderHistory();
       renderMessages();
@@ -589,6 +606,7 @@
       if (view !== state.view) return;
       state.activeId = data.conversation.id;
       state.messages = [];
+      setAttachment(data.conversation.pending_attachment || null);
       upsertConversation(data.conversation);
       renderHistory();
       renderMessages();
@@ -680,8 +698,9 @@
   }
 
   async function sendNow() {
-    const value = input.value.trim();
-    if (!value || state.streaming || !state.modelReady) return;
+    // A document can be sent without a question: it then asks for a summary.
+    const value = input.value.trim() || (state.attachment ? 'Explícame el documento adjunto.' : '');
+    if (!value || state.streaming || !state.modelReady || state.uploading) return;
     hideNotice();
     if (!state.activeId) {
       const creating = nextView();
@@ -701,7 +720,9 @@
     input.value = '';
     resizeInput();
     removeFollowups();
-    appendUser(value);
+    const attachment = state.attachment;
+    setAttachment(null);
+    appendUser(value, attachment);
     const pending = appendAssistant();
     let content = '';
     let reveal = null;
@@ -713,7 +734,8 @@
     const visible = () => view === state.view;
     setStreaming(true);
     try {
-      await stream(`/api/ia/conversations/${encodeURIComponent(conversationId)}/messages`, { text: value }, {
+      const body = attachment ? { text: value, attachment_id: attachment.id } : { text: value };
+      await stream(`/api/ia/conversations/${encodeURIComponent(conversationId)}/messages`, body, {
         meta: data => {
           pending.dataset.id = data.assistant_id;
           upsertConversation(data.conversation);
@@ -777,6 +799,8 @@
           pending.remove();
           input.value = value;
           resizeInput();
+          // Not sent: the document stays attached unless the server says it is gone.
+          if (attachment && error.status !== 409 && visible()) setAttachment(attachment);
         }
         showNotice(error.message, { retry: true });
       }
@@ -796,21 +820,66 @@
 
   const menu = find('ia-actions-menu');
   const plus = find('ia-plus');
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let menuTimer = null;
+
+  // Menu items stay focusable when unavailable (aria-disabled), as the ARIA menu
+  // pattern recommends, so arrow keys reach them and screen readers announce them.
+  const isOff = item => item.classList.contains('is-off') || item.getAttribute?.('aria-disabled') === 'true' || item.disabled === true;
+  const menuItems = () => (menu.querySelectorAll ? [...menu.querySelectorAll('[role="menuitem"]')] : []);
+  const setOff = (id, off) => {
+    const item = find(id);
+    if (!item) return;
+    if (off) item.setAttribute('aria-disabled', 'true');
+    else item.removeAttribute?.('aria-disabled');
+  };
+  const lastReply = () => [...state.messages].reverse().find(item => item.role === 'assistant' && item.content);
+  const exportable = () => state.messages.filter(item => typeof item.content === 'string' && item.content.trim());
 
   function syncMenu() {
-    const last = [...state.messages].reverse().find(item => item.role === 'assistant' && item.content);
-    find('ia-actions-copy').disabled = !last;
-    find('ia-actions-stop').disabled = !state.streaming;
+    setOff('ia-actions-copy', !lastReply());
+    setOff('ia-actions-stop', !state.streaming);
+    const off = !exportable().length || state.streaming;
+    setOff('ia-actions-pdf', off);
+    setOff('ia-actions-txt', off);
   }
 
-  function setMenu(open) {
-    menu.hidden = !open;
+  function focusItem(index) {
+    const items = menuItems();
+    if (!items.length) return;
+    items[((index % items.length) + items.length) % items.length].focus();
+  }
+
+  function placeMenu() {
+    // Keep the whole panel on screen: never taller than the space above the composer.
+    const shellBox = menu.parentElement?.getBoundingClientRect?.();
+    if (!shellBox) return;
+    menu.style.maxHeight = `${Math.max(180, Math.min(640, Math.floor(shellBox.top) - 16))}px`;
+  }
+
+  function setMenu(open, { focus = null, restore = false } = {}) {
+    clearTimeout(menuTimer);
     plus.setAttribute('aria-expanded', String(open));
-    if (open) syncMenu();
+    if (open) {
+      syncMenu();
+      menu.hidden = false;
+      placeMenu();
+      // Read layout once so the transition starts from the closed state.
+      void menu.offsetWidth;
+      menu.classList.add('is-open');
+      if (focus === 'first') focusItem(0);
+      else if (focus === 'last') focusItem(-1);
+      return;
+    }
+    if (menu.hidden) return;
+    menu.classList.remove('is-open');
+    if (reducedMotion()) menu.hidden = true;
+    else menuTimer = setTimeout(() => { menu.hidden = true; }, 160);
+    if (restore) plus.focus();
   }
 
   async function copyLastReply() {
-    const last = [...state.messages].reverse().find(item => item.role === 'assistant' && item.content);
+    const last = lastReply();
     if (!last) return;
     try {
       await navigator.clipboard.writeText(last.content);
@@ -820,10 +889,284 @@
     }
   }
 
+  // --- Descargar conversación: only in the browser (no server call, no dependency).
+  // Text goes into a Blob or through textContent; nothing is parsed as HTML.
+  const EXPORT_DATE = new Intl.DateTimeFormat('es-PR', {
+    timeZone: 'America/Puerto_Rico', dateStyle: 'long', timeStyle: 'short',
+  });
+  const FILE_DATE = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Puerto_Rico', year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  const DISCLAIMER = 'R.E.I.G.E.L. usa un modelo de lenguaje local y puede equivocarse. Confirma los datos importantes con el equipo.';
+  // Control characters (except tab and line breaks) never reach the file.
+  // eslint-disable-next-line no-control-regex
+  const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+  const cleanText = value => String(value ?? '').replace(/\r\n?/g, '\n').replace(CONTROL, '');
+  const activeTitle = () => {
+    const item = state.conversations.find(conv => conv.id === state.activeId);
+    return cleanText(item?.title || 'Nueva conversación').replace(/\s+/g, ' ').trim() || 'Nueva conversación';
+  };
+  const exportStamp = now => `${EXPORT_DATE.format(now)} (hora de Puerto Rico)`;
+
+  function conversationText(now) {
+    const lines = [
+      'Power Solar · R.E.I.G.E.L. · Conversación con IA',
+      `Conversación: ${activeTitle()}`,
+      `Exportada: ${exportStamp(now)}`,
+      '',
+    ];
+    exportable().forEach(message => {
+      lines.push(message.role === 'user' ? 'Tú:' : 'R.E.I.G.E.L.:');
+      if (message.attachment?.name) lines.push(`[Documento adjunto: ${cleanText(message.attachment.name).trim()}]`);
+      lines.push(cleanText(message.content).trim());
+      const note = stateNote(message);
+      if (note) lines.push(`(${note})`);
+      lines.push('');
+    });
+    lines.push('—', DISCLAIMER, '');
+    return lines.join('\n').replace(/\n/g, '\r\n');
+  }
+
+  function downloadText() {
+    if (!exportable().length || state.streaming) return;
+    const now = new Date();
+    const blob = new Blob(['\ufeff', conversationText(now)], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `reigel-conversacion-${FILE_DATE.format(now)}.txt`;
+    link.rel = 'noopener';
+    link.hidden = true;
+    document.body?.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showNotice('Conversación descargada como texto.');
+  }
+
+  function fillPrintHead() {
+    const title = find('ia-print-title');
+    const date = find('ia-print-date');
+    if (title) title.textContent = activeTitle();
+    if (date) date.textContent = `Exportada: ${exportStamp(new Date())}`;
+  }
+
+  function printConversation() {
+    if (!exportable().length || state.streaming) return;
+    fillPrintHead();
+    if (typeof print === 'function') print();
+  }
+
   function runMenuAction(action) {
     if (action === 'new') newConversation();
     else if (action === 'stop') state.controller?.abort();
     else if (action === 'copy') copyLastReply();
+    else if (action === 'export-txt') downloadText();
+    else if (action === 'export-pdf') printConversation();
+    else if (action === 'files') openFilePicker();
+  }
+
+  function onMenuKey(event) {
+    const items = menuItems();
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'Tab') { setMenu(false); return; }
+    if ((event.key === ' ' || event.key === 'Enter') && index >= 0) {
+      const item = items[index];
+      if (isOff(item)) { event.preventDefault(); return; }
+      if (event.key === ' ' && item.tagName === 'A') { event.preventDefault(); item.click(); }
+      return;
+    }
+    const keys = {
+      ArrowDown: () => focusItem(index + 1),
+      ArrowUp: () => focusItem(index < 0 ? -1 : index - 1),
+      Home: () => focusItem(0),
+      End: () => focusItem(-1),
+      Escape: () => setMenu(false, { restore: true }),
+    };
+    if (!keys[event.key]) return;
+    event.preventDefault();
+    event.stopPropagation?.();
+    keys[event.key]();
+  }
+
+  // --- Adjuntar documento: PDF, .txt or .md, read on the server (text only) ---
+  const FORMATS = /\.(pdf|txt|md)$/i;
+  const sizeLabel = bytes => {
+    const number = new Intl.NumberFormat('es-PR', { maximumFractionDigits: 1 });
+    return bytes >= 1024 * 1024 ? `${number.format(bytes / (1024 * 1024))} MB` : `${number.format(Math.max(1, bytes / 1024))} KB`;
+  };
+  const pagesLabel = pages => (pages ? `${pages} ${pages === 1 ? 'página' : 'páginas'}` : '');
+  const charsLabel = chars => new Intl.NumberFormat('es-PR').format(chars);
+
+  function fileBadge(item) {
+    const badge = document.createElement('p');
+    badge.className = 'ia-msg-file';
+    const label = document.createElement('span');
+    label.textContent = `Documento adjunto: ${item.name}`;
+    badge.append(label);
+    const details = [item.pages ? pagesLabel(item.pages) : '', item.truncated ? 'leído en parte' : ''].filter(Boolean);
+    if (details.length) {
+      const small = document.createElement('small');
+      small.textContent = details.join(' · ');
+      badge.append(small);
+    }
+    return badge;
+  }
+
+  function attachmentDescription(limits) {
+    if (!limits) return 'No disponible en este momento';
+    return `PDF, .txt o .md · hasta ${sizeLabel(limits.max_bytes)} y ${limits.max_pages} páginas`;
+  }
+
+  function renderAttachment() {
+    const tray = find('ia-attach-tray');
+    const button = find('ia-attach');
+    const available = Boolean(state.attachLimits);
+    if (button) {
+      button.hidden = !available;
+      button.disabled = Boolean(state.uploading) || state.streaming;
+      button.setAttribute('aria-pressed', String(Boolean(state.attachment)));
+    }
+    setOff('ia-actions-files', !available || Boolean(state.uploading) || state.streaming);
+    const description = find('ia-actions-files-desc');
+    if (description) description.textContent = attachmentDescription(state.attachLimits);
+    if (!tray) return;
+    const chip = find('ia-attach-chip');
+    const error = find('ia-attach-error');
+    const name = find('ia-attach-name');
+    const meta = find('ia-attach-meta');
+    const remove = find('ia-attach-remove');
+    const item = state.uploading || state.attachment;
+    tray.hidden = !(item || state.attachError || tray.dataset.open === 'true');
+    if (chip) {
+      chip.hidden = !item;
+      chip.classList.toggle('is-busy', Boolean(state.uploading));
+      chip.setAttribute('aria-busy', String(Boolean(state.uploading)));
+    }
+    if (item && name && meta) {
+      name.textContent = item.name;
+      if (state.uploading) {
+        meta.textContent = `${sizeLabel(item.size_bytes)} · leyendo el documento…`;
+      } else {
+        const parts = [sizeLabel(item.size_bytes), pagesLabel(item.pages)];
+        if (item.truncated) parts.push(`se usarán los primeros ${charsLabel(item.chars)} caracteres`);
+        meta.textContent = parts.filter(Boolean).join(' · ');
+      }
+    }
+    if (remove) {
+      remove.hidden = Boolean(state.uploading);
+      if (item) remove.setAttribute('aria-label', `Quitar el documento ${item.name}`);
+    }
+    if (error) {
+      error.hidden = !state.attachError;
+      error.textContent = state.attachError;
+    }
+    // A document alone is enough to send.
+    input.required = !state.attachment;
+  }
+
+  function setAttachment(item, { error = '' } = {}) {
+    state.attachment = item;
+    state.attachError = error;
+    if (!item && !error) {
+      const tray = find('ia-attach-tray');
+      if (tray) tray.dataset.open = 'false';
+    }
+    renderAttachment();
+  }
+
+  function applyAttachLimits(limits) {
+    state.attachLimits = limits && typeof limits.max_bytes === 'number' ? limits : null;
+    const picker = find('ia-file');
+    if (picker) picker.disabled = !state.attachLimits;
+    renderAttachment();
+  }
+
+  function openFilePicker() {
+    const picker = find('ia-file');
+    if (!picker || !state.attachLimits || state.uploading || state.streaming) return;
+    const tray = find('ia-attach-tray');
+    if (tray) tray.dataset.open = 'true';
+    state.attachError = '';
+    renderAttachment();
+    picker.value = '';
+    picker.click();
+  }
+
+  async function ensureConversation() {
+    if (state.activeId) return state.activeId;
+    const creating = nextView();
+    const created = await request('/api/ia/conversations', { method: 'POST', body: {} });
+    if (creating !== state.view) return null;
+    state.activeId = created.conversation.id;
+    upsertConversation(created.conversation);
+    renderHistory();
+    return state.activeId;
+  }
+
+  async function uploadFile(file) {
+    const limits = state.attachLimits;
+    if (!file || !limits) return;
+    if (!FORMATS.test(file.name)) {
+      setAttachment(state.attachment, { error: 'Formato no admitido. Adjunta un PDF, un .txt o un .md.' });
+      return;
+    }
+    if (file.size > limits.max_bytes) {
+      setAttachment(state.attachment, { error: `El archivo supera el máximo de ${sizeLabel(limits.max_bytes)}.` });
+      return;
+    }
+    if (!file.size) {
+      setAttachment(state.attachment, { error: 'El archivo está vacío.' });
+      return;
+    }
+    state.attachError = '';
+    state.uploading = { name: file.name, size_bytes: file.size };
+    renderAttachment();
+    const view = state.view;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      const conversationId = await ensureConversation();
+      if (!conversationId) return;
+      const response = await fetch(`/api/ia/conversations/${encodeURIComponent(conversationId)}/attachments`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Attachment-Name': encodeURIComponent(file.name) },
+        body: file,
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No pudimos adjuntar el documento.');
+      state.uploading = null;
+      if (view === state.view && conversationId === state.activeId) {
+        setAttachment(data.attachment);
+        showNotice(`Documento listo: ${data.attachment.name}. Escribe tu pregunta o envía para que lo explique.`);
+        input.focus();
+      }
+    } catch (error) {
+      state.uploading = null;
+      const message = error.name === 'AbortError' ? 'La carga tardó demasiado. Inténtalo de nuevo.'
+        : error instanceof TypeError ? 'No hay conexión con el servidor.' : error.message;
+      if (view === state.view) setAttachment(state.attachment, { error: message });
+    } finally {
+      clearTimeout(timer);
+      state.uploading = null;
+      renderAttachment();
+    }
+  }
+
+  async function removeAttachment() {
+    const item = state.attachment;
+    const conversationId = state.activeId;
+    setAttachment(null);
+    find('ia-attach')?.focus();
+    if (!item || !conversationId) return;
+    try {
+      await request(`/api/ia/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      showNotice('Documento quitado.');
+    } catch {
+      // Already gone (sent, expired or replaced): nothing else to do.
+    }
   }
 
   function bindEvents() {
@@ -857,19 +1200,43 @@
         else input.focus();
       }
     });
-    plus.addEventListener('click', () => setMenu(menu.hidden));
+    // A pointer click opens the menu without moving focus; Enter, Space or the
+    // arrow keys on «+» open it with the first (or last) item focused.
+    plus.addEventListener('click', event => {
+      const open = plus.getAttribute('aria-expanded') !== 'true';
+      setMenu(open, { focus: open && event.detail === 0 ? 'first' : null });
+    });
+    plus.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      setMenu(true, { focus: event.key === 'ArrowUp' ? 'last' : 'first' });
+    });
+    menu.addEventListener('keydown', onMenuKey);
     menu.addEventListener('click', event => {
-      const item = event.target.closest('[data-ia-menu]');
-      if (!item || item.classList.contains('is-off') || item.disabled) return;
+      const item = event.target.closest('[role="menuitem"], [data-ia-menu]');
+      if (!item) return;
+      if (isOff(item)) {
+        event.preventDefault?.();
+        return;
+      }
+      const action = item.dataset.iaMenu;
       setMenu(false);
-      runMenuAction(item.dataset.iaMenu);
+      if (action) {
+        input.focus();
+        runMenuAction(action);
+      }
     });
     document.addEventListener('click', event => {
       if (!menu.hidden && !event.target.closest('#ia-actions-menu') && !event.target.closest('#ia-plus')) setMenu(false);
     });
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !menu.hidden) setMenu(false);
+      if (event.key === 'Escape' && !menu.hidden) setMenu(false, { restore: true });
     });
+    find('ia-attach')?.addEventListener('click', openFilePicker);
+    find('ia-file')?.addEventListener('change', event => uploadFile(event.target.files?.[0]));
+    find('ia-attach-remove')?.addEventListener('click', removeAttachment);
+    // Ctrl+P also prints the conversation with its header.
+    globalThis.addEventListener?.('beforeprint', fillPrintHead);
   }
 
   // Decides whether a question that arrived in the address (?q=) may be sent without
@@ -930,6 +1297,7 @@
       const data = await request('/api/ia/bootstrap');
       state.owner = data.owner;
       applyOwner(data);
+      applyAttachLimits(data.attachments);
       state.conversations = Array.isArray(data.conversations) ? data.conversations : [];
       renderHistory();
       if (state.conversations.length) {

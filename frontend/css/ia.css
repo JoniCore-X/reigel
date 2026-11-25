@@ -349,9 +349,19 @@
 }
 
 .ia-menu {
-  color: var(--blue);
-  border-color: var(--line);
-  background: #fff;
+  color: #fff;
+  border-color: #e0440e;
+  background: #e0440e;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.ia-menu:hover {
+  border-color: #c23908;
+  background: #c23908;
+}
+
+:root:not([data-theme="dark"]) .ia-menu:focus-visible {
+  outline-color: #071d43;
 }
 
 .ia-menu[hidden] {
@@ -369,10 +379,6 @@
   flex: none;
   width: 34px;
   height: 34px;
-  object-fit: cover;
-  background: #000d2f;
-  border: 1px solid var(--line);
-  border-radius: 50%;
 }
 
 .ia-title strong {
@@ -469,10 +475,6 @@
   width: 96px;
   height: 96px;
   margin-bottom: 16px;
-  object-fit: cover;
-  background: #000d2f;
-  border-radius: 50%;
-  box-shadow: 0 12px 32px rgba(22, 49, 113, .22);
 }
 
 .ia-empty-kicker {
@@ -629,7 +631,7 @@
 .ia-msg--assistant {
   position: relative;
   align-items: flex-start;
-  padding-left: 44px;
+  padding-left: 0;
 }
 
 .ia-msg--assistant .ia-msg-body {
@@ -661,17 +663,7 @@
   50% { opacity: 0; }
 }
 
-.ia-msg-avatar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: block;
-  width: 30px;
-  height: 30px;
-  object-fit: cover;
-  background: #000d2f;
-  border-radius: 50%;
-}
+:is(.ia-title-mark, .ia-empty-logo) .ia-sun-rays { animation: none; }
 
 .ia-msg-state {
   font-size: 12px;
@@ -797,93 +789,257 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 50%;
-  transition: color .15s, border-color .15s, background .15s;
+  transition: color .15s, border-color .15s, background .15s, transform .18s;
 }
 
 .ia-plus:hover,
 .ia-plus[aria-expanded="true"] {
   color: var(--blue);
-  background: #fff;
+  background: var(--white, #fff);
   border-color: var(--line);
 }
 
+.ia-plus[aria-expanded="true"] svg { transform: rotate(45deg); }
+.ia-plus svg { transition: transform .18s ease; }
+.ia-plus:focus-visible { outline: 2px solid var(--menu-focus, #1f4fb8); outline-offset: 2px; }
+
+/* Actions menu («+»). Its colors are its own tokens, redefined for dark mode, so
+   the panel and its text always change together (the panel used to stay #fff
+   while dark mode turned --ink and --muted into light text). */
 .ia-actions-menu {
+  --menu-bg: #fff;
+  --menu-border: #dbe2ee;
+  --menu-title: #071d43;
+  --menu-desc: #4a5872;
+  --menu-label: #55637b;
+  --menu-hover: #eef3fc;
+  --menu-active: #e2eafa;
+  --menu-chip: #edf2fb;
+  --menu-icon: #1f4fb8;
+  --menu-chip-hot: #071d43;
+  --menu-icon-hot: #ff9a3d;
+  --menu-accent: #ff7900;
+  --menu-focus: #1f4fb8;
+  --menu-off-title: #56627a;
+  --menu-off-desc: #5e6a80;
+  --menu-off-chip: #f3f5f9;
+  --menu-off-icon: #7a869b;
+  --menu-shadow: 0 24px 60px rgba(7, 29, 67, .18), 0 4px 14px rgba(7, 29, 67, .08);
   position: absolute;
   bottom: 100%;
-  left: max(0px, calc(50% - 410px));
+  left: max(clamp(14px, 3vw, 28px), calc(50% - 410px));
   z-index: 30;
-  width: min(320px, calc(100vw - 40px));
-  max-height: min(480px, 70vh);
-  overflow: auto;
+  width: min(348px, calc(100% - 2 * clamp(14px, 3vw, 28px)));
+  max-height: min(640px, calc(100dvh - 150px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
-  margin-bottom: 10px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 18px 44px rgba(23, 35, 61, .18);
+  margin-bottom: 8px;
+  color: var(--menu-title);
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: 18px;
+  box-shadow: var(--menu-shadow);
+  scrollbar-width: thin;
+  opacity: 0;
+  transform: translateY(8px) scale(.98);
+  transform-origin: 18px 100%;
+  transition: opacity .14s ease, transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.ia-actions-menu.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+:root[data-theme="dark"] .ia-actions-menu {
+  --menu-bg: #111d35;
+  --menu-border: #2c3d5e;
+  --menu-title: #eef3fb;
+  --menu-desc: #b0bdd1;
+  --menu-label: #9fb0c8;
+  --menu-hover: #1b2b4c;
+  --menu-active: #22355c;
+  --menu-chip: #1a2a49;
+  --menu-icon: #8fb6ff;
+  --menu-chip-hot: #ff7900;
+  --menu-icon-hot: #071d43;
+  --menu-accent: #ff9a3d;
+  --menu-focus: #8fb6ff;
+  --menu-off-title: #a3b1c6;
+  --menu-off-desc: #95a4ba;
+  --menu-off-chip: #162440;
+  --menu-off-icon: #8796ad;
+  --menu-shadow: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(143, 182, 255, .06);
+}
+
+.ia-actions-group + .ia-actions-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--menu-border);
+}
+
+.ia-actions-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--menu-label);
+}
+
+.ia-actions-sep::before {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  content: "";
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.ia-actions-sep::after {
+  flex: 1;
+  height: 1px;
+  content: "";
+  background: repeating-linear-gradient(90deg, var(--menu-border) 0 4px, transparent 4px 8px);
 }
 
 .ia-actions-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 8px 10px;
+  min-height: 48px;
+  padding: 6px 10px;
+  font: inherit;
+  color: var(--menu-title);
   text-align: left;
   text-decoration: none;
+  cursor: pointer;
   background: none;
   border: 0;
-  border-radius: 10px;
-}
-
-.ia-actions-item:hover:not(.is-off):not(:disabled),
-.ia-actions-item:focus-visible:not(.is-off):not(:disabled) {
-  background: #eef2fb;
+  border-radius: 12px;
   outline: 0;
+  transition: background-color .12s ease, transform .12s ease;
 }
 
-.ia-actions-item svg {
+.ia-actions-item::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  content: "";
+  background: var(--menu-accent);
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+
+.ia-actions-icon {
+  display: inline-flex;
   flex: none;
-  color: var(--blue);
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--menu-icon);
+  background: var(--menu-chip);
+  border-radius: 10px;
+  transition: background-color .12s ease, color .12s ease;
+}
+
+.ia-actions-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ia-actions-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .ia-actions-item strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--menu-title);
 }
 
 .ia-actions-item small {
-  display: block;
-  font-size: 11.5px;
-  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--menu-desc);
 }
 
-.ia-actions-item:disabled {
-  cursor: default;
+.ia-actions-item:not([aria-disabled="true"]):hover,
+.ia-actions-item:not([aria-disabled="true"]):focus-visible {
+  background: var(--menu-hover);
 }
 
-.ia-actions-item.is-off {
-  opacity: .55;
-  cursor: default;
+.ia-actions-item:not([aria-disabled="true"]):hover::before,
+.ia-actions-item:not([aria-disabled="true"]):focus-visible::before { opacity: 1; }
+
+.ia-actions-item:not([aria-disabled="true"]):hover .ia-actions-icon,
+.ia-actions-item:not([aria-disabled="true"]):focus-visible .ia-actions-icon {
+  color: var(--menu-icon-hot);
+  background: var(--menu-chip-hot);
 }
 
-.ia-actions-item.is-off svg {
-  color: var(--muted);
+/* Inside the scrolling panel the global 3 px outline would be clipped: an inset
+   ring (≥ 6:1 against the item) replaces it. */
+.ia-actions-menu .ia-actions-item:focus-visible {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px var(--menu-focus);
 }
 
-.ia-actions-sep {
-  margin: 6px 10px 4px;
-  padding-top: 8px;
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
+.ia-actions-item:not([aria-disabled="true"]):active {
+  background: var(--menu-active);
+  transform: scale(.985);
 }
+
+/* Unavailable: still legible (AA), but flat, dashed and without hover. */
+.ia-actions-item[aria-disabled="true"] { cursor: not-allowed; }
+.ia-actions-item[aria-disabled="true"] strong { font-weight: 600; color: var(--menu-off-title); }
+.ia-actions-item[aria-disabled="true"] small { color: var(--menu-off-desc); }
+.ia-actions-item[aria-disabled="true"] .ia-actions-icon {
+  color: var(--menu-off-icon);
+  background: var(--menu-off-chip);
+  box-shadow: inset 0 0 0 1px var(--menu-border);
+}
+.ia-actions-item.is-off .ia-actions-icon { box-shadow: none; background: transparent; outline: 1.5px dashed var(--menu-border); outline-offset: -1.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-actions-menu,
+  .ia-actions-item,
+  .ia-actions-icon,
+  .ia-plus,
+  .ia-plus svg { transition: none; }
+  .ia-actions-menu { transform: none; }
+  .ia-actions-item:not([aria-disabled="true"]):active { transform: none; }
+}
+
+@media (forced-colors: active) {
+  .ia-actions-menu { border: 1px solid CanvasText; }
+  .ia-actions-menu .ia-actions-item:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
+  .ia-actions-item[aria-disabled="true"] :is(strong, small) { color: GrayText; }
+}
+
+/* Print-only header; hidden on screen. */
+.ia-print-head { display: none; }
 
 .ia-counter {
   font-family: Consolas, "Courier New", monospace;
@@ -1007,12 +1163,7 @@
   }
 
   .ia-msg--assistant {
-    padding-left: 38px;
-  }
-
-  .ia-msg-avatar {
-    width: 26px;
-    height: 26px;
+    padding-left: 0;
   }
 
   .ia-msg--assistant .ia-msg-body {
@@ -1058,7 +1209,7 @@
   }
 
   .ia-msg--assistant {
-    padding-left: 34px;
+    padding-left: 0;
   }
 }
 
@@ -1123,7 +1274,18 @@
 }
 @keyframes ia-sun-turn { to { transform: rotate(360deg); } }
 .ia-waiting { display: inline-flex; align-items: center; min-height: 1.6em; }
-.ia-waiting .ia-sun { margin-left: 0; width: 1.5em; height: 1.5em; }
+.ia-waiting .ia-sun { margin-left: 0; animation: ia-sun-arrive .52s cubic-bezier(.16, 1, .3, 1) both; }
+/* Sin texto delante, el puntero arranca justo donde empezará la respuesta. */
+.ia-msg-body > .ia-sun:first-child { margin-left: 0; }
+.ia-sun--leaving { animation: ia-sun-leave .46s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes ia-sun-arrive {
+  from { opacity: 0; transform: scale(.35) rotate(-70deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes ia-sun-leave {
+  from { opacity: 1; transform: scale(1) rotate(0); }
+  to { opacity: 0; transform: scale(.45) rotate(50deg); }
+}
 .ia-word { animation: ia-word-in .5s cubic-bezier(.22, .7, .25, 1) both; }
 @keyframes ia-word-in {
   from { opacity: 0; filter: blur(2px); }
@@ -1131,7 +1293,7 @@
 }
 :root[data-theme="dark"] .ia-body { --ia-sun-core: #0b1322; }
 @media (prefers-reduced-motion: reduce) {
-  .ia-sun-rays, .ia-word { animation: none; }
+  .ia-sun-rays, .ia-word, .ia-waiting .ia-sun, .ia-sun--leaving { animation: none; }
 }
 
 /* Sugerencias del motor (reigel/suggestions.py): bajo la bienvenida y tras cada respuesta. */
@@ -1139,7 +1301,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 2px 0 18px 38px;
+  margin: 2px 0 18px;
 }
 .ia-prompts .ia-suggestion,
 .ia-followups .ia-suggestion {
@@ -1214,4 +1376,280 @@
   .ia-body .ia-team,
   .ia-body .ia-back { padding-inline: 8px; font-size: 11.5px; }
   .ia-body .ia-title { display: none; }
+}
+
+/* «Guardar como PDF»: the browser prints only the conversation, in light colors,
+   with the Power Solar / R.E.I.G.E.L. header (filled by ia.js) and the notice. */
+@media print {
+  @page { margin: 16mm 14mm; }
+  html,
+  body.ia-body {
+    height: auto !important;
+    overflow: visible !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+  .ia-body :is(.ia-sidebar, .ia-scrim, .ia-topbar, .skip-link, .ps-loader, .ia-empty, .ia-followups,
+    .ia-actions-menu, .ia-notice, .ia-composer, .ia-sun, .ia-waiting) { display: none !important; }
+  .ia-body :is(.ia-shell, .ia-main, .ia-scroll, .ia-thread, .ia-composer-shell) {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    color: #000 !important;
+    background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  .ia-body .ia-print-head {
+    display: block !important;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    color: #071d43;
+    border-bottom: 2px solid #ff7900;
+  }
+  .ia-print-head p { margin: 0; }
+  .ia-print-brand { font-size: 10pt; letter-spacing: .04em; }
+  .ia-print-title { margin-top: 4px !important; font-size: 15pt; font-weight: 700; }
+  .ia-print-date { margin-top: 2px !important; font-size: 9pt; color: #333; }
+  .ia-body .ia-msg {
+    display: block !important;
+    margin: 0 0 12px !important;
+    animation: none !important;
+  }
+  .ia-body .ia-msg::before {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #444;
+    break-after: avoid;
+  }
+  .ia-body .ia-msg--user::before { content: "Tú"; }
+  .ia-body .ia-msg--assistant::before { content: "R.E.I.G.E.L."; }
+  .ia-body .ia-msg .ia-msg-body {
+    max-width: none !important;
+    padding: 0 0 0 10px !important;
+    font-size: 10.5pt !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
+    background: none !important;
+    border: 0 !important;
+    border-left: 2px solid #c8d1e0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .ia-body .ia-msg--user .ia-msg-body { border-left-color: #1f4fb8 !important; }
+  .ia-body .ia-msg-state { color: #444 !important; font-size: 8.5pt; }
+  .ia-body .ia-msg-body.is-streaming::after { display: none !important; }
+  .ia-body .ia-disclaimer {
+    display: block !important;
+    max-width: none;
+    padding-top: 8px;
+    margin-top: 16px !important;
+    font-size: 8.5pt !important;
+    color: #333 !important;
+    text-align: left;
+    border-top: 1px solid #c8d1e0;
+  }
+}
+
+/* Adjuntar documento ------------------------------------------------------- */
+.ia-attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.ia-attach svg,
+.ia-attach-chip svg,
+.ia-attach-remove svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ia-attach:hover:not(:disabled),
+.ia-attach[aria-pressed="true"] {
+  color: var(--blue);
+  background: var(--white, #fff);
+  border-color: var(--line);
+}
+
+.ia-attach:focus-visible { outline: 2px solid #1f4fb8; outline-offset: 2px; }
+.ia-attach:disabled { cursor: not-allowed; opacity: .55; }
+
+.ia-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.ia-attach-tray {
+  --tray-bg: #fff;
+  --tray-border: #dbe2ee;
+  --tray-title: #071d43;
+  --tray-text: #4a5872;
+  --tray-chip: #edf2fb;
+  --tray-icon: #1f4fb8;
+  --tray-error-bg: #fdecee;
+  --tray-error-border: #f3c1c8;
+  --tray-error-text: #8f1d2c;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  max-width: 820px;
+  margin: 0 auto 8px;
+}
+
+:root[data-theme="dark"] .ia-attach-tray {
+  --tray-bg: #111d35;
+  --tray-border: #2c3d5e;
+  --tray-title: #eef3fb;
+  --tray-text: #b0bdd1;
+  --tray-chip: #1a2a49;
+  --tray-icon: #8fb6ff;
+  --tray-error-bg: #3d1820;
+  --tray-error-border: #6b2a36;
+  --tray-error-text: #ffc2ca;
+}
+
+.ia-attach-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 52px;
+  padding: 6px 6px 6px 8px;
+  color: var(--tray-title);
+  background: var(--tray-bg);
+  border: 1px solid var(--tray-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(7, 29, 67, .08);
+}
+
+.ia-attach-chip-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--tray-icon);
+  background: var(--tray-chip);
+  border-radius: 10px;
+}
+
+.ia-attach-chip.is-busy .ia-attach-chip-icon svg { animation: ia-attach-pulse 1.2s ease-in-out infinite; }
+
+@keyframes ia-attach-pulse {
+  50% { opacity: .35; }
+}
+
+.ia-attach-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ia-attach-chip-text strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tray-title);
+}
+
+.ia-attach-chip-text small {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--tray-text);
+}
+
+.ia-attach-remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--tray-text);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+}
+
+.ia-attach-remove:hover { color: var(--tray-title); background: var(--tray-chip); }
+.ia-attach-remove:focus-visible { outline: 2px solid var(--tray-icon); outline-offset: 0; }
+
+.ia-attach-error {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--tray-error-text);
+  background: var(--tray-error-bg);
+  border: 1px solid var(--tray-error-border);
+  border-radius: 10px;
+}
+
+.ia-attach-note {
+  margin: 0;
+  padding-left: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tray-text);
+}
+
+.ia-msg-file {
+  display: inline-flex;
+  flex-direction: column;
+  align-self: flex-end;
+  max-width: min(78%, 640px);
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--white, #fff);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ia-msg-file span::before { content: "▤ "; color: var(--blue); }
+.ia-msg-file small { font-size: 11.5px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .ia-body .ia-attach { min-width: 44px; min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-attach-chip.is-busy .ia-attach-chip-icon svg { animation: none; }
+}
+
+@media print {
+  .ia-body .ia-attach-tray { display: none !important; }
+  .ia-body .ia-msg-file { color: #333 !important; background: none !important; border-color: #c8d1e0 !important; }
 }

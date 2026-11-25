@@ -5,7 +5,7 @@ const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)]
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const state = {user:null,view:'dashboard',leadView:'table',leads:[],users:[],appointments:[],conversations:[],tasks:[],settings:null,conversation:null,requestId:0,leadQuery:{q:'',stage:'',advisor_id:'',sort:'created_at',order:'desc',offset:0},taskQuery:{status:'pending',owner_id:''},dashboardPeriod:'month',dashboardStart:'',dashboardEnd:''};
 const stages = {nuevo:'Prospecto nuevo',contacto_pendiente:'Contacto pendiente',contactado:'Contactado',calificado:'Interesado',cita:'Cita programada',cita_realizada:'Cita realizada',propuesta_preparacion:'Propuesta en preparación',propuesta_presentada:'Propuesta presentada',negociacion:'Negociación',ganado:'Ganado',perdido:'Perdido'};
-const views = {dashboard:'Operaciones',leads:'Prospectos',tasks:'Tareas y seguimiento',appointments:'Agenda',notifications:'Notificaciones',energy:'Orientación energética',privacy:'Privacidad',conversations:'Conversaciones',automation:'R.E.I.G.E.L.',marketing:'Marketing',settings:'Equipo y ajustes',subscription:'Suscripción'};
+const views = {dashboard:'Operaciones',leads:'Prospectos',tasks:'Tareas y seguimiento',appointments:'Agenda',notifications:'Notificaciones',energy:'Orientación energética',privacy:'Privacidad',conversations:'Conversaciones',automation:'R.E.I.G.E.L.',learning:'Aprendizaje',marketing:'Marketing',settings:'Equipo y ajustes',subscription:'Suscripción'};
 const channels = {web:'Chat web propio',whatsapp:'WhatsApp',telegram:'Telegram',instagram:'Instagram',messenger:'Messenger',openai:'Inteligencia artificial',ai:'IA local'};
 const statuses = {confirmed:'Confirmada',completed:'Realizada',no_show:'No asistió',cancelled:'Cancelada',sent:'Enviado',failed:'Falló el envío',uncertain:'Entrega sin confirmar',received:'Recibido',pending:'Pendiente'};
 const weekdays = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -73,7 +73,7 @@ async function navigate(view, focus = true) {
   content.innerHTML=loading();
   if (focus) $('#main').focus();
   try {
-    const renderers={dashboard:renderDashboard,leads:renderLeads,tasks:renderTasks,notifications:renderNotifications,energy:renderEnergy,privacy:renderPrivacy,appointments:renderAppointments,conversations:renderConversations,automation:renderAutomation,marketing:renderMarketing,settings:renderSettings,subscription:renderSubscription};
+    const renderers={dashboard:renderDashboard,leads:renderLeads,tasks:renderTasks,notifications:renderNotifications,energy:renderEnergy,privacy:renderPrivacy,appointments:renderAppointments,conversations:renderConversations,automation:renderAutomation,learning:renderLearning,marketing:renderMarketing,settings:renderSettings,subscription:renderSubscription};
     await renderers[view](requestId);
     if(view==='automation'&&current(requestId))await appendTrainer();
   }catch(error){if(requestId===state.requestId&&state.user)fail(error);}
@@ -260,7 +260,7 @@ $('#logout').addEventListener('click',async()=>{try{await post('/api/auth/logout
 document.addEventListener('click',async event=>{
   const view=event.target.closest('[data-view]');if(view){if(dialog.open)closeDialog();navigate(view.dataset.view);return;}
   const button=event.target.closest('[data-action]');if(!button)return;const {action,id}=button.dataset;
-  const actions={...operationActions(button),refresh:()=>navigate(state.view,false),'new-lead':newLead,'lead-detail':()=>leadDetail(id),'close-dialog':closeDialog,'new-appointment':()=>newAppointment(),'schedule-lead':()=>newAppointment(id),'cancel-appointment':()=>cancelAppointment(id),'new-user':newUser,'edit-user':()=>editUser(id),'offboard-user':()=>offboardUser(id),availability:()=>{closeDialog();return navigate('settings');},'open-conversation':()=>openConversation(id),'conversation-mode':()=>conversationMode(id,button.dataset.mode,button),'copy-template':()=>copy(campaignTemplates[Number(button.dataset.index)].text),'copy-utm':()=>copy($('#utm-link').textContent),'copy-draft':()=>copy($('#draft-text').textContent),'refresh-knowledge':()=>refreshKnowledge(button)};
+  const actions={...operationActions(button),...learningActions(button),refresh:()=>navigate(state.view,false),'new-lead':newLead,'lead-detail':()=>leadDetail(id),'close-dialog':closeDialog,'new-appointment':()=>newAppointment(),'schedule-lead':()=>newAppointment(id),'cancel-appointment':()=>cancelAppointment(id),'new-user':newUser,'edit-user':()=>editUser(id),'offboard-user':()=>offboardUser(id),availability:()=>{closeDialog();return navigate('settings');},'open-conversation':()=>openConversation(id),'conversation-mode':()=>conversationMode(id,button.dataset.mode,button),'copy-template':()=>copy(campaignTemplates[Number(button.dataset.index)].text),'copy-utm':()=>copy($('#utm-link').textContent),'copy-draft':()=>copy($('#draft-text').textContent),'refresh-knowledge':()=>refreshKnowledge(button)};
   try {await actions[action]?.();}catch(error){toast(error.message);}
 });
 syncMenu();

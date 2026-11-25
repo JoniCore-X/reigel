@@ -215,7 +215,10 @@ class WebChat:
         value = re.sub(r"(?<!\w)\+?(?:\d[ ()-]*){7,16}(?!\w)", "[número omitido; usa el formulario de cita]", value)
         return value
 
-    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None):
+    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None):
+        """``gaps``, when given, receives ``(reason, text)`` for answers the learning queue
+        should see (no verified knowledge, generic fallback). The caller records them
+        after this transaction commits; the text is the already-masked message."""
         incoming = text(message_text, "mensaje", limit=2000, required=True)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -281,9 +284,12 @@ class WebChat:
                 updated_facts = []
                 if decision.intent != "contradiction":
                     updated_facts = self._qualify(profile, value, decision)
+                reasons = []
                 reply, actions, sources = self._answer(
-                    value, profile, session, db, decision, updated_facts, ai_reply=ai_reply
+                    value, profile, session, db, decision, updated_facts, ai_reply=ai_reply, gaps=reasons
                 )
+                if gaps is not None:
+                    gaps.extend((reason, incoming) for reason in reasons)
             db.execute("UPDATE web_chat_sessions SET profile_json=?,sources_json=? WHERE token_hash=?", (json.dumps(profile, ensure_ascii=False), json.dumps(sources, ensure_ascii=False), session["token_hash"]))
             if reply:
                 self._append(db, session["conversation_id"], "outbound", reply)
@@ -412,7 +418,9 @@ class WebChat:
         decision: IntentDecision | None = None,
         updated_facts: list[str] | None = None,
         ai_reply: str | None = None,
+        gaps: list | None = None,
     ):
+        gaps = gaps if gaps is not None else []
         decision = decision or classify_message(value, context=profile)
         actions, sources = ["book", "human"], []
         fixed = safety.reply_for(value, safety.HANDOFF_CHAT)
@@ -433,6 +441,7 @@ class WebChat:
                 return answer["text"], actions, answer["sources"]
             if answer:
                 return answer["text"], ["human"], answer["sources"]
+            gaps.append("no_knowledge")
             return "No encontré una respuesta clara en las fuentes verificadas. ¿Qué equipo o concepto quieres consultar?", ["human"], sources
         if decision.intent == "contradiction":
             profile["last_question"] = "monthly_bill"
@@ -504,6 +513,7 @@ class WebChat:
             if answer and isinstance(answer.get("text"), str):
                 reply, sources = answer["text"], answer.get("sources", [])
             else:
+                gaps.append("no_knowledge")
                 return "No tengo información vigente verificada para contestar eso sobre Power Solar. Se lo puedo pasar al equipo para que lo confirme; prefiero no inventar direcciones, ofertas ni condiciones.", ["human"], sources
         elif decision.intent == "greeting":
             reply = (f"¡Hola, {voice.greeting()}! Soy R.E.I.G.E.L., el asistente virtual de Power Solar. "
@@ -542,6 +552,7 @@ class WebChat:
             elif "monthly_bill" in profile or "priority" in profile:
                 reply = "¡Súper! Hay diferentes opciones para ayudarte con eso; primero revisamos los datos de tu hogar, sin prometer resultados."
             else:
+                gaps.append("fallback")
                 reply = "No te entendí bien. Te puedo orientar sobre la factura de luz, el respaldo en apagones o los sistemas solares, coordinar una evaluación o pasarte con alguien del equipo. ¿Qué prefieres?"
                 return reply, actions, sources
         return reply + " " + self._next_question(profile), actions, sources

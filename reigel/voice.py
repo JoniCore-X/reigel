@@ -36,6 +36,23 @@ PLAIN = (
     "principal con un ejemplo sencillo, sin física ni detalles de ingeniería."
 )
 
+# Owner, 25 nov 2026, about an /ia answer that coached a homeowner on placing panels:
+# «Le falta hablar en tercera persona. ¿No sabías que ese trabajo lo hacemos nosotros?»
+INSTALLATION = (
+    "Evaluar el techo, revisar su estructura y las sombras, decidir dónde y con qué inclinación van las "
+    "placas, diseñar el sistema e instalarlo es trabajo del equipo de Power Solar, no de la persona. "
+    "Cuando pregunten por el techo, la ubicación, la inclinación, las sombras, la estructura, el diseño o la "
+    "instalación, habla de ese trabajo en tercera persona: «el equipo de Power Solar evalúa…», «Power Solar "
+    "diseña…». No hables en primera persona («evaluamos», «instalamos») ni des instrucciones para hacerlo "
+    "por su cuenta: nunca le digas a la persona que coloque, ponga, incline, oriente, monte, fije ni instale "
+    "placas, ni que revise o mida el techo ella misma. Explica en palabras sencillas qué mira el equipo en la "
+    "evaluación, por ejemplo el material y el estado del techo, su inclinación, hacia dónde mira y las sombras, "
+    "sin cifras ni promesas, y que lo que conviene a esa casa se sabe después de la evaluación. No digas que "
+    "un tipo de techo sirve, no sirve o es mejor para las placas: eso lo determina el equipo en la evaluación. "
+    "Menciona solo los detalles que la persona dio; no inventes árboles, edificios ni otros datos de su casa. "
+    "Invita a pedir esa evaluación al equipo de Power Solar; tú no la reservas."
+)
+
 # Correct, plain explanations the model must rely on instead of improvising.
 # Same content as /soluciones and the verified knowledge base, in everyday words.
 GLOSSARY = (
@@ -57,7 +74,11 @@ GLOSSARY = (
     ("mantenimiento, limpieza, daños o tormentas", "la persona no debe subir al techo, limpiar, tocar, abrir, "
                                                    "desconectar ni reparar los equipos; si ve algo raro, se aleja y "
                                                    "llama a un técnico cualificado"),
-    ("evaluación o estudio de consumo", "una persona del equipo revisa la factura de luz, el techo y cómo se usa "
+    ("techo, ubicación, inclinación, sombras o instalación de las placas",
+     "lo evalúa y lo diseña el equipo de Power Solar: revisa el material y el estado del techo, su inclinación, "
+     "hacia dónde mira y las sombras, y decide dónde van las placas; la persona no las coloca, inclina ni "
+     "instala por su cuenta"),
+    ("evaluación o estudio de consumo", "una persona del equipo de Power Solar revisa la factura de luz, el techo y cómo se usa "
                                         "la luz en la casa; lo que conviene se sabe después de la evaluación, no antes, "
                                         "y se coordina con el equipo"),
 )
@@ -82,6 +103,10 @@ PLAIN_EXAMPLE = (
     ("R.E.I.G.E.L.", "Lo primero es mirar tus facturas de luz de varios meses: ahí ves cuánta luz usas y "
                      "cuánto pagas. En la evaluación, una persona del equipo revisa eso contigo y te explica "
                      "qué opciones tiene tu casa. ¿Quieres que te explique qué se mira en la factura?"),
+    ("Persona", "¿Cómo pongo las placas en mi techo?"),
+    ("R.E.I.G.E.L.", "Eso lo trabaja el equipo de Power Solar. En la evaluación revisa el material y el estado "
+                     "del techo, hacia dónde mira y si le da sombra, y diseña dónde conviene que vayan las "
+                     "placas. ¿Quieres que te explique qué se mira en esa evaluación?"),
 )
 
 
@@ -100,7 +125,7 @@ def guide(now=None):
     plain = " ".join(f"{speaker}: {text}" for speaker, text in PLAIN_EXAMPLE)
     glossary = "; ".join(f"{term}: {meaning}" for term, meaning in GLOSSARY)
     return (
-        f"{STYLE} {PLAIN} Ahora en Puerto Rico corresponde decir «{greeting(now)}». "
+        f"{STYLE} {PLAIN} {INSTALLATION} Ahora en Puerto Rico corresponde decir «{greeting(now)}». "
         f"Explicaciones correctas que debes usar, con tus palabras, cuando pregunten por estos temas "
         f"(no inventes otras definiciones): {glossary}. "
         f"Ejemplos de estilo (otras conversaciones, no son datos de esta persona; no los copies palabra por palabra): "
