@@ -105,8 +105,8 @@ def test_corporate_metadata_and_sitemap_use_each_public_route(corporate_app):
             assert "x-robots-tag" not in response.headers
         sitemap = ElementTree.fromstring(client.get("/sitemap.xml").text)
         locations = [element.text for element in sitemap.findall("{*}url/{*}loc")]
-        assert set(locations) == {origin + path for path in PAGES}
-        assert len(locations) == len(PAGES)
+        assert set(locations) == {origin + path for path in [*PAGES, "/soluciones/tesla-panel-mount-flat"]}
+        assert len(locations) == len(PAGES) + 1
         robots = client.get("/robots.txt").text
         assert all(f"Allow: {path}\n" in robots for path in PAGES)
         assert "Disallow: /$\n" in robots
@@ -115,6 +115,14 @@ def test_corporate_metadata_and_sitemap_use_each_public_route(corporate_app):
         assert "Disallow: /webhooks/\n" in robots
         assert client.get("/").headers["x-robots-tag"] == "noindex, nofollow"
         assert "link" not in client.get("/app").headers
+
+
+def test_html_pages_are_revalidated_so_updates_are_never_hidden_by_cache(corporate_app):
+    with TestClient(corporate_app) as client:
+        for path in [*PAGES, "/chat"]:
+            assert client.get(path).headers["cache-control"] == "no-cache", path
+        for path in ("/", "/ia", "/app"):
+            assert client.get(path).headers["cache-control"] == "no-store", path
 
 
 def test_local_corporate_pages_are_not_advertised_to_search_engines(corporate_app):

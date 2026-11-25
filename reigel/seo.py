@@ -21,8 +21,10 @@ PUBLIC_PAGES = {
     "/soluciones": ("soluciones", "Soluciones | Power Solar · Team Caguas", "Información para evaluar energía solar, respaldo y consumo de tu hogar con Power Solar · Team Caguas."),
     "/proceso": ("proceso", "Evaluación | Power Solar · Team Caguas", "Conoce el proceso de orientación, evaluación y revisión de una propuesta de energía para tu hogar."),
     "/contacto": ("contacto", "Contacto | Power Solar · Team Caguas", "Comparte tu interés mediante el formulario de Power Solar o conversa con R.E.I.G.E.L. para coordinar una evaluación."),
+    "/soluciones/tesla-panel-mount-flat": ("panel-mount-flat", "Tesla Panel Mount Flat | Power Solar · Team Caguas", "Cómo funciona esta estructura para techos de madera de baja pendiente, sus piezas, normas y condiciones. Requiere evaluación estructural."),
     "/preguntas": ("preguntas", "Preguntas frecuentes | Power Solar · Team Caguas", "Respuestas sobre evaluación, consumo, respaldo, contacto y condiciones de una propuesta de energía solar."),
 }
+NAV_PARENT = {"panel-mount-flat": "soluciones"}  # Subpáginas que marcan su sección en el menú.
 CONTENT_START = "<!--corporate:content:start-->"
 CONTENT_END = "<!--corporate:content:end-->"
 
@@ -57,7 +59,8 @@ def render_shell(store, page_key, title, description, *, status=200, canonical_p
     content = content.replace("{{page_title}}", escape(title, quote=True))
     content = content.replace("{{page_description}}", escape(description, quote=True))
     content = content.replace(' aria-current="page"', "")
-    content = content.replace(f'data-site-page="{page_key}"', f'data-site-page="{page_key}" aria-current="page"')
+    nav_key = NAV_PARENT.get(page_key, page_key)
+    content = content.replace(f'data-site-page="{nav_key}"', f'data-site-page="{nav_key}" aria-current="page"')
     origin = public_origin(store)
     headers = {}
     if origin and canonical_path:
@@ -68,8 +71,8 @@ def render_shell(store, page_key, title, description, *, status=200, canonical_p
         headers["Link"] = f'<{canonical}>; rel="canonical"'
     else:
         headers["X-Robots-Tag"] = "noindex, nofollow"
-    if canonical_path is None:
-        headers["Cache-Control"] = "no-store"
+    # Las páginas se validan siempre, para que una actualización no siga enlazando recursos viejos.
+    headers["Cache-Control"] = "no-store" if canonical_path is None else "no-cache"
     return HTMLResponse(content, status_code=status, headers=headers)
 
 

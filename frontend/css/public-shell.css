@@ -160,3 +160,6 @@ body.public-body.launcher-away .chat-launcher:not(:focus-visible) {
 @media (forced-colors: active) {
   body.public-body .chat-launcher-symbol { color: ButtonText; }
 }
+
+/* El numero vive sobre una placa clara que no cambia al pasar el cursor: siempre oscuro. */
+.corporate-body .corp-directory-item.ui-corner-card:is(:hover, :focus-visible) .corp-index { color: var(--sol-navy, #071d43); }

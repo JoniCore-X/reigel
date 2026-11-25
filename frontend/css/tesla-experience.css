@@ -95,7 +95,8 @@
 .corporate-body .tx-hero-media::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #071d43f7 0%, #071d43e6 34%, #071d43b8 52%, #071d4333 76%, #071d4314 100%);
+  /* La foto del techo tiene tejas claras: el tramo 34-60 % sostiene AA para el texto que llega hasta ahí. */
+  background: linear-gradient(90deg, #071d43f7 0%, #071d43e6 34%, #071d43cc 52%, #071d4366 66%, #071d4333 78%, #071d4314 100%);
   content: "";
 }
 .corporate-body .tx-hero-media img { width: 100%; height: 100%; object-fit: cover; object-position: 78% 52%; }
