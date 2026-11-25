@@ -101,7 +101,7 @@ def test_root_is_the_public_conversation_and_legacy_chat_stays_reachable(system)
         assert "El historial de esta conversación se guarda para el equipo" in chat.text
         assert 'id="chat-session-state" hidden' in chat.text
         assert 'src="/static/js/chat.js?v=10"' in chat.text
-        assert chat.text.index("/static/css/coordination-chat.css?v=3") > chat.text.index("/static/css/site-loader.css")
+        assert chat.text.index("/static/css/coordination-chat.css?v=4") > chat.text.index("/static/css/site-loader.css")
         assert 'data-book-step="3"' in chat.text and 'id="chat-book-progress" hidden' in chat.text
         assert 'href="/captacion"' in chat.text
         assert 'href="/app"' in chat.text
