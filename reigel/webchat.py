@@ -17,12 +17,9 @@ from .core import DomainError, format_reference, new_reference, stamp, text, uid
 from . import privacy, safety, voice
 
 
-WELCOME = (
-    "¡Hola! Soy R.E.I.G.E.L., el asistente virtual de Power Solar · Team Caguas. Te ayudo con tus dudas "
-    "y, cuando quieras, con una evaluación o con alguien del equipo. "
-    "Para empezar, ¿qué buscas solucionar: las alzas en la factura, las interrupciones del servicio o ambas? "
-    "Por seguridad, no compartas documentos, cuentas ni datos bancarios por aquí."
-)
+# Saludo mínimo pedido por el titular: los temas de inicio y la nota al pie ya
+# orientan y advierten sobre datos sensibles.
+WELCOME = "Hola, ¿en qué te ayudo?"
 MUNICIPALITIES = (
     "Adjuntas", "Aguada", "Aguadilla", "Aguas Buenas", "Aibonito", "Añasco", "Arecibo", "Arroyo", "Barceloneta",
     "Barranquitas", "Bayamón", "Cabo Rojo", "Caguas", "Camuy", "Canóvanas", "Carolina", "Cataño", "Cayey",

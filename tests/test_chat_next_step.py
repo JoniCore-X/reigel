@@ -50,7 +50,7 @@ def test_a_booked_visitor_keeps_the_dock(chat):
 def test_scripted_replies_speak_like_a_team_caguas_advisor(chat):
     service, _, _, token, initial = chat
     welcome = initial["messages"][-1]["text"]
-    assert welcome.startswith("¡Hola! Soy R.E.I.G.E.L.") and "las alzas en la factura, las interrupciones del servicio o ambas?" in welcome
+    assert welcome == "Hola, ¿en qué te ayudo?"
     need = service.message(token, "Las alzas en la factura", "voice-flow-001")["reply"]
     assert need.startswith("¡Súper!") and "¿en qué pueblo está tu hogar?" in need
     town = service.message(token, "Caguas", "voice-flow-002")["reply"]
