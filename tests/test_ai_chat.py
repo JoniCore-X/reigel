@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from reigel import ai_chat, api
 from reigel.core import Store
-from reigel.webchat import WebChat
+from reigel.webchat import WELCOME, WebChat
 
 REAL_ASYNC_CLIENT = httpx.AsyncClient
 
@@ -192,7 +192,7 @@ def test_ai_brief_covers_only_unclassified_messages(chat):
     service, _, token = chat
     brief = service.ai_brief(token, "Tengo una duda sobre la lluvia y mi tejado", "brief-unknown-001")
     assert brief and brief["fingerprint"] and brief["verified"] == ""
-    assert any("R.E.I.G.E.L." in item["text"] for item in brief["history"])
+    assert any(item["text"] == WELCOME for item in brief["history"])
     assert service.ai_brief(token, "Quiero reservar una cita", "brief-booking-001") is None
     service.message(token, "/stop", "brief-stop-001")
     assert service.ai_brief(token, "Tengo otra duda sobre el tejado", "brief-unknown-002") is None
