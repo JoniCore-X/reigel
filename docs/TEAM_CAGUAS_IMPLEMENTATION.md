@@ -2120,3 +2120,127 @@ solo se explica en texto. Sin commit ni publicación.
 - Comprobado con pruebas locales, vectores RFC 6238 y un escaneo del QR con Google Authenticator en un teléfono real sobre la demo sintética (2026-11-22). Sin probar: OAuth con proveedores reales.
 - Bloqueado hasta configurar: credenciales OAuth y un canal autorizado de correo/SMS. Sin canal, correo y teléfono no se pueden verificar ni recuperar; el acceso por usuario sí funciona.
 - Transición del Team: la contraseña sola sigue activa hasta que la persona activa Google Authenticator; el propietario puede exigirlo a todos desde `/app/acceso`.
+
+## Fase 1 de aprendizaje, tramo A: cola con aprobación humana y banco de preguntas, 25 de noviembre de 2026
+
+R.E.I.G.E.L. puede registrar lo que no supo responder bien, una persona del equipo
+propone una respuesta y solo un administrador la aprueba. Aprender y publicar son pasos
+separados: en este tramo nada aprendido llega a un cliente. No se editaron
+`ai_chat.py`, `voice.py`, `assistant.py` ni `api.py` (otra tarea los modifica); se
+importan solo para leer.
+
+- `reigel/learning.py`: migración aditiva e idempotente `learning_queue_v1` (tablas
+  `learning_gaps`, `learning_proposals`, `learning_eval_cases`, `learning_eval_runs`),
+  aplicada al construir `LearningQueue(store)`. Desde el tramo B la construye `create_app`
+  (ver abajo); en desarrollo solo se aplicó a bases temporales.
+- Flujo: `record_gap` (agrupa por ruta y clave normalizada; conserva el motivo de mayor
+  incertidumbre; un hueco resuelto que reaparece se reabre), `propose` (asesor o
+  administrador, con fuente o criterio obligatorio), `approve`, `reject`, `reject_gap`,
+  `resolve` (solo administrador) y `list` (asesor o administrador desde el tramo B: tras
+  redactarla, la cola no contiene datos de visitantes y el asesor la necesita para proponer;
+  filtrable y ordenado por prioridad actual, con horas en `America/Puerto_Rico`; se guarda UTC). Cada acción queda en
+  `audit_events`, incluido un intento de aprobación bloqueado.
+- Al aprobar, la respuesta debe pasar `validate_reply` (/chat) y
+  `validate_workspace_reply` (/ia) con `verified=True`, más un veto propio a cualquier
+  mención de financiación. Si no pasa, la aprobación se rechaza con el motivo y la
+  propuesta sigue pendiente.
+- Privacidad: la pregunta se guarda redactada con `ia_workspace.hide_contacts` (correos y
+  teléfonos) más un ocultamiento propio de números muy largos, direcciones postales,
+  números de cinco o más cifras y nombres presentados («me llamo…», «soy…»). No hay
+  columnas de conversación, visitante, IP, cookie ni nombre. El ocultamiento es por
+  patrones: un nombre sin presentación o una dirección sin palabra clave pasan.
+- Retención: `purge_expired` borra los huecos no aprobados (abiertos, propuestos o
+  descartados) cuya última aparición supera 90 días, con sus propuestas. Es explícita:
+  nada la programa todavía. No sustituye ni atiende las solicitudes de acceso,
+  corrección o eliminación de `privacy.py`.
+- Prioridad `P = 100 × U × R × N / (1 + C)`, de 0 a 100: U por motivo, R por tema con los
+  patrones de `suggestions.TOPICS`, N mitad frecuencia y mitad recencia, C fijo (0,25 por
+  defecto, configurable por instancia). Es una heurística para ordenar la cola, no una
+  ley ni una medida de impacto.
+- `reigel/learning_eval.py`: 10 casos iniciales (techo de madera, colocar placas, sombra,
+  reserva, hablar con una persona, baja, privacidad, precio, ahorro y financiamiento) con
+  expectativas por patrones y un evaluador. `publish_like_ia` copia el recorrido de
+  `api.ia_events` sobre la respuesta completa; si la ruta cambia, hay que actualizarlo.
+- `scripts/eval_ia.py`: ejecuta el banco contra Ollama local con las instrucciones de /ia
+  (`ai_chat.stream_workspace`), en una base temporal que se borra al salir (`--output`
+  guarda una copia en JSON). No lee `.env` ni descarga modelos; si Ollama no responde,
+  termina con código 2. Una respuesta sustituida por el mensaje seguro cuenta como pasada
+  para la persona, pero el resumen la señala aparte.
+
+Corridas reales (qwen2.5:3b, 25 nov 2026, temperatura de /ia, resultados variables entre
+corridas): 6, 6 y 7 de 10. Fallaron siempre reserva («Reservaste una cita»), baja («No
+recibirá más mensajes», «no enviaré más mensajes») y privacidad (nunca remitió a «Citas y
+equipo»); hablar con una persona falló dos veces («hablaré como si fuera una persona del
+equipo») y la tercera la ruta la sustituyó. Esas frases pasaron el validador de /ia y se
+habrían publicado; corregirlo toca `ai_chat.py` y queda para la tarea que lo edita. Los
+patrones del banco se ampliaron con esas frases observadas. Los tres casos de techo pasan
+gracias a la invitación fija que añade la ruta: el modelo solo no invitó a «Citas y equipo».
+
+Límites: los validadores y las expectativas son patrones, no revisión semántica (por
+ejemplo, «el equipo de financiamiento» o «te hará un estudio» pasan). El banco mide solo
+/ia; los resultados de una corrida no llegan a `/app` hasta el tramo B. Pendiente (tramo
+B): captura en `ai_chat`, rutas en `api.py`, vista «Aprendizaje» en `/app` y uso de lo
+aprobado como «Respuestas revisadas por el equipo». Sin commit ni publicación.
+
+## Fase 1 de aprendizaje, tramo B: captura, rutas, vista «Aprendizaje» y validadores, 25 de noviembre de 2026
+
+Corrección de seguridad primero. El banco mostró que /ia publicaba acciones que no
+hace («Reservaste una cita», «No recibirás más mensajes de nuestra parte», «¿Quieres que
+te ayude a hacer esa llamada?», «hablaré con una persona del equipo») y frases en
+portugués.
+
+- `ai_chat.claimed_action` rechaza afirmaciones de reserva, baja o registro, borrado de
+  datos, llamada o contacto prometido, y traspaso al equipo o hacerse pasar por persona.
+  `ai_chat.mixes_portuguese` rechaza ã/õ/ç y palabras portuguesas que no existen en
+  español («ou», «com», «agora», «pergunta», «ajudar», «avaliação»…). Se aplican en
+  `validate_workspace_reply` y `validate_reply`. En `assistant.validate_draft` solo se
+  aplican las reservas, bajas, borrados y el portugués: en el modo `ai` de un canal el
+  equipo sí puede atender o llamar, así que ofrecerlo sigue permitido. El inglés no se
+  bloquea. Falso positivo conocido: «No puedo decirte cuánto vas a ahorrar» se retira por
+  el patrón de ahorro ya existente.
+- Peticiones de reserva, cambio de cita, hablar con una persona, baja y privacidad en /ia:
+  se detectan con el clasificador determinista de /chat y, si la respuesta aceptada no
+  menciona «Citas y equipo», el servidor añade una frase fija validada
+  (`ai_chat.REFERRAL_INVITATIONS`), como ya hacía con el techo. Si el modelo afirma la
+  acción, se sustituye por el mensaje seguro, que también remite a «Citas y equipo».
+- `ai_chat.WorkspaceOutput` es ahora la frontera de salida de /ia: la usan
+  `api.ia_events` y `learning_eval.publish`, así que el banco mide lo que se publica, no
+  una copia.
+
+Tramo B:
+
+- `create_app` construye `LearningQueue` sobre su propia base (migración aditiva) y ejecuta
+  la retención de 90 días al arrancar y, como mucho, una vez al día al listar la cola. En
+  desarrollo solo se ejecutó en bases temporales; el servidor real la aplicará la próxima vez
+  que arranque con `main.py`.
+- Captura sin bloquear ni filtrar datos (errores de registro solo se anotan en el registro,
+  sin contenido): /ia registra `blocked` cuando sustituye una respuesta y `model_error`
+  cuando el modelo falla; /chat registra `fallback` cuando el modelo se pidió y no se usó, o
+  cuando sale la respuesta genérica, y `no_knowledge` cuando no hay fuente verificada. Se
+  guarda el texto ya enmascarado y redactado.
+- Rutas (`actor`, `payload`, `DomainError`, controles de origen y límites por IP y por
+  cuenta): `GET /api/learning/gaps`, `GET /api/learning/gaps/{id}/proposals`,
+  `POST /api/learning/gaps` (señalar, `staff_flag`), `POST /api/learning/gaps/{id}/proposals`
+  (asesor o administrador); `POST /api/learning/proposals/{id}/approve|reject` y
+  `POST /api/learning/gaps/{id}/reject|resolve` (solo administrador);
+  `GET /api/learning/eval` (equipo) y `POST /api/learning/eval` (solo administrador, cuatro
+  por hora, en segundo plano, exige el modelo local configurado disponible y guarda la corrida
+  en `learning_eval_runs`).
+- Vista «Aprendizaje» en /app (`frontend/js/learning.js`, `frontend/css/learning.css`):
+  último resultado del banco, cola por prioridad con filtros, proponer, señalar, y para
+  administradores aprobar, rechazar, descartar, resolver y ejecutar el banco. Texto escapado;
+  el servidor vuelve a comprobar cada permiso.
+- Lo aprobado se ofrece al modelo como «Respuestas revisadas por el equipo de Power Solar»
+  (hasta tres, por coincidencia de palabras con la pregunta, en /ia y en /chat). No cuenta
+  como fuente verificada para los validadores y se revalida al leerla.
+
+Banco tras la corrección (scripts/eval_ia.py, 25 nov 2026, resultados variables entre
+corridas): primera corrida, 10 de 10 con cada modelo; corrida final, qwen2.5:3b 9 de 10 con
+cinco sustituciones y llama3.2:3b 10 de 10 con dos. El fallo de qwen es de financiamiento:
+«cómo te van a aprobar el financiamiento» dentro de una negación, que el patrón del banco no
+distingue. Varios casos de remisión pasan gracias a la frase fija del servidor, no al modelo.
+Falsos positivos observados en `coaches_installation` (no modificado): «No es tarea de la
+persona colocar las placas» y «la cantidad de placas solares que se instalen» se retiran.
+
+Sin verificar: la vista en el navegador de la vista previa 8878, porque no se reinició el
+proceso (el reinicio fue denegado) y sigue con el backend anterior. Sin commit ni publicación.
