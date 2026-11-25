@@ -1,0 +1,43 @@
+LICENCIA DE USO EXCLUSIVO — TODOS LOS DERECHOS RESERVADOS
+R.E.I.G.E.L.
+
+Copyright (c) 2026 JoniCore-X. Todos los derechos reservados.
+
+1. Titularidad. Este repositorio, incluido su código fuente, documentación,
+   diseño, textos, estructura y cualquier otro material propio (el "Software"),
+   es propiedad exclusiva de su titular.
+
+2. Sin licencia concedida. Que el Software sea visible públicamente no otorga
+   ninguna licencia ni derecho. Salvo autorización previa y por escrito del
+   titular, queda prohibido:
+   a) copiar, reproducir, modificar, adaptar o crear obras derivadas;
+   b) distribuir, publicar, sublicenciar, vender o alquilar;
+   c) usar el Software, total o parcialmente, con fines comerciales o no
+      comerciales, incluido su despliegue o ejecución como servicio;
+   d) usar el Software o sus partes para entrenar, ajustar o evaluar modelos
+      de inteligencia artificial.
+
+3. Visualización en la plataforma. Solo se permite ver el contenido a través de
+   la plataforma que lo aloja, en la medida estrictamente exigida por las
+   condiciones de servicio de dicha plataforma.
+
+4. Material de terceros. Las marcas, logotipos, fotografías, fichas técnicas y
+   demás material de terceros (incluidos Power Solar y Tesla) pertenecen a sus
+   respectivos titulares, no se licencian mediante este documento y solo se
+   usan con fines de referencia. Consulte frontend/assets/power-solar/SOURCES.md.
+
+5. Sin garantía. El Software se ofrece "tal cual", sin garantía de ningún tipo.
+   El titular no es responsable de daños derivados de su uso no autorizado.
+
+6. Solicitudes de permiso: contacte al titular a través de su perfil en la
+   plataforma donde se aloja este repositorio.
+
+---
+
+EXCLUSIVE LICENSE — ALL RIGHTS RESERVED
+
+Copyright (c) 2026 JoniCore-X. All rights reserved. Public visibility of this
+repository grants no license. No copying, modification, distribution, use,
+deployment, or use for training AI models is permitted without the owner's
+prior written permission. Third-party marks and materials belong to their
+respective owners. Provided "as is", without warranty.
