@@ -3147,3 +3147,87 @@ cada cuatro veces, pero ya no le cuesta la respuesta.
 frente a 0.88 de respuestas válidas, que parecería decir que la regla de hablar llano
 estorba. Son ocho respuestas por variante: dos de diferencia. No es un hallazgo, es ruido,
 y está aquí como recordatorio de que estas tablas engañan con pocas muestras.
+
+## Elegir el modelo, y el fallo que apareció al medirlo (26 de noviembre de 2026)
+
+El titular pidió integrar Ollama y que el modelo lo eligiera yo. La elección se hizo con
+el banco de medición, no con opinión, y «mejor» se definió como lo que importa aquí: el
+modelo cuyas respuestas sobreviven a los validadores sin dejar de ser útiles.
+
+### Los tres candidatos instalados
+
+Mismo prompt, mismos doce casos, temperatura 0 y semilla fija; lo único distinto, el modelo.
+
+| | qwen2.5:3b | llama3.2:3b | dolphin-phi:2.7b |
+| --- | --- | --- | --- |
+| Respuestas válidas | **0.75** | 0.58 | 0.33 |
+| Palabras | 23 | 30 | 78 |
+| Cierra preguntando | 1.00 | 1.00 | 0.25 |
+| Repite el marcador del prompt | 0.00 | 0.00 | 0.92 |
+| Segundos por respuesta | 1.0 | 0.8 | 7.0 |
+
+**Gana el que ya estaba configurado, `qwen2.5:3b`.** `llama3.2:3b` es algo más rápido pero
+inventa detalle técnico: sus cinco rechazos son todos por afirmar cosas sin fuente
+verificada. `dolphin-phi` no sirve para esto: copia el marcador del prompt en nueve de
+cada diez respuestas, se va a 78 palabras y tarda siete veces más.
+
+No se descargó ningún modelo mayor. En la computadora quedaban **7,6 GB libres** y los
+modelos ya ocupan 5,6; bajar un 7B dejaría el disco al límite. `nomic-embed-text` y
+`dolphin-phi` no los usa el proyecto: son 1,9 GB recuperables si el titular los quiere fuera.
+
+### El fallo: el prompt no cabía en su propia ventana
+
+Midiendo el tamaño real con `prompt_eval_count` de Ollama apareció algo mayor que la
+elección del modelo. **Las tres rutas recortaban el prompt**, y Ollama no avisa: recorta y
+responde igual, con la mitad de sus instrucciones.
+
+| Ruta | Ventana | Prompt real | El modelo leía |
+| --- | --- | --- | --- |
+| Borradores y canales (`assistant`) | 2048 | 2179 | **1026** |
+| `/chat` (peor caso) | 3072 | 3731 | 2975 |
+| `/ia` (peor caso) | 4096 | 5162 | 4094 |
+
+El caso de los borradores es el grave: su prompt del sistema, **él solo y sin historial**,
+no cabía. Y esa ruta alimenta `channels.py`, que envía sin revisión humana.
+
+### Qué pasaba de verdad: los borradores nunca han funcionado
+
+Ocho mensajes, misma semilla, lo único distinto la ventana:
+
+| | 2048, como estaba | 4096, corregido |
+| --- | --- | --- |
+| Tokens que lee el modelo | 1026 | 2150 |
+| Respuestas válidas | **0 de 8** | 4 de 8 |
+| Palabras | 165 | 50 |
+| Cierra preguntando | 0.00 | 0.75 |
+
+Con 2048 se rechazaban **todas**, siempre por lo mismo: el texto pasaba del límite de 900
+caracteres. Sin sus instrucciones, el modelo escribía listas numeradas de 165 palabras —
+justo lo que `voice.PLAIN` prohíbe— y llegaba a decirle a la persona «comprueba si tu
+contador de luz está funcionando», que es la clase de instrucción que `voice.INSTALLATION`
+prohíbe expresamente.
+
+**Falló cerrado, no abierto.** Un borrador rechazado no se envía: el equipo veía que no
+había borrador y el canal pasaba a atención humana con su informe de necesidad. Nadie
+recibió un mensaje malo. Pero la ayuda de redacción llevaba desde su estreno sin producir
+una sola respuesta utilizable.
+
+### La corrección
+
+Ventanas por defecto: `assistant` 2048 → **4096**, `/chat` 3072 → **5120**, `/ia` 4096 →
+**8192**. Cuesta poco: cuadruplicar la ventana añadió **220 MB** al modelo cargado
+(1,94 GB a 2,16 GB), medido con `/api/ps`.
+
+`tests/test_prompt_fits.py` evita que vuelva a pasar en silencio: compara el tamaño real
+de los tres prompts contra sus ventanas, con la relación medida ese día (3,57 caracteres
+por token, y el guardián usa 3,3 a propósito). Si el prompt vuelve a crecer, falla una
+prueba en lugar de recortarse una instrucción.
+
+### Lo que esto no arregla
+
+Quedan 4 rechazos de 8 en los borradores, por las causas de siempre: afirmar detalle
+técnico sin fuente, mezclar portugués, prometer condiciones. **La palanca grande no es el
+modelo, es la base de evidencia:** `validate_reply` relaja la comprobación de detalle
+técnico cuando hay fuente verificada (`verified=True`), y hoy el panel de conocimiento
+dice «Sin información verificable». Llenar esa base hará más por la calidad que cambiar
+de modelo.

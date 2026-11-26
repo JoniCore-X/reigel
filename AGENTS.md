@@ -103,12 +103,18 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1044 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1050 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
 Una ejecución de Python deja un aviso de obsolescencia de `starlette.testclient`
 originado en FastAPI, no en este código.
+
+El prompt tiene que caber en la ventana del modelo. Cuando no cabe, Ollama no avisa:
+recorta y responde igual, con la mitad de sus instrucciones. Así estuvieron los
+borradores de `assistant.py` hasta el 26 de noviembre de 2026, rechazados uno a uno por
+pasarse de largo. `tests/test_prompt_fits.py` compara el tamaño real de los tres prompts
+con su ventana; si crece el prompt, falla esa prueba antes que el modelo.
 
 Antes de añadir o quitar una instrucción del prompt, medirla contra el modelo:
 

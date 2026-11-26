@@ -49,7 +49,11 @@ def _bounded_setting(name, default, minimum, maximum, parser):
 
 def _generation_settings():
     timeout = _bounded_setting("REIGEL_LOCAL_TIMEOUT_SECONDS", 35, 10, 120, int)
-    context = _bounded_setting("REIGEL_LOCAL_NUM_CTX", 2048, 512, 8192, int)
+    # 4096, no 2048: medido el 26 nov 2026 con qwen2.5:3b, el prompt del sistema
+    # solo ya son 2179 tokens. Con una ventana de 2048 el modelo leía 1026, menos
+    # de la mitad, y redactaba sin la mayoría de sus instrucciones. Cuadruplicar la
+    # ventana cuesta 220 MB en el modelo cargado; perder el prompt cuesta mucho más.
+    context = _bounded_setting("REIGEL_LOCAL_NUM_CTX", 4096, 512, 8192, int)
     prediction = _bounded_setting("REIGEL_LOCAL_NUM_PREDICT", 260, 64, 512, int)
     temperature = _bounded_setting("REIGEL_LOCAL_TEMPERATURE", 0.15, 0.0, 0.4, float)
     return timeout, {

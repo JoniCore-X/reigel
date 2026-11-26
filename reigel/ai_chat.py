@@ -52,10 +52,26 @@ def model_name():
     return value
 
 
+# Cuando el prompt no cabe en `num_ctx`, Ollama no avisa: recorta y responde igual,
+# con la mitad de sus instrucciones. Así apareció el fallo del 26 de noviembre de 2026,
+# porque el prompt creció durante meses y las ventanas se quedaron donde estaban.
+# Relación medida ese día con qwen2.5:3b sobre estos mismos prompts: 7788 caracteres
+# son 2179 tokens, o sea 3.57 caracteres por token. Aquí se usa 3.3, pesimista a
+# propósito, porque equivocarse por abajo se paga con instrucciones perdidas.
+CHARS_PER_TOKEN = 3.3
+
+
+def prompt_fits(characters: int, num_ctx: int, reply_tokens: int) -> bool:
+    """¿Cabe un prompt de ese tamaño dejando sitio para la respuesta?"""
+    return characters / CHARS_PER_TOKEN + reply_tokens <= num_ctx
+
+
 def _workspace_settings():
     timeout = _bounded_setting("REIGEL_IA_TIMEOUT_SECONDS", 60, 10, 120, int)
     prediction = _bounded_setting("REIGEL_IA_NUM_PREDICT", 320, 64, 600, int)
-    context = _bounded_setting("REIGEL_IA_NUM_CTX", 4096, 1024, 8192, int)
+    # 8192, no 4096: con veinte turnos y un mensaje de 4000 caracteres el prompt
+    # llega a 5162 tokens, y con 4096 el modelo leía 4094. Ver `PROMPT_FITS`.
+    context = _bounded_setting("REIGEL_IA_NUM_CTX", 8192, 1024, 8192, int)
     temperature = _bounded_setting("REIGEL_IA_TEMPERATURE", 0.3, 0.0, 0.7, float)
     history = _bounded_setting("REIGEL_IA_HISTORY", 20, 4, 40, int)
     return timeout, history, {
@@ -80,7 +96,9 @@ def _bounded_setting(name, default, minimum, maximum, parser):
 
 def _settings():
     timeout = _bounded_setting("REIGEL_CHAT_TIMEOUT_SECONDS", 45, 10, 60, int)
-    context = _bounded_setting("REIGEL_CHAT_NUM_CTX", 3072, 1024, 8192, int)
+    # 5120, no 3072: con ocho mensajes de historial y uno de 2000 caracteres el
+    # prompt llega a 3731 tokens, y con 3072 el modelo leía 2975. Ver `PROMPT_FITS`.
+    context = _bounded_setting("REIGEL_CHAT_NUM_CTX", 5120, 1024, 8192, int)
     prediction = _bounded_setting("REIGEL_CHAT_NUM_PREDICT", 220, 64, 400, int)
     temperature = _bounded_setting("REIGEL_CHAT_TEMPERATURE", 0.2, 0.0, 0.5, float)
     history = _bounded_setting("REIGEL_CHAT_HISTORY", 8, 2, 12, int)
