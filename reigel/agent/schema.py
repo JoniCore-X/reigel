@@ -64,9 +64,21 @@ CREATE INDEX IF NOT EXISTS agent_needs_open ON agent_need_reports(status,created
 CREATE INDEX IF NOT EXISTS agent_needs_conversation ON agent_need_reports(conversation_id,topic,status);
 """
 
+# Constancias de permiso para llamar. Solo se inserta: «no llamar» es una más, y la
+# última manda. Nada se sobrescribe, así que el historial queda completo.
+CALLS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS agent_call_consent (
+ id TEXT PRIMARY KEY,lead_id TEXT NOT NULL REFERENCES leads(id),kind TEXT NOT NULL,
+ evidence TEXT NOT NULL,captured_at TEXT NOT NULL,captured_by TEXT REFERENCES users(id),
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS agent_call_consent_lead ON agent_call_consent(lead_id,captured_at DESC);
+"""
+
 VERSION = "team_caguas_agent_v1"
 MEMORY_VERSION = "team_caguas_agent_memory_v2"
 NEEDS_VERSION = "team_caguas_agent_needs_v3"
+CALLS_VERSION = "team_caguas_agent_calls_v4"
 
 
 def migrate_agent(db) -> None:
@@ -87,3 +99,5 @@ def migrate_agent(db) -> None:
     db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (MEMORY_VERSION, stamp()))
     db.executescript(NEEDS_SCHEMA)
     db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (NEEDS_VERSION, stamp()))
+    db.executescript(CALLS_SCHEMA)
+    db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (CALLS_VERSION, stamp()))

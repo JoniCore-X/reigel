@@ -199,6 +199,7 @@ async function operationsLeadDetail(id) {
     }));
     $('#activity-form').addEventListener('submit',event=>submitForm(event,async(form,fields)=>{await post(`/api/leads/${encodeURIComponent(id)}/activities`,{type:fields.get('type'),description:fields.get('description'),outcome:fields.get('outcome'),occurred_at:zonedTimestamp(fields.get('occurred_at'))});toast('Interacción registrada.');await leadDetail(id);}));
     findLeadDuplicates(lead);
+    addCallButton(id);
     appendLeadMemory(id);
   }catch(error){if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
 }
@@ -338,6 +339,111 @@ function briefMemory(remembered) {
       text:'Solo aparece lo vigente y usable. Una deducción del modelo sin aprobar no se muestra aquí ni llega al cliente.'}),
   ]);
   parent.insertBefore(section,parent.querySelector('.form-actions'));
+}
+const callResults={reached:'Habló con la persona',voicemail:'Buzón de voz',no_answer:'No contestó',
+  callback:'Pidió que la llamaran luego',refused:'No quiere continuar ahora',
+  wrong_number:'Número equivocado',do_not_call:'Pidió no recibir más llamadas'};
+const consentKinds={written:'Autorización escrita',web_form:'Formulario del sitio',
+  inbound_request:'La persona pidió que la llamaran',verbal:'Autorización verbal registrada'};
+function callList(title,items,render) {
+  if(!items||!items.length)return null;
+  return node('section',{class:'call-block'},[
+    node('h4',{text:title}),
+    node('ul',{},items.map(item=>node('li',{},[render?render(item):node('span',{text:String(item)})]))),
+  ]);
+}
+function callPlanView(plan,reload) {
+  const permiso=plan.permission||{};
+  const banner=node('div',{class:`call-permission ${permiso.allowed?'is-allowed':'is-blocked'}`},[
+    node('strong',{text:permiso.allowed?`Puedes llamar · ${permiso.basis_label}`:`No llames · ${permiso.basis_label}`}),
+    node('p',{class:'muted',text:permiso.notice||''}),
+  ]);
+  const consentSelect=node('select',{attrs:{name:'kind','aria-label':'Tipo de constancia'}},
+    Object.entries(consentKinds).map(([value,label])=>memoryOption(value,label,value==='verbal')));
+  const evidence=node('input',{attrs:{type:'text',maxlength:'400',required:'',
+    placeholder:'Dónde consta: documento, correo, grabación interna…','aria-label':'Evidencia'}});
+  const consentError=node('p',{class:'form-error',attrs:{role:'alert'}});
+  const consentForm=node('form',{class:'call-consent-form'},[
+    node('h4',{text:'Dejar constancia del permiso'}),
+    node('div',{class:'belief-form-row'},[
+      node('label',{text:'Tipo'},[consentSelect]),
+      node('label',{text:'Evidencia'},[evidence]),
+      node('button',{class:'button small',attrs:{type:'submit'},text:'Guardar constancia'}),
+    ]),
+    consentError,
+  ]);
+  consentForm.addEventListener('submit',async event=>{
+    event.preventDefault();consentError.textContent='';
+    try {await post(`/api/leads/${encodeURIComponent(plan.lead_id)}/call-consent`,
+      {kind:consentSelect.value,evidence:evidence.value});await reload();}
+    catch(problem) {consentError.textContent=problem.message;}
+  });
+  const result=node('select',{attrs:{name:'result','aria-label':'Resultado'}},
+    Object.entries(callResults).map(([value,label])=>memoryOption(value,label,value==='reached')));
+  const notes=node('textarea',{attrs:{name:'notes',required:'',maxlength:'1500',
+    placeholder:'Qué se habló y qué quedó acordado.'}});
+  const followUp=node('input',{attrs:{type:'datetime-local',name:'next_followup_at','aria-label':'Próximo seguimiento'}});
+  const outcomeError=node('p',{class:'form-error',attrs:{role:'alert'}});
+  const outcomeForm=node('form',{class:'call-outcome-form'},[
+    node('h4',{text:'Cerrar la llamada'}),
+    node('label',{text:'Qué se habló'},[notes]),
+    node('div',{class:'belief-form-row'},[
+      node('label',{text:'Resultado'},[result]),
+      node('label',{text:'Próximo seguimiento'},[followUp]),
+      node('button',{class:'button small primary',attrs:{type:'submit'},text:'Guardar cierre'}),
+    ]),
+    outcomeError,
+  ]);
+  outcomeForm.addEventListener('submit',async event=>{
+    event.preventDefault();outcomeError.textContent='';
+    try {
+      await post(`/api/leads/${encodeURIComponent(plan.lead_id)}/call-outcome`,{
+        result:result.value,notes:notes.value,
+        next_followup_at:followUp.value?zonedTimestamp(followUp.value):undefined});
+      toast('Llamada registrada.');
+      await reload();
+    } catch(problem) {outcomeError.textContent=problem.message;}
+  });
+  return node('div',{class:'call-plan'},[
+    banner,
+    node('p',{class:'hint',text:plan.notice||''}),
+    node('section',{class:'call-block'},[node('h4',{text:'Para qué es la llamada'}),
+                                         node('p',{text:plan.purpose||''})]),
+    callList('Lo que ya sabes',plan.known,item=>node('span',{
+      text:`${item.label}: ${item.kind==='currency'?currency(item.value):item.value}`})),
+    plan.appointment_at?node('section',{class:'call-block'},[node('h4',{text:'Cita confirmada'}),
+      node('p',{text:`${dateTime(plan.appointment_at)} · confirma qué conviene tener a mano.`})]):null,
+    callList('Lo que R.E.I.G.E.L. recuerda',plan.remembered,
+      item=>node('span',{},[node('span',{text:item.claim}),
+                            node('small',{class:'muted',text:` ${item.subject} · ${item.source}`})])),
+    callList('Confirmar',plan.confirm),
+    callList('Preguntar',plan.ask),
+    callList('Nunca en esta llamada',plan.never_say),
+    plan.phone_on_file?null:node('p',{class:'form-error',text:'Este registro no tiene teléfono.'}),
+    consentForm,
+    permiso.allowed?outcomeForm:node('p',{class:'field-help',
+      text:'Registra primero el permiso: el cierre se habilita cuando se puede llamar.'}),
+  ]);
+}
+async function callPlan(id) {
+  openDialog('Preparar llamada',loading());
+  const reload=async()=>{if(dialog.open)await callPlan(id);};
+  try {
+    const plan=await api(`/api/leads/${encodeURIComponent(id)}/call-plan`);
+    if(!dialog.open)return;
+    $('#dialog-title').textContent=`Preparar llamada · ${plan.lead_name}`;
+    $('#dialog-content').replaceChildren(callPlanView(plan,reload));
+  } catch(problem) {
+    if(dialog.open)$('#dialog-content').replaceChildren(
+      node('p',{class:'form-error',attrs:{role:'alert'},text:problem.message}));
+  }
+}
+function addCallButton(id) {
+  const actions=$('.lead-profile-header .actions');
+  if(!actions||actions.querySelector('[data-action="call-plan"]'))return;
+  const button=node('button',{class:'button small',attrs:{type:'button','data-action':'call-plan','data-id':id},
+    text:'Preparar llamada'});
+  actions.prepend(button);
 }
 const needUrgency={high:['red','Urgente'],normal:['orange','Pendiente'],low:['blue','Cuando se pueda']};
 function needReportRow(report,reload) {
@@ -653,6 +759,7 @@ async function appendTrainer() {
 function operationActions(button) {
   const {id}=button.dataset;
   return {
+    'call-plan':()=>callPlan(id),
     'retry-leads':filterOperationsLeads,
     'lead-view':()=>setLeadView(button.dataset.mode),
     'lead-page':()=>{state.leadQuery.offset=Number(button.dataset.offset)||0;return filterOperationsLeads();},

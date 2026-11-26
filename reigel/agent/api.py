@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import Depends, Request
 
-from . import memory, needs, policy, runtime
+from . import calls, memory, needs, policy, runtime
 from ..core import DomainError
 
 CYCLES = ("SELECT id,trigger,started_at,finished_at,leads_seen,decided,executed,held,skipped,error"
@@ -97,6 +97,21 @@ def register_routes(app, actor, payload):
     async def resolve_need(report_id: str, request: Request, user=Depends(actor)):
         app.state.limiter.check(request, "agent_need_resolve", 120, 3600)
         return {"report": needs.resolve(app.state.store, report_id, await payload(request), user)}
+
+    # Llamadas: el sistema prepara y cierra; marcar lo hace una persona.
+    @app.get("/api/leads/{lead_id}/call-plan")
+    async def call_plan(lead_id: str, user=Depends(actor)):
+        return calls.plan(app.state.store, lead_id, user)
+
+    @app.post("/api/leads/{lead_id}/call-consent", status_code=201)
+    async def call_consent(lead_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_call_consent", 120, 3600)
+        return {"permission": calls.record_consent(app.state.store, lead_id, await payload(request), user)}
+
+    @app.post("/api/leads/{lead_id}/call-outcome", status_code=201)
+    async def call_outcome(lead_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_call_outcome", 240, 3600)
+        return calls.record_outcome(app.state.store, lead_id, await payload(request), user)
 
     # Memoria del agente. El ámbito es el del propio registro: un asesor solo ve y
     # cambia la memoria de los suyos, porque `memory` pasa por `store._lead`.

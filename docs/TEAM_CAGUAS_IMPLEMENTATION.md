@@ -2817,3 +2817,80 @@ redefinición por tema que ya usa `dark-mode.css`.
   (`#53627b`) siguen sin usar tokens. De ahí había copiado yo el `#2b5b96`.
 - **Sin verificar:** anchos de móvil, lectores de pantalla, Safari y Firefox.
 - **Versiones:** `operations.js?v=9`, `operations.css?v=13`, `dark-mode.css?v=6`.
+
+## Motor comercial autónomo, fase E: preparar y cerrar llamadas, sin marcar (26 de noviembre de 2026)
+
+Última pieza de lo que el titular eligió: el sistema prepara la llamada y recoge lo
+hablado; marcar lo hace una persona. No es falta de tiempo. La FCC declaró en febrero
+de 2024 que una voz generada por IA es voz «artificial» bajo la TCPA: una llamada
+comercial así a un número sin consentimiento previo expreso por escrito es ilegal, y
+Puerto Rico se rige por la ley federal. El valor está igualmente en las dos puntas.
+
+### Permiso, con constancia y con jerarquía
+
+`agent_call_consent` es un registro de solo inserción: cada constancia dice de qué tipo
+es (escrita, formulario del sitio, la persona lo pidió, verbal registrada), quién la
+recogió y cuándo. **«No llamar» es una constancia más, y la última manda**: una negativa
+posterior bloquea una autorización escrita anterior, y una autorización posterior vuelve
+a permitir. Nada se sobrescribe, así que el historial completo queda disponible.
+
+Sin ninguna constancia se cae al permiso general de la ficha, y el plan **lo dice con
+todas las letras**: «solo hay el permiso general del registro, no una constancia
+específica para llamadas». Un registro sin permiso de contacto no es llamable.
+
+### El plan se arma con reglas
+
+`calls.plan` junta la ficha, la memoria del agente y los informes de necesidad abiertos
+de esa persona: para qué es la llamada (según la etapa), lo que ya se sabe, la cita
+confirmada si la hay, qué confirmar (lo que quedó sin responder en el chat), qué
+preguntar (lo que falta en la ficha) y **lo que nunca se dice**: precios, ahorro,
+financiación, garantías, plazos y dar una cita por confirmada sin su referencia.
+Ningún modelo participa: el asesor tiene que poder fiarse de la hoja con Ollama apagado.
+Una deducción del modelo sin aprobar no entra, igual que no llega a un cliente.
+
+### El cierre vuelve al sistema
+
+`record_outcome` escribe por `store.create_activity`, que ya actualiza el último
+contacto, acepta el próximo seguimiento y, si el resultado es «pidió no recibir más
+llamadas», **deja la constancia en el mismo acto**. Siete resultados posibles, y el
+cierre se rechaza entero si el resultado o las notas no son válidos: no deja actividades
+a medias.
+
+### Verificación (local)
+
+- `tests/test_agent_calls.py`: 16 casos. Jerarquía de constancias en los dos sentidos,
+  ficha sin permiso, validación de tipo y evidencia, el plan juntando ficha + memoria +
+  informes, el propósito por etapa, la lista de lo que nunca se dice, el cierre con su
+  actividad y su próximo paso, «no llamar» bloqueando la siguiente llamada, el rechazo
+  sin escribir nada, el aislamiento entre asesores, el recorrido por HTTP y la auditoría.
+- Suite completa de Python y de Node en verde (cifras en el commit).
+- **Navegador, vista previa sintética 8877 a 1280×950:** «Preparar llamada» en la ficha
+  abre la hoja; con solo el permiso general avisa de que no hay constancia específica;
+  al registrar una autorización escrita pasa a «Puedes llamar · Autorización escrita»;
+  al cerrar con «pidió no recibir más llamadas» el aviso cambia a **«No llames»**, el
+  formulario de cierre desaparece y la hoja pide registrar permiso primero.
+
+### Hallazgos
+
+- **El servidor no formatea para pantalla.** La primera versión mandaba la cita como
+  `2026-11-28T13:00:00+00:00` dentro de una frase y el importe como `180.0`. Ahora los
+  valores viajan como están guardados y con una pista de tipo (`currency`, `number`,
+  `text`), y el frontend los muestra como `$180.00` y `28 nov, 9:00 a. m.`, en la zona
+  del equipo. Hay una prueba que comprueba que ninguna fecha cruda se cuela en el texto.
+- **Una prueba mía comparaba cadenas de fecha** y fallaba: la agenda ofrece la hora de
+  Puerto Rico (`09:00-04:00`) y el instante se guarda en UTC (`13:00+00:00`). Es el mismo
+  momento escrito de dos maneras, exactamente como manda la regla del proyecto; se
+  corrigió la prueba para comparar instantes.
+- **Un error mío al escribir `permission`:** `lead, rows = read(db) if db is not None else None, None`
+  no desempaqueta lo que parece. Se eliminó el parámetro, que no usaba nadie.
+
+### Límites
+
+- **No hay centralita ni marcado.** Conectar un proveedor (Twilio o similar) exige cuenta
+  de pago y autorización aparte, y sigue sin permitir voz artificial saliente.
+- **No hay ingesta de transcripciones.** El cierre lo escribe una persona; extraer
+  compromisos de una grabación es trabajo posterior y entraría como deducción.
+- **El cierre no crea creencias en la memoria** todavía: son dos registros separados.
+- **Sin verificar:** tema claro de la hoja, anchos de móvil, lectores de pantalla,
+  Safari y Firefox.
+- **Versiones:** `operations.js?v=11`, `operations.css?v=14`.

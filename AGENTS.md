@@ -25,6 +25,12 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   `policy.py` fija la autorización de cada acción. Arranca apagado, solo crea tareas y
   avisos internos, y rechaza toda acción marcada como saliente: no envía mensajes, no
   marca llamadas y no cambia la etapa de un registro.
+- `agent/calls.py`: preparación y cierre de llamadas. El sistema **no marca**: no hay
+  centralita ni voz saliente, y una llamada comercial con voz de IA sin consentimiento
+  escrito es ilegal bajo la TCPA. Registro de constancias de solo inserción donde «no
+  llamar» es una más y la última manda. El plan se arma con reglas (ficha + memoria +
+  informes abiertos) y lleva siempre lo que nunca se dice. El cierre entra por
+  `store.create_activity`.
 - `agent/needs.py`: informe de necesidad. Cuando el chat no puede responder (sin evidencia,
   validador que bloquea, modelo caído o petición de atención humana), la cola humana recibe
   qué necesita esa persona, qué contestó ya y qué falta por preguntar. Se arma con reglas,

@@ -436,3 +436,18 @@
 .brief-memory-list li{padding:9px 11px;border:1px solid var(--line,#dfe3e8);border-left:3px solid var(--green);border-radius:6px}
 .brief-memory-list strong{display:block;overflow-wrap:anywhere}
 .brief-memory-list small{display:block;margin-top:4px;font-size:11px;color:var(--muted,#5e6a7d)}
+
+/* Hoja de preparación de la llamada. */
+.call-plan{display:grid;gap:14px}
+.call-permission{padding:11px 13px;border:1px solid var(--line,#dfe3e8);border-left:3px solid var(--line,#dfe3e8);border-radius:6px}
+.call-permission.is-allowed{border-left-color:var(--green)}
+.call-permission.is-blocked{border-left-color:var(--red)}
+.call-permission p{margin:4px 0 0;font-size:12px}
+.call-block h4{margin:0 0 7px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#5e6a7d)}
+.call-block p{margin:0;font-size:13px}
+.call-block ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.call-block li{position:relative;padding-left:15px;font-size:13px;overflow-wrap:anywhere}
+.call-block li::before{content:"·";position:absolute;left:4px;color:var(--muted,#5e6a7d)}
+.call-consent-form,.call-outcome-form{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line,#dfe3e8)}
+.call-consent-form h4,.call-outcome-form h4{margin:0;font-size:13px}
+.call-outcome-form textarea{min-height:76px}
