@@ -69,7 +69,17 @@ vean hay que reiniciar el servidor activo, y eso lo decide el titular.
 
 ## Fase 6 · Operación (requiere decisiones del titular)
 
-- Topología de Ollama para Docker/producción.
+- Despliegue con Docker — preparado (25 nov 2026), sin desplegar: `docs/DESPLIEGUE.md`.
+  El titular eligió servidor con Docker. Falta que el titular contrate servidor y
+  dominio, autorice las descargas y haga el primer arranque, que será la primera
+  prueba real de la imagen (nunca se construyó ni se arrancó).
+- Topología de Ollama para Docker/producción — resuelta sin tocar el código:
+  contenedor acompañante opcional (perfil `ia`) que comparte la red de la
+  aplicación y escucha solo en `127.0.0.1`. Pendiente de decidir: hacer
+  configurable la dirección de Ollama para aislarlo en su propia red.
 - Política del modo IA en Telegram (hoy envía sin revisión si se activa).
 - Migración real: detener servicio, `scripts/backup.py`, guardar SHA256,
-  arrancar el código nuevo.
+  arrancar el código nuevo. Hacia el servidor: `deploy/restore.sh` (ruta B de
+  `docs/DESPLIEGUE.md`). Sin ensayar con la base comercial.
+- Antes de publicar: lista de `docs/DESPLIEGUE.md` (permisos de imágenes, placa
+  de 410 W, formulario de `/contacto`, IA sin revisión humana, privacidad).

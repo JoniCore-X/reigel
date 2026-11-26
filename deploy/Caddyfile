@@ -1,7 +1,36 @@
+# Proxy HTTPS de R.E.I.G.E.L. DOMAIN y CADDY_EMAIL llegan desde .env (compose.yaml).
+# Caddy obtiene y renueva solo el certificado y redirige HTTP a HTTPS.
 {
     email {$CADDY_EMAIL}
+    # Configuración fija: sin API de administración dentro del contenedor.
+    admin off
 }
+
 {$DOMAIN} {
     encode zstd gzip
-    reverse_proxy app:8765
+
+    # Tope general; la aplicación aplica después sus propios límites, más estrictos
+    # (64 KB por solicitud, 1 MB en webhooks y 5 MB en adjuntos del equipo).
+    request_body {
+        max_size 6MB
+    }
+
+    # Las cabeceras de seguridad de las respuestas (política de contenido, HSTS,
+    # marcos, tipo de contenido, referente y permisos) las define la aplicación
+    # en reigel/api.py. No repetirlas aquí: dos fuentes acabarían contradiciéndose.
+    header -Server
+
+    # Caddy sustituye X-Forwarded-For por la dirección real de quien se conecta;
+    # no acepta la que envíe el cliente. La aplicación solo confía en este proxy.
+    reverse_proxy app:8765 {
+        # Respuestas de /ia por frases (SSE): sin retención intermedia.
+        flush_interval -1
+    }
+
+    # Respuesta propia cuando la aplicación no contesta (arranque o mantenimiento).
+    handle_errors {
+        header Cache-Control "no-store"
+        header X-Content-Type-Options "nosniff"
+        respond "Servicio no disponible temporalmente. Vuelve a intentarlo en unos minutos." {err.status_code}
+    }
 }
