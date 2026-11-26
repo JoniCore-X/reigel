@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import Depends, Request
 
-from . import policy, runtime
+from . import memory, policy, runtime
 from ..core import DomainError
 
 CYCLES = ("SELECT id,trigger,started_at,finished_at,leads_seen,decided,executed,held,skipped,error"
@@ -82,3 +82,24 @@ def register_routes(app, actor, payload):
             rows = (db.execute(DECISIONS_ALL, (100,)) if user["role"] == "admin"
                     else db.execute(DECISIONS_MINE, (user["id"], 100)))
             return {"decisions": [dict(row) for row in rows]}
+
+    # Memoria del agente. El ámbito es el del propio registro: un asesor solo ve y
+    # cambia la memoria de los suyos, porque `memory` pasa por `store._lead`.
+    @app.get("/api/leads/{lead_id}/memory")
+    async def lead_memory(lead_id: str, user=Depends(actor)):
+        return memory.history(app.state.store, lead_id, user)
+
+    @app.post("/api/leads/{lead_id}/memory", status_code=201)
+    async def remember(lead_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_memory", 240, 3600)
+        return {"belief": memory.record(app.state.store, lead_id, await payload(request), user)}
+
+    @app.post("/api/memory/{belief_id}/approve")
+    async def approve_belief(belief_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_memory_approve", 120, 3600)
+        return {"belief": memory.approve(app.state.store, belief_id, user)}
+
+    @app.post("/api/memory/{belief_id}/retract")
+    async def retract_belief(belief_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_memory_retract", 120, 3600)
+        return {"belief": memory.retract(app.state.store, belief_id, await payload(request), user)}

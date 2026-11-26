@@ -8,10 +8,15 @@ fuera y requieren consentimiento documentado y autorización expresa.
 
 La frontera está en `policy.ACTIONS`: cada acción declara si es interna o
 saliente, y `runtime.tick` se niega a ejecutar una acción saliente.
+
+La memoria del agente (`memory.py`) sigue el mismo criterio: registra lo que observa
+sin pedir permiso, pero solo una creencia con procedencia válida y vigente llega a un
+texto dirigido a un cliente, y eso pasa por una única puerta, `speaking_context`.
 """
 from .policy import ACTIONS, MODES
 from .planner import evaluate
+from .memory import SOURCES, SUBJECTS, speaking_context
 from .runtime import tick
 from .schema import migrate_agent
 
-__all__ = ["ACTIONS", "MODES", "evaluate", "tick", "migrate_agent"]
+__all__ = ["ACTIONS", "MODES", "SOURCES", "SUBJECTS", "evaluate", "speaking_context", "tick", "migrate_agent"]

@@ -34,7 +34,23 @@ CREATE INDEX IF NOT EXISTS agent_decisions_status ON agent_decisions(status,prio
 CREATE INDEX IF NOT EXISTS agent_cycles_time ON agent_cycles(started_at DESC);
 """
 
+# Memoria del agente. Solo se inserta: una revisión crea una fila nueva y enlaza la
+# anterior. `supersedes` y `superseded_by` forman la cadena en los dos sentidos.
+MEMORY_SCHEMA = """
+CREATE TABLE IF NOT EXISTS agent_beliefs (
+ id TEXT PRIMARY KEY,lead_id TEXT NOT NULL REFERENCES leads(id),subject TEXT NOT NULL,
+ claim TEXT NOT NULL,source_kind TEXT NOT NULL,source_ref TEXT NOT NULL DEFAULT '',
+ confidence REAL NOT NULL DEFAULT 1,observed_at TEXT NOT NULL,expires_at TEXT,
+ supersedes TEXT REFERENCES agent_beliefs(id),superseded_by TEXT REFERENCES agent_beliefs(id),
+ approved_by TEXT REFERENCES users(id),approved_at TEXT,
+ retracted_at TEXT,retracted_reason TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS agent_beliefs_lead ON agent_beliefs(lead_id,observed_at DESC);
+CREATE INDEX IF NOT EXISTS agent_beliefs_subject ON agent_beliefs(lead_id,subject,superseded_by);
+"""
+
 VERSION = "team_caguas_agent_v1"
+MEMORY_VERSION = "team_caguas_agent_memory_v2"
 
 
 def migrate_agent(db) -> None:
@@ -51,3 +67,5 @@ def migrate_agent(db) -> None:
     # Apagado por defecto. Encenderlo es una decisión explícita de administración.
     db.execute("INSERT OR IGNORE INTO agent_runtime(key,value,updated_at) VALUES('enabled','0',?)", (stamp(),))
     db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (VERSION, stamp()))
+    db.executescript(MEMORY_SCHEMA)
+    db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (MEMORY_VERSION, stamp()))

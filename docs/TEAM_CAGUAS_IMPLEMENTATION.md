@@ -2529,3 +2529,75 @@ A la base se suma el retraso acumulado y el valor que el equipo anotó en la opo
   queda en `#e8eef8` sobre el panel; en claro, `#5d6c80` sobre blanco (≈5,4:1).
 - **Versiones:** `operations.js?v=3`, `app.js?v=12`, `operations.css?v=7` (y la prueba que
   las fija en `tests/test_access_copy.py`).
+
+## Motor comercial autónomo, fase B: memoria con procedencia (26 de noviembre de 2026)
+
+El titular pidió que el agente pudiera modificar su memoria interna a voluntad.
+Lo que se construyó permite más que eso y además se puede auditar: el agente
+registra cuanto observa sin pedir permiso, y lo acotado es **qué creencia puede
+usar al hablar con un cliente**. Un registro que se sobrescribe deriva; uno que
+se acumula con procedencia se puede revisar, corregir y olvidar sin perder el rastro.
+
+### Las cuatro reglas
+
+1. **Nada se sobrescribe.** Una revisión inserta una fila nueva y enlaza la anterior
+   en los dos sentidos (`supersedes` / `superseded_by`). Lo antiguo sigue legible.
+2. **Toda creencia declara su procedencia:** lo que dijo la persona (vence a los 180
+   días), lo que escribió el equipo (365), un dato del propio registro (90), una
+   fuente verificada (30) o una deducción del modelo (30).
+3. **Una deducción del modelo no se usa con un cliente hasta que alguien la aprueba.**
+   Se recuerda desde el primer momento; lo que requiere aprobación es usarla.
+4. **Todo vence.** Una creencia vencida se sigue leyendo en el historial y deja de
+   usarse. Lo que alguien contó hace ocho meses dejó de ser un hecho.
+
+`speaking_context` es la única puerta por la que la memoria llega a un texto dirigido
+a un cliente, y solo deja pasar lo vigente, no sustituido, no retirado y usable.
+
+### Lo que hay
+
+- **`reigel/agent/memory.py`**: `record`, `history`, `speaking_context`, `approve` y
+  `retract`. Nueve asuntos (vivienda, consumo, motivo, objeción, decisor, plazo,
+  contacto, historial, otro); uno vigente por asunto, y el nuevo sustituye al anterior.
+- **Tabla `agent_beliefs`** (migración `team_caguas_agent_memory_v2`, aditiva). Solo se
+  inserta; las correcciones son enlaces, no borrados.
+- **Retirar no es borrar ni es una solicitud de eliminación.** Una creencia retirada
+  conserva su texto y guarda el motivo; las solicitudes de eliminación siguen en
+  `privacy.py`, con revisión humana, y tampoco borran registros.
+- **Rutas:** `GET`/`POST /api/leads/{id}/memory`, `POST /api/memory/{id}/approve` y
+  `POST /api/memory/{id}/retract`. El ámbito es el del registro: pasan por
+  `store._lead`, así que un asesor solo ve y cambia la memoria de sus prospectos
+  (un intento ajeno devuelve 404, no 403: no se revela que el registro existe).
+- **Sección «Lo que R.E.I.G.E.L. recuerda»** en la ficha del prospecto: formulario con
+  asunto, procedencia y confianza declarada; lista con el estado de cada creencia,
+  «aprobar su uso» cuando hace falta y «retirar» con motivo en línea. Construida con
+  nodos del DOM y `textContent`.
+- La confianza se declara al guardar (seguro / probable / por confirmar). Guardar una
+  deducción como certeza es justo el dato que después se repite como si fuera un hecho.
+
+### Verificación (local)
+
+- `tests/test_agent_memory.py`: 12 casos. Cubren procedencia y vencimiento por tipo,
+  que una deducción no se use hasta aprobarse, que una revisión no borre la anterior,
+  que lo vencido se lea pero no se use, que retirar conserve el texto y el motivo,
+  el rechazo de asunto, procedencia, confianza y campos desconocidos, el aislamiento
+  entre asesores y la auditoría de cada escritura.
+- Suite completa de Python y de Node en verde (cifras en el commit).
+- **Navegador, vista previa sintética 8877 a 1280×950**, con la cuenta propietaria:
+  se registró una creencia dicha por la persona (confianza 60 %, vence a 180 días) y
+  una deducción del modelo; la deducción apareció marcada «No se usa al hablar»;
+  «Aprobar su uso» la volvió utilizable (el contador pasó a «2 en uso de 2»); «Retirar»
+  con motivo la dejó en «Retirada», visible, con su motivo y fuera de uso («1 en uso de 2»).
+
+### Límites
+
+- **La memoria todavía no alimenta ninguna respuesta.** `speaking_context` existe y está
+  probado, pero ni `ai_chat` ni `assistant` lo llaman aún: eso es la fase siguiente,
+  junto con el informe de necesidad del escalado.
+- **Nadie escribe creencias automáticamente.** Hoy las registra una persona desde la
+  ficha o una llamada a la API; extraerlas de una conversación es trabajo posterior,
+  y por diseño entrarán como `inferred`, es decir, sin usarse hasta que alguien apruebe.
+- **Sin verificar:** la sección en tema claro, en anchos de móvil, con lectores de
+  pantalla, en Safari ni en Firefox; el comportamiento con decenas de creencias en una
+  misma ficha (lo probado son dos); y el vencimiento real por paso del tiempo (se
+  comprueba adelantando el instante en las pruebas, no esperando 180 días).
+- **Versiones:** `operations.js?v=5`, `operations.css?v=8`.

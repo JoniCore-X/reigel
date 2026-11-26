@@ -199,6 +199,7 @@ async function operationsLeadDetail(id) {
     }));
     $('#activity-form').addEventListener('submit',event=>submitForm(event,async(form,fields)=>{await post(`/api/leads/${encodeURIComponent(id)}/activities`,{type:fields.get('type'),description:fields.get('description'),outcome:fields.get('outcome'),occurred_at:zonedTimestamp(fields.get('occurred_at'))});toast('Interacción registrada.');await leadDetail(id);}));
     findLeadDuplicates(lead);
+    appendLeadMemory(id);
   }catch(error){if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
 }
 function activityTimeline(items) {
@@ -319,6 +320,112 @@ async function leadBrief(id) {
     const data=await api(`/api/leads/${encodeURIComponent(id)}/brief`);if(!dialog.open)return;
     $('#dialog-content').innerHTML=`<p class="hint orange">Preparación interna basada en registros autorizados. Requiere revisión humana; no es una evaluación técnica certificada.</p><section class="result-section"><h3>Datos conocidos</h3><dl class="brief-known">${(data.known||[]).map(item=>`<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl></section>${informationList('Información sin verificar',data.unverified)}${informationList('Preguntas pendientes',data.questions)}${informationList('Temas para explicar',data.topics)}${informationList('Próximas acciones sugeridas',data.next_actions)}<div class="form-actions">${actionButton('lead-detail','Volver a la ficha',`data-id="${esc(id)}"`,'small')}</div>`;
   } catch(error) {if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
+}
+const memoryStates={active:['green','Vigente'],superseded:['orange','Sustituida'],
+  expired:['orange','Vencida'],retracted:['red','Retirada']};
+function memoryOption(value,label,selected) {
+  const option=node('option',{text:label});option.value=value;option.selected=!!selected;return option;
+}
+function memoryBeliefRow(belief,reload) {
+  const actions=node('div',{class:'actions'});
+  const row=node('li',{class:belief.usable?'is-usable':''},[
+    node('div',{},[
+      node('strong',{text:belief.claim}),
+      node('p',{text:`${belief.subject_label} · ${belief.source_label} · confianza ${Math.round(Number(belief.confidence)*100)}%`}),
+      node('small',{text:belief.retracted_reason
+        ? `Retirada: ${belief.retracted_reason}`
+        : `Observada ${dateTime(belief.observed_at)}${belief.expires_at?` · vence ${dateTime(belief.expires_at)}`:''}`}),
+    ]),
+    node('div',{class:'belief-tags'},[
+      node('span',{class:`badge ${memoryStates[belief.state][0]}`,text:memoryStates[belief.state][1]}),
+      belief.usable?null:node('span',{class:'badge',text:'No se usa al hablar'}),
+      actions,
+    ]),
+  ]);
+  if(belief.state!=='active')return row;
+  if(!belief.usable) {
+    const approve=node('button',{class:'button small',attrs:{type:'button'},text:'Aprobar su uso'});
+    approve.addEventListener('click',async()=>{
+      approve.disabled=true;
+      try {await post(`/api/memory/${encodeURIComponent(belief.id)}/approve`,{});await reload();}
+      catch(problem) {approve.disabled=false;toast(problem.message);}});
+    actions.append(approve);
+  }
+  const retract=node('button',{class:'button small danger',attrs:{type:'button'},text:'Retirar'});
+  retract.addEventListener('click',()=>{
+    const reason=node('input',{attrs:{type:'text',maxlength:'200','aria-label':'Motivo para retirar'}});
+    const confirm=node('button',{class:'button small danger',attrs:{type:'submit'},text:'Confirmar'});
+    const form=node('form',{class:'belief-retract'},[
+      node('label',{text:'Motivo'},[reason]),confirm]);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();confirm.disabled=true;
+      try {await post(`/api/memory/${encodeURIComponent(belief.id)}/retract`,{reason:reason.value});await reload();}
+      catch(problem) {confirm.disabled=false;toast(problem.message);}});
+    actions.replaceChildren(form);reason.focus();
+  });
+  actions.append(retract);
+  return row;
+}
+async function appendLeadMemory(leadId) {
+  const parent=$('#dialog-content');
+  if(!parent||!dialog.open)return;
+  const reload=async()=>{const old=$('#lead-memory');if(old)old.remove();await appendLeadMemory(leadId);};
+  try {
+    const data=await api(`/api/leads/${encodeURIComponent(leadId)}/memory`);
+    if(!dialog.open||state.activeLead?.id!==leadId)return;
+    const beliefs=data.beliefs||[];
+    const claim=node('textarea',{attrs:{name:'claim',required:'',maxlength:'400',
+      placeholder:'Lo que sabemos, dicho con sus palabras.'}});
+    const subject=node('select',{attrs:{name:'subject','aria-label':'Asunto'}},
+      Object.entries(data.subjects||{}).map(([value,label])=>memoryOption(value,label,value==='motivo')));
+    const source=node('select',{attrs:{name:'source_kind','aria-label':'De dónde viene'}},
+      Object.entries(data.sources||{}).map(([value,label])=>memoryOption(value,label,value==='team_entered')));
+    // La confianza se declara: una deducción guardada como certeza es justo la
+    // clase de dato que después se repite como si fuera un hecho.
+    const confidence=node('select',{attrs:{name:'confidence','aria-label':'Qué tan seguro'}},[
+      memoryOption('1','Seguro',true),memoryOption('0.6','Probable'),memoryOption('0.3','Por confirmar')]);
+    const error=node('p',{class:'form-error',attrs:{role:'alert'}});
+    const save=node('button',{class:'button small',attrs:{type:'submit'},text:'Recordar'});
+    const form=node('form',{class:'belief-form'},[
+      node('label',{text:'Qué recordar'},[claim]),
+      node('div',{class:'belief-form-row'},[
+        node('label',{text:'Asunto'},[subject]),
+        node('label',{text:'De dónde viene'},[source]),
+        node('label',{text:'Qué tan seguro'},[confidence]),
+        save,
+      ]),
+      error,
+    ]);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();save.disabled=true;error.textContent='';
+      try {
+        await post(`/api/leads/${encodeURIComponent(leadId)}/memory`,
+          {subject:subject.value,claim:claim.value,source_kind:source.value,
+           confidence:Number(confidence.value)});
+        await reload();
+      } catch(problem) {error.textContent=problem.message;save.disabled=false;}
+    });
+    const section=node('section',{class:'panel lead-memory'},[]);
+    section.id='lead-memory';
+    section.append(
+      node('header',{class:'panel-head'},[
+        node('div',{},[node('p',{class:'section-kicker',text:'MEMORIA DEL AGENTE'}),
+                       node('h3',{text:'Lo que R.E.I.G.E.L. recuerda'})]),
+        node('span',{class:'badge',text:`${(data.usable||[]).length} en uso de ${beliefs.length}`}),
+      ]),
+      node('div',{class:'panel-body'},[
+        form,
+        beliefs.length
+          ? node('ul',{class:'belief-list'},beliefs.map(belief=>memoryBeliefRow(belief,reload)))
+          : node('p',{class:'field-help',text:'Todavía no hay nada recordado sobre esta persona.'}),
+        node('p',{class:'hint',text:data.notice||''}),
+      ]),
+    );
+    parent.append(section);
+  } catch(problem) {
+    if(dialog.open)parent.append(node('p',{class:'field-help',
+      text:`Memoria del agente no disponible: ${problem.message}`}));
+  }
 }
 const agentModes={auto:'Automático',approval:'Requiere aprobación',draft:'Borrador'};
 const agentStatus={executed:'Hecho',planned:'En espera de una persona'};

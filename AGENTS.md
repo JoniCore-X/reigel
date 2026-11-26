@@ -25,6 +25,11 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   `policy.py` fija la autorización de cada acción. Arranca apagado, solo crea tareas y
   avisos internos, y rechaza toda acción marcada como saliente: no envía mensajes, no
   marca llamadas y no cambia la etapa de un registro.
+- `agent/memory.py`: memoria del agente sobre cada cliente. Solo se inserta: una revisión
+  enlaza la anterior y nada se sobrescribe. Cada creencia lleva procedencia, confianza y
+  vencimiento; una deducción del modelo no se usa al hablar hasta que una persona la
+  aprueba. `speaking_context` es la única puerta hacia un texto dirigido a un cliente.
+  Retirar una creencia no la borra y no es una solicitud de eliminación de datos.
 - `knowledge.py`: evidencia con fuentes y vencimiento; un fallo no renueva su vigencia.
 - `energy.py`: aritmética con parámetros explícitos, sin tarifas ni ahorros inventados.
 - `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.
