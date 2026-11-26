@@ -15,7 +15,9 @@ import segno
 PERIOD = 30
 DIGITS = 6
 WINDOW = 1
-ISSUER = "R.E.I.G.E.L. Team"
+# Name shown by authenticator apps. It is only a label: codes depend on the secret and the time,
+# so secrets enrolled under a previous issuer keep working.
+ISSUER = "R.E.I.G.E.L. | Power Solar"
 
 
 def new_secret() -> bytes:

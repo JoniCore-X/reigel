@@ -57,10 +57,10 @@ function heading(kicker,title,copy,action='') {return `<div class="page-heading"
 function actionButton(action,label,extra='',kind='primary') {return `<button type="button" class="button ${kind}" data-action="${esc(action)}" ${extra}>${esc(label)}</button>`;}
 function loading() {return '<div class="loading" role="status">Cargando tu espacio…</div>';}
 function fail(error) {content.innerHTML=`<div class="error-state" role="alert"><h2>No pudimos cargar esta vista.</h2><p>${esc(error.message)}</p>${actionButton('refresh','Volver a intentar')}</div>`;}
-function showLogin() {state.user=null;$('#workspace').hidden=true;$('#login-screen').hidden=false;closeMenu();if(dialog.open)dialog.close();}
+function showLogin() {state.user=null;$('#workspace').hidden=true;$('#login-screen').hidden=false;closeMenu();if(dialog.open)dialog.close();syncAuthSteps();}
 async function enter(user) {
   state.user=user;
-  $('#login-screen').hidden=true;$('#workspace').hidden=false;
+  $('#login-screen').hidden=true;$('#workspace').hidden=false;syncAuthSteps();
   $('#user-name').textContent=user.name;$('#user-role').textContent=roleLabel(user);$('[data-view="subscription"]').hidden=!user.is_owner;if(state.view==='subscription'&&!user.is_owner)state.view='dashboard';$('#user-avatar').textContent=initials(user.name);
   try {state.settings=await api('/api/settings');$('#business-zone').textContent=(state.settings.business?.market || 'Puerto Rico').toUpperCase();}catch {state.settings=null;}
   syncMenu();await navigate(state.view,false);
@@ -285,18 +285,28 @@ function openMenu() {$('#sidebar').classList.add('open');$('#sidebar').inert=fal
 $('#menu-button').addEventListener('click',openMenu);$('#scrim').addEventListener('click',()=>{closeMenu();$('#menu-button').focus();});window.addEventListener('resize',()=>{if(!matchMedia('(max-width:800px)').matches)closeMenu();else syncMenu();});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#sidebar').classList.contains('open')){closeMenu();$('#menu-button').focus();}if(event.key==='Tab'&&$('#sidebar').classList.contains('open')){const focusable=$$('a,button:not([disabled])',$('#sidebar'));if(event.shiftKey&&document.activeElement===focusable[0]){event.preventDefault();focusable.at(-1).focus();}else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){event.preventDefault();focusable[0].focus();}}});
 $('#close-dialog').addEventListener('click',closeDialog);dialog.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)closeDialog();}});
+// Step indicator of the login screen. It only mirrors what is already on screen: the visible form (or the
+// workspace once inside) decides the stage; it never drives the flow.
+function syncAuthSteps() {
+  const list=$('#auth-steps');if(!list)return;
+  const detail=!$('#totp-form').hidden?'Código':!$('#invite-form').hidden?'Invitación':!$('#enroll-form').hidden?'Autenticador':'';
+  const current=$('#login-screen').hidden?3:detail?2:1;
+  $$('.auth-step',list).forEach(item=>{const step=Number(item.dataset.step);const done=step<current;item.classList.toggle('is-done',done);if(step===current)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');$('.auth-sr',item).textContent=done?'Completado: ':'';});
+  $('#auth-step-detail').textContent=current===2?detail:'';
+}
+function focusLoginStart() {$('#login-form [name=email]').focus();}
 // Google Authenticator is mandatory: a correct password leads to the code step or, on the first login,
 // to the one-time invitation code and only then to the QR enrollment.
 $('#login-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post('/api/auth/login',{email:data.get('email'),password:data.get('password')});if(result.enrollment_required){form.reset();showInviteStep(true);return;}form.reset();if(result.mfa_required){showTotpStep(true);return;}await enter(result.user);}));
-function showTotpStep(visible){$('#login-form').hidden=visible;$('#totp-form').hidden=!visible;$('.form-error',$('#totp-form')).textContent='';if(visible)$('#totp-form [name=code]').focus();else $('#totp-form').reset();}
-function showInviteStep(visible){const form=$('#invite-form');$('#login-form').hidden=visible;form.hidden=!visible;$('.form-error',form).textContent='';if(visible)$('[name=invitation_code]',form).focus();else form.reset();}
+function showTotpStep(visible){$('#login-form').hidden=visible;$('#totp-form').hidden=!visible;$('.form-error',$('#totp-form')).textContent='';syncAuthSteps();if(visible)$('#totp-form [name=code]').focus();else $('#totp-form').reset();}
+function showInviteStep(visible){const form=$('#invite-form');$('#login-form').hidden=visible;form.hidden=!visible;$('.form-error',form).textContent='';syncAuthSteps();if(visible)$('[name=invitation_code]',form).focus();else form.reset();}
 $('#invite-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const {setup}=await post('/api/team-identity/totp/enroll',{invitation_code:data.get('invitation_code')});form.reset();form.hidden=true;showEnrollStep(setup);}));
-$('#invite-back').addEventListener('click',()=>showInviteStep(false));
-function showEnrollStep(setup){const form=$('#enroll-form');const visible=Boolean(setup);$('#login-form').hidden=visible;form.hidden=!visible;$('.form-error',form).textContent='';if(visible){$('#enroll-qr').src=setup.qr;$('#enroll-secret').textContent=String(setup.secret||'').match(/.{1,4}/g)?.join(' ')||'';$('[name=code]',form).focus();}else{form.reset();$('#enroll-qr').removeAttribute('src');$('#enroll-secret').textContent='';$('.enroll-manual',form).open=false;}}
+$('#invite-back').addEventListener('click',()=>{showInviteStep(false);focusLoginStart();});
+function showEnrollStep(setup){const form=$('#enroll-form');const visible=Boolean(setup);$('#login-form').hidden=visible;form.hidden=!visible;$('.form-error',form).textContent='';syncAuthSteps();if(visible){$('#enroll-qr').src=setup.qr;$('#enroll-secret').textContent=String(setup.secret||'').match(/.{1,4}/g)?.join(' ')||'';$('[name=code]',form).focus();}else{form.reset();$('#enroll-qr').removeAttribute('src');$('#enroll-secret').textContent='';$('.enroll-manual',form).open=false;}}
 $('#enroll-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post('/api/team-identity/totp/enroll/confirm',{code:data.get('code')});showEnrollStep(null);await enter(result.user);toast('Google Authenticator activado. Desde ahora entrarás con tu contraseña y el código de la app.');}));
-$('#enroll-back').addEventListener('click',()=>showEnrollStep(null));
+$('#enroll-back').addEventListener('click',()=>{showEnrollStep(null);focusLoginStart();});
 $('#totp-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post('/api/team-identity/totp/login',{code:data.get('code')});showTotpStep(false);await enter(result.user);}));
-$('#totp-back').addEventListener('click',()=>showTotpStep(false));
+$('#totp-back').addEventListener('click',()=>{showTotpStep(false);focusLoginStart();});
 (()=>{const form=$('#login-form'),input=$('[name=password]',form),toggle=$('.password-toggle',form);const show=visible=>{input.type=visible?'text':'password';toggle.setAttribute('aria-pressed',String(visible));};toggle.addEventListener('click',()=>{show(input.type==='password');input.focus({preventScroll:true});});form.addEventListener('submit',()=>show(false));form.addEventListener('reset',()=>show(false));})();
 $('#logout').addEventListener('click',async()=>{try{await post('/api/auth/logout',{});showLogin();toast('Sesión cerrada.');}catch(error){toast(error.message);}});
 document.addEventListener('click',async event=>{

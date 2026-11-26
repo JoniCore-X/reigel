@@ -98,13 +98,5 @@
 :root[data-theme="dark"] .workspace-body :is(.avatar, .empty-symbol) { background: #22324f; color: #d5e0f2; }
 :root[data-theme="dark"] .workspace-body #view-content span:not([class]) { color: var(--muted); }
 
-/* The login card stays light in dark mode; keep its text legible. */
-:root[data-theme="dark"] .workspace-body .login-card :is(.muted, .login-help) { color: #4f5f76; }
-:root[data-theme="dark"] .workspace-body .login-card .text-link:not(.button) { color: var(--blue); }
-:root[data-theme="dark"] .workspace-body .login-card .form-error { color: #b42318; }
-:root[data-theme="dark"] .workspace-body .login-card input { background: #0f1a2e; color: var(--ink); border-color: #3a4d72; }
-:root[data-theme="dark"] .workspace-body .login-card input::placeholder { color: #b4c1d4; }
-:root[data-theme="dark"] .workspace-body .login-card input:hover { border-color: #6b83a8; }
-:root[data-theme="dark"] .workspace-body .login-card input:focus-visible { background: #13213a; border-color: #1f4fb8; box-shadow: 0 0 0 3px #1f4fb844; }
-:root[data-theme="dark"] .workspace-body .login-card .password-toggle { color: #c6d3e6; }
-:root[data-theme="dark"] .workspace-body .login-card .password-toggle:hover { color: #fff; background: #ffffff18; }
+/* La pantalla de entrada (#login-screen) define sus propios colores por tema en
+   team-auth.css: tarjeta y campos cambian juntos, sin mezclar claro y oscuro. */

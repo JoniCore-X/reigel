@@ -3,7 +3,7 @@ import hashlib
 import json
 import time
 import sqlite3
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import httpx
 import pytest
@@ -289,6 +289,17 @@ def test_otpauth_uri_is_google_authenticator_compatible():
     query = parse_qs(parsed.query)
     assert parsed.scheme == "otpauth" and parsed.netloc == "totp"
     assert query["secret"] == ["GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"] and query["digits"] == ["6"] and query["period"] == ["30"] and query["algorithm"] == ["SHA1"]
+    # The authenticator shows «R.E.I.G.E.L. | Power Solar» and the account email; spaces, "|" and "@" travel percent-encoded.
+    assert totp.ISSUER == "R.E.I.G.E.L. | Power Solar" and query["issuer"] == [totp.ISSUER]
+    assert uri.startswith("otpauth://totp/R.E.I.G.E.L.%20%7C%20Power%20Solar:ana%40example.test?")
+    assert "issuer=R.E.I.G.E.L.%20%7C%20Power%20Solar&" in uri and " " not in uri and "|" not in uri and "+" not in uri
+    assert unquote(parsed.path) == "/R.E.I.G.E.L. | Power Solar:ana@example.test"
+
+
+def test_issuer_label_is_not_part_of_code_verification():
+    # A secret enrolled under any earlier issuer name still verifies: only the secret and the time count.
+    secret = b"12345678901234567890"
+    assert totp.matching_step(secret, "287082", at=1 * totp.PERIOD) == 1
 
 
 def first_login(app, email):

@@ -13,8 +13,25 @@
   }
 
   function notify(text, ok = false) {
-    $('team-message').textContent = text;
-    $('team-message').classList.toggle('ok', ok);
+    const message = $('team-message');
+    // Errors interrupt (alert); confirmations wait their turn (status).
+    message.setAttribute('role', ok ? 'status' : 'alert');
+    message.classList.toggle('ok', ok);
+    message.textContent = text;
+    if (text) message.scrollIntoView({block: 'nearest'});
+  }
+
+  // Step indicator: it only mirrors the view that is already on screen.
+  function syncSteps() {
+    const current = !$('setup-view').hidden ? 2 : !$('member-view').hidden ? 3 : 1;
+    document.querySelectorAll('#auth-steps .auth-step').forEach(item => {
+      const step = Number(item.dataset.step);
+      item.classList.toggle('is-done', step < current);
+      if (step === current) item.setAttribute('aria-current', 'step');
+      else item.removeAttribute('aria-current');
+      item.querySelector('.auth-sr').textContent = step < current ? 'Completado: ' : '';
+    });
+    $('auth-step-detail').textContent = current === 2 ? 'Autenticador' : '';
   }
 
   async function run(button, work) {
@@ -46,6 +63,7 @@
     $('setup-view').hidden = false;
     $('guest-view').hidden = true;
     $('member-view').hidden = true;
+    syncSteps();
     $('confirm-form').elements.code.focus();
   }
 
@@ -55,6 +73,7 @@
     $('setup-link').href = '#';
     $('setup-qr').removeAttribute('src');
     $('setup-view').hidden = true;
+    syncSteps();
   }
 
   async function renderMember() {
@@ -77,6 +96,7 @@
     $('policy-section').hidden = !user.is_owner;
     $('member-view').hidden = false;
     $('guest-view').hidden = true;
+    syncSteps();
   }
 
   function submit(id, work) {
@@ -105,11 +125,14 @@
     if (state.withGrant) {
       state.withGrant = false;
       $('guest-view').hidden = false;
+      syncSteps();
       notify('Listo. Entra con tu contraseña y el siguiente código de la app.', true);
+      $('team-message').focus();
       return;
     }
     await renderMember();
     notify('Nuevo teléfono registrado en Google Authenticator. Se cerraron tus otras sesiones.', true);
+    $('team-message').focus();
   });
   submit('manage-totp-form', async (data, form) => {
     state.withGrant = false;
@@ -135,6 +158,7 @@
     } catch (error) {
       if (error.status !== 401) notify(error.message);
       $('guest-view').hidden = false;
+      syncSteps();
     }
   })();
 })();
