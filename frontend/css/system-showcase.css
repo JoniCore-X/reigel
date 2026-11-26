@@ -380,11 +380,11 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   grid-template-rows: auto 1fr;
-  grid-template-areas: "head figure" "list figure";
+  grid-template-areas: "head figure" "guide figure";
   gap: clamp(28px, 3.4vw, 44px) clamp(32px, 5vw, 80px);
 }
 .corporate-body .sc-app-head { position: relative; z-index: 1; grid-area: head; }
-.corporate-body .sc-app h2 { margin: 0; color: var(--sc-navy); font-size: clamp(34px, 4.2vw, 56px); line-height: 1.04; letter-spacing: -.04em; }
+.corporate-body .sc-app h2 { margin: 0; color: var(--sc-navy); font-size: clamp(30px, 2.95vw, 43px); line-height: 1.08; letter-spacing: -.04em; }
 .corporate-body .sc-app-head p:not(.corp-eyebrow) { max-width: 40ch; margin: 20px 0 0; color: var(--sc-app-muted); font-size: clamp(16px, 1.3vw, 18px); line-height: 1.6; }
 
 .corporate-body .sc-app-figure { grid-area: figure; align-self: center; min-width: 0; margin: 0; }
@@ -421,19 +421,51 @@
 .corporate-body .sc-app figcaption span { display: block; }
 .corporate-body .sc-app figcaption span + span { margin-top: 4px; }
 
-.corporate-body .sc-app-list { position: relative; z-index: 1; grid-area: list; align-self: start; margin: 0; padding: 0; border-top: 1px solid var(--sc-app-line); list-style: none; }
-.corporate-body .sc-app-list li {
+/* Tres indicadores en columna. Sin system-showcase.js son tres bloques de
+   texto seguidos; con él (.sc-app-live) pasan a pestañas y los paneles comparten
+   una misma celda, así que cambiar de pestaña no mueve la página. */
+.corporate-body .sc-app-guide { position: relative; z-index: 1; grid-area: guide; align-self: start; min-width: 0; }
+.corporate-body .sc-app-tabs { display: grid; border-top: 1px solid var(--sc-app-line); }
+.corporate-body .sc-app-tabs[hidden] { display: none; }
+.corporate-body .sc-app-tab {
+  position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 16px;
-  padding: 15px 0;
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  padding: 12px 14px 12px 18px;
+  border: 0;
   border-bottom: 1px solid var(--sc-app-line);
-  color: var(--sc-navy);
-  font-size: clamp(15px, 1.15vw, 16.5px);
-  font-weight: 550;
-  line-height: 1.35;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sc-app-muted);
+  font: inherit;
+  font-size: clamp(15.5px, 1.2vw, 17px);
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: color .3s ease, background-color .3s ease;
 }
-.corporate-body .sc-app-list svg {
+.corporate-body .sc-app-tab::before {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 0;
+  width: 3px;
+  background: var(--sol-link, #1b55c4);
+  content: "";
+  transform: scaleY(0);
+  transition: transform .4s var(--sc-ease);
+}
+.corporate-body .sc-app-tab:hover { background: #ffffff66; color: var(--sc-navy); }
+.corporate-body .sc-app-tab[aria-selected="true"] { background: #ffffffb3; color: var(--sc-navy); }
+.corporate-body .sc-app-tab[aria-selected="true"]::before { transform: scaleY(1); }
+.corporate-body .sc-app-tab:focus-visible { outline: 3px solid var(--sol-link, #1b55c4); outline-offset: -3px; }
+.corporate-body .sc-app :is(.sc-app-tab, .sc-app-lines, .sc-app-notice) svg {
   width: 22px;
   height: 22px;
   flex: 0 0 22px;
@@ -445,27 +477,84 @@
   stroke-linejoin: round;
 }
 
-/* Revelado propio: 24 px y 800 ms, la lista en cadena. */
+.corporate-body .sc-app-panels { display: grid; gap: 28px; }
+.corporate-body .sc-app-panel { display: grid; align-content: start; gap: 18px; min-width: 0; }
+.corporate-body .sc-app-panel h3 { margin: 0 0 8px; color: var(--sc-navy); font-size: 19px; line-height: 1.25; letter-spacing: -.01em; }
+.corporate-body .sc-app-panel-copy > p { max-width: 46ch; margin: 0; color: var(--sc-navy); font-size: clamp(16px, 1.25vw, 17.5px); line-height: 1.55; }
+.corporate-body .sc-app-lines { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.corporate-body .sc-app-lines li { display: flex; align-items: flex-start; gap: 12px; color: var(--sc-app-muted); font-size: 15px; font-weight: 550; line-height: 1.4; }
+.corporate-body .sc-app .sc-app-lines svg { width: 18px; height: 18px; flex-basis: 18px; margin-top: 1px; }
+
+/* Demostraciones: dibujo propio y mínimo, sin cifras ni interfaz ajena. */
+.corporate-body .sc-app-demo { max-width: 340px; padding: 12px 0 0; border-top: 1px dashed #071d4347; }
+.corporate-body .sc-app-demo-label { margin: 0 0 8px; color: var(--sc-app-muted); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; line-height: 1.3; text-transform: uppercase; }
+.corporate-body .sc-app-demo-art { display: block; width: 100%; max-width: 280px; height: auto; }
+.corporate-body .sc-app-demo-text { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; color: var(--sc-app-muted); font-size: 13.5px; line-height: 1.45; }
+.corporate-body .sc-demo-key { display: inline-flex; align-items: center; gap: 7px; }
+.corporate-body .sc-demo-key::before { width: 10px; height: 10px; border-radius: 50%; background: #1b55c4; content: ""; }
+.corporate-body .sc-demo-key-fill::before { background: #8fb0e6; }
+.sc-demo-track { fill: #071d431f; }
+.sc-demo-fill { fill: #8fb0e6; }
+.sc-demo-reserve { fill: #1b55c4; }
+.sc-demo-mark { fill: none; stroke: #071d43; stroke-width: 2; stroke-linecap: round; }
+.sc-demo-axis { fill: none; stroke: #071d4347; stroke-width: 1; }
+.sc-demo-area { fill: #1b55c421; }
+.sc-demo-line { fill: none; stroke: #1b55c4; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sc-demo-dot { fill: #e6e6e6; stroke: #1b55c4; stroke-width: 2; }
+.corporate-body .sc-app-notice { display: flex; align-items: flex-start; gap: 12px; max-width: 320px; margin: 0; padding: 12px 14px; border: 1px solid var(--sc-app-line); border-radius: 12px; background: #ffffffb3; color: var(--sc-app-muted); font-size: 14px; line-height: 1.45; }
+.corporate-body .sc-app-notice strong { display: block; color: var(--sc-navy); font-size: 14.5px; }
+.corporate-body .sc-app-terms { max-width: 46ch; margin: 22px 0 0; color: var(--sc-app-muted); font-size: 13.5px; line-height: 1.55; }
+
+.corporate-body .sc-app-live .sc-app-panels { gap: 0; padding-top: 24px; }
+.corporate-body .sc-app-live .sc-app-panel { grid-area: 1 / 1; visibility: hidden; opacity: 0; transform: translate3d(0, 8px, 0); transition: opacity .35s ease, transform .45s var(--sc-ease), visibility 0s linear .35s; }
+.corporate-body .sc-app-live .sc-app-panel.is-active { visibility: visible; opacity: 1; transform: none; transition-delay: .12s, .12s, 0s; }
+.corporate-body .sc-app-live .sc-app-panel h3 { display: none; }
+.corporate-body .sc-app-live .sc-app-panel:focus-visible { outline: 3px solid var(--sol-link, #1b55c4); outline-offset: 6px; }
+
+/* Marca externa: un punto sobre el gris, encima del teléfono relacionado.
+   No tapa ni cambia la captura. */
+.corporate-body .sc-app-pin {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sol-link, #1b55c4);
+  box-shadow: 0 0 0 5px #1b55c433, 0 0 0 11px #1b55c414;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(.5);
+  transition: opacity .35s ease, transform .5s var(--sc-ease);
+}
+.corporate-body .sc-app-pin::after { position: absolute; top: 100%; left: 50%; width: 2px; height: clamp(6px, 1.2vw, 16px); margin: 5px 0 0 -1px; background: var(--sol-link, #1b55c4); content: ""; }
+.corporate-body .sc-app-pin.is-active { opacity: 1; transform: translate(-50%, -50%); }
+
+/* Revelado propio: 24 px y 800 ms, en cadena. */
 .corporate-body .sc-app .sc-armed .sc-r { transition: opacity .8s var(--sc-ease), transform .8s var(--sc-ease); transition-delay: calc(var(--i, 0) * 80ms); }
 .corporate-body .sc-app .sc-armed:not(.is-in) .sc-r { transform: translate3d(0, 24px, 0); }
 
 @media (max-width: 900px) {
-  .corporate-body .sc-app-inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "figure" "list"; }
+  .corporate-body .sc-app-inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "figure" "guide"; }
   .corporate-body .sc-app-stage { width: min(210vw, 1100px); margin-left: calc(50% - min(105vw, 550px)); }
   .corporate-body .sc-app figcaption { margin-inline: 0; }
 }
 
 @media (max-width: 600px) {
   .corporate-body .sc-app figcaption { margin-right: 56px; }
+  .corporate-body .sc-app-terms { margin-right: 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .corporate-body .sc-app * { transition: none !important; }
+  .corporate-body .sc-app *, .corporate-body .sc-app *::before { transition: none !important; }
   .corporate-body .sc-app .sc-armed:not(.is-in) .sc-r { opacity: 1; transform: none; }
+  .corporate-body .sc-app-live .sc-app-panel { transform: none; }
 }
 
 @media (forced-colors: active) {
   .corporate-body .sc-app-shot::after { display: none; }
+  .corporate-body .sc-app-tab[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .corporate-body .sc-app-pin { background: Highlight; }
 }
 
 @media print {
@@ -728,6 +817,16 @@
 .corporate-body .sc-eng-foot p:first-child { max-width: 62ch; }
 .corporate-body .sc-eng-foot p:first-child .sc-eng-link { display: inline; min-height: 0; }
 .corporate-body .sc-eng-note { margin: clamp(56px, 7vw, 104px) auto 0; padding-top: 20px; border-top: 1px solid var(--sc-eng-line); color: var(--sc-eng-mute); font-size: 13px; line-height: 1.55; }
+.corporate-body .sc-eng-index-more { margin-top: 6px; }
+.corporate-body .sc-eng-next { margin: clamp(56px, 8vw, 112px) auto 0; }
+.corporate-body .sc-eng-next + .sc-eng-note { margin-top: clamp(28px, 4vw, 48px); }
+/* Continuación en /proceso: capítulos 03 y 04. Misma banda, apertura más corta. */
+.corporate-body .sc-eng--cont { padding-top: clamp(64px, 8vw, 112px); }
+.corporate-body .sc-eng--cont h2 { font-size: clamp(34px, 5vw, 72px); line-height: 1; }
+.corporate-body .sc-eng--cont .sc-eng-ch--profile { margin-top: clamp(64px, 9vw, 128px); }
+/* El ancla va en la apertura, no en la sección: una sección más alta que la
+   ventana no quedaba alineada al llegar desde otra página. */
+.corporate-body :is(#ingenieria, #ingenieria-montaje) { scroll-margin-top: 112px; }
 .corporate-body #power-zones { scroll-margin-top: 72px; }
 
 @media (max-width: 900px) {

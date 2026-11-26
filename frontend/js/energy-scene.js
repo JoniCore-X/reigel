@@ -7,44 +7,59 @@
 
   // Each flow: off, on, in (towards the far end of its route) or out (the reverse).
   // The street connects at the house panel, so grid power never crosses the inverter.
+  // "home" feeds the equipment wired to the backup; "rest" feeds everything else.
+  // charge: qualitative battery marks, walked once in order and then held. A scene
+  // may add whenFull, applied on its last mark (the surplus leaves once it is full).
   const SCENES = {
     'day:yes': {
       title: 'De día, con batería.',
-      text: 'Las placas le dan luz a la casa, lo que sobra carga la batería y el resto puede salir a la red.',
-      home: 'full', flows: { solar: 'on', home: 'on', battery: 'in', grid: 'in', link: 'on' },
-      meters: { solar: ['Produciendo', 3], inverter: ['Repartiendo la energía', 3], battery: ['Cargando · entra energía', 2], home: ['Con luz', 2], grid: ['Recibe lo que sobra', 1] },
+      text: 'Las placas le dan energía a la casa y lo que sobra carga la batería. Cuando la batería se llena, el resto puede salir a la red.',
+      home: 'full', flows: { solar: 'on', home: 'on', battery: 'in', grid: 'off', link: 'on', rest: 'on' },
+      charge: ['baja', 'media', 'llena'], verb: 'Cargando',
+      whenFull: { flows: { battery: 'off', grid: 'in' }, meters: { battery: ['Carga llena', 3], grid: ['Recibe lo que sobra', 1] } },
+      meters: { solar: ['Produciendo', 3], inverter: ['Repartiendo la energía', 3], battery: ['Cargando', 2], home: ['Toda la casa con luz', 2], grid: ['Conectada', 1] },
     },
     'day:no': {
       title: 'De día, sin batería.',
-      text: 'Las placas le dan luz a la casa y lo que sobra sale a la red. Si no alcanza, entra la luz de la calle.',
-      home: 'full', flows: { solar: 'on', home: 'on', battery: 'off', grid: 'in', link: 'on' },
-      meters: { solar: ['Produciendo', 3], inverter: ['Repartiendo la energía', 3], battery: ['No tiene', 0], home: ['Con luz', 2], grid: ['Recibe lo que sobra', 2] },
+      text: 'Las placas le dan energía a la casa y lo que sobra sale a la red, porque no hay dónde guardarlo. Si no alcanza, entra la luz de la calle.',
+      home: 'full', flows: { solar: 'on', home: 'on', battery: 'off', grid: 'in', link: 'on', rest: 'on' },
+      meters: { solar: ['Produciendo', 3], inverter: ['Repartiendo la energía', 3], battery: ['No tiene', 0], home: ['Toda la casa con luz', 2], grid: ['Recibe lo que sobra', 2] },
     },
     'night:yes': {
       title: 'De noche, con batería.',
-      text: 'Las placas descansan y la batería entrega lo que guardó de día. Si no alcanza, entra la luz de la calle.',
-      home: 'full', flows: { solar: 'off', home: 'on', battery: 'out', grid: 'off', link: 'on' },
-      meters: { solar: ['Descansando', 0], inverter: ['Repartiendo la energía', 2], battery: ['Entregando · sale energía', 2], home: ['Con luz', 2], grid: ['Disponible', 1] },
+      text: 'Las placas descansan y la batería le entrega a la casa lo que guardó de día. Su carga va bajando: dura según lo que tengas conectado y la carga disponible. Si no alcanza, entra la luz de la calle.',
+      home: 'full', flows: { solar: 'off', home: 'on', battery: 'out', grid: 'off', link: 'on', rest: 'on' },
+      charge: ['llena', 'media', 'baja'], verb: 'Entregando',
+      meters: { solar: ['Descansando', 0], inverter: ['Repartiendo la energía', 2], battery: ['Entregando', 2], home: ['Toda la casa con luz', 2], grid: ['Disponible', 1] },
     },
     'night:no': {
       title: 'De noche, sin batería.',
       text: 'Las placas no producen sin sol y el inversor descansa. La luz de la calle entra directo por el panel eléctrico de la casa.',
-      home: 'full', flows: { solar: 'off', home: 'on', battery: 'off', grid: 'out', link: 'off' },
-      meters: { solar: ['Descansando', 0], inverter: ['En reposo', 0], battery: ['No tiene', 0], home: ['Con luz', 2], grid: ['Entregando', 3] },
+      home: 'full', flows: { solar: 'off', home: 'on', battery: 'off', grid: 'out', link: 'off', rest: 'on' },
+      meters: { solar: ['Descansando', 0], inverter: ['En reposo', 0], battery: ['No tiene', 0], home: ['Toda la casa con luz', 2], grid: ['Entregando', 3] },
     },
     'outage:yes': {
-      title: 'Apagón de día, con batería y respaldo.',
-      text: 'El sistema se separa de la red. Con sol, las placas y la batería mantienen solo los equipos conectados al respaldo, según su tamaño y diseño. De noche queda solo la batería, y el respaldo dura mientras tenga carga.',
-      home: 'partial', flows: { solar: 'on', home: 'on', battery: 'out', grid: 'off', link: 'on' },
-      meters: { solar: ['Produciendo', 2], inverter: ['Separado de la red', 2], battery: ['Respaldando · sale energía', 2], home: ['Equipos de respaldo', 1], grid: ['Sin servicio', 0] },
+      title: 'Interrupción eléctrica de día, con batería y respaldo.',
+      text: 'El sistema queda separado de la red. Con sol, las placas y la batería mantienen solo los equipos conectados al respaldo; el resto de la casa se queda sin luz. La carga va bajando: dura según lo que tengas conectado y la carga disponible. De noche queda solo la batería.',
+      home: 'partial', flows: { solar: 'on', home: 'on', battery: 'out', grid: 'off', link: 'on', rest: 'off' },
+      charge: ['llena', 'media', 'baja'], verb: 'Respaldando',
+      meters: { solar: ['Produciendo', 2], inverter: ['Separado de la red', 2], battery: ['Respaldando', 2], home: ['Solo equipos con respaldo', 1], grid: ['Sin servicio', 0] },
     },
     'outage:no': {
-      title: 'Apagón de día, sin batería.',
+      title: 'Interrupción eléctrica de día, sin batería.',
       text: 'Aunque haya sol, las placas se apagan por seguridad para no mandar electricidad a la calle mientras la reparan. La casa se queda sin luz.',
-      home: 'off', flows: { solar: 'off', home: 'off', battery: 'off', grid: 'off', link: 'off' },
+      home: 'off', flows: { solar: 'off', home: 'off', battery: 'off', grid: 'off', link: 'off', rest: 'off' },
       meters: { solar: ['Apagadas por seguridad', 0], inverter: ['Apagado por seguridad', 0], battery: ['No tiene', 0], home: ['Sin luz', 0], grid: ['Sin servicio', 0] },
     },
   };
+  // Marks drawn on the battery for each qualitative level.
+  const MARKS = { baja: 1, media: 2, llena: 3 };
+
+  // Punto de extensión desactivado: cargador de vehículo. No está confirmado como
+  // parte de la oferta, así que no se dibuja ni se nombra. Para activarlo harían
+  // falta un grupo propio en el SVG, una ruta data-flow="vehicle", su estado en
+  // cada escena y su texto; mientras siga en false, nada de eso existe.
+  const EXTENSIONS = { vehicle: false };
 
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   const reduced = () => Boolean(motion?.matches);
@@ -61,13 +76,13 @@
   const titleNode = root.querySelector('[data-energy-title]');
   const textNode = root.querySelector('[data-energy-text]');
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const PER_FLOW = { solar: 3, link: 1, home: 2, battery: 3, grid: 5 };
+  const PER_FLOW = { solar: 3, link: 1, home: 2, rest: 4, battery: 3, grid: 5 };
+  if (EXTENSIONS.vehicle) PER_FLOW.vehicle = 2;
   const SHEEN_TRAVEL = [560, 268];
   const SHEEN_PERIOD = 7;
   const HALO_PERIOD = 4.5;
   const TEXT_SWAP_MS = 200;
-  const LEVEL_PERIOD = 3.2;
-  const LEVEL_STEPS = 4;
+  const CHARGE_STEP = 4.5;
   const LAUNCHER_GAP = 10;
 
   // Points are sampled once, so animating never forces a layout read.
@@ -85,6 +100,7 @@
   // Halos use a prebuilt gradient: no SVG filter per particle.
   const particles = [];
   Object.entries(PER_FLOW).forEach(([flow, count]) => {
+    if (!routes[flow]) return;
     for (let index = 0; index < count; index += 1) {
       const group = document.createElementNS(SVG_NS, 'g');
       const glow = document.createElementNS(SVG_NS, 'circle');
@@ -105,25 +121,53 @@
   let onScreen = false;
   let last = 0;
   let clock = 0;
+  let sceneStart = 0;
+  let shownStep = -1;
   let textTimer = 0;
 
   const sceneKey = () => `${mode}:${battery.checked ? 'yes' : 'no'}`;
+
+  // Position in the scene's charge marks. With reduced motion it stays on the
+  // middle mark: a still picture of a battery that is neither full nor empty.
+  function chargeStep(scene) {
+    if (!scene.charge) return -1;
+    if (reduced()) return 1;
+    return Math.min(scene.charge.length - 1, Math.floor((clock - sceneStart) / CHARGE_STEP));
+  }
+  const isFull = (scene, step) => Boolean(scene.whenFull) && step === scene.charge.length - 1;
+  const flowsOf = (scene, step) => (isFull(scene, step) ? { ...scene.flows, ...scene.whenFull.flows } : scene.flows);
   const isIdle = () => Object.values(SCENES[sceneKey()].flows).every(state => state === 'off');
 
-  // Charging climbs the level marks; delivering steps them down.
-  function drawLevel(scene) {
-    const direction = scene.flows.battery;
-    let step = 0;
-    if (direction === 'in') step = reduced() ? 3 : 1 + Math.floor((clock % LEVEL_PERIOD) / LEVEL_PERIOD * LEVEL_STEPS);
-    if (direction === 'out') step = reduced() ? 2 : LEVEL_STEPS - Math.floor((clock % LEVEL_PERIOD) / LEVEL_PERIOD * LEVEL_STEPS);
-    if (level.dataset.step !== String(step)) level.dataset.step = String(step);
+  function setMeter(name, label, level) {
+    const meter = root.querySelector(`[data-meter="${name}"]`);
+    const state = meter.querySelector('[data-meter-state]');
+    if (state.textContent !== label) state.textContent = label;
+    meter.dataset.level = String(level);
+  }
+
+  // Everything that depends on the charge mark: battery marks, routes and legend.
+  // Runs on selection and again only when the mark changes, never per frame.
+  function paintStep(scene, step) {
+    shownStep = step;
+    const flows = flowsOf(scene, step);
+    Object.entries(flows).forEach(([flow, state]) => {
+      root.dataset[`flow${flow[0].toUpperCase()}${flow.slice(1)}`] = state;
+    });
+    const meters = isFull(scene, step) ? { ...scene.meters, ...scene.whenFull.meters } : scene.meters;
+    Object.entries(meters).forEach(([name, [label, amount]]) => {
+      const charging = name === 'battery' && scene.charge && !isFull(scene, step);
+      setMeter(name, charging ? `${label} · carga ${scene.charge[step]}` : label, amount);
+    });
+    level.dataset.step = String(scene.charge ? MARKS[scene.charge[step]] : 0);
   }
 
   function draw() {
     const scene = SCENES[sceneKey()];
-    drawLevel(scene);
+    const step = chargeStep(scene);
+    if (step !== shownStep) paintStep(scene, step);
+    const flows = flowsOf(scene, step);
     particles.forEach(item => {
-      const direction = scene.flows[item.flow];
+      const direction = flows[item.flow];
       if (direction === 'off') {
         item.group.style.display = 'none';
         return;
@@ -203,17 +247,15 @@
     root.dataset.mode = mode;
     root.dataset.battery = battery.checked ? 'yes' : 'no';
     root.dataset.home = scene.home;
-    Object.entries(scene.flows).forEach(([flow, state]) => {
-      root.dataset[`flow${flow[0].toUpperCase()}${flow.slice(1)}`] = state;
-    });
     modes.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.energyMode === mode)));
     tellStory(scene, animate);
-    Object.entries(scene.meters).forEach(([name, [label, level]]) => {
-      const meter = root.querySelector(`[data-meter="${name}"]`);
-      meter.querySelector('[data-meter-state]').textContent = label;
-      meter.dataset.level = String(level);
-    });
+    sceneStart = clock;
+    paintStep(scene, chargeStep(scene));
     syncLoop();
+    // Enlace documentado, sin conectar: la calculadora es solo del equipo y esta
+    // escena no la carga ni le pasa datos. Un módulo autorizado podría escuchar
+    // este evento para saber qué estado se muestra; hoy nadie lo escucha.
+    root.dispatchEvent(new CustomEvent('energy-scene:change', { detail: { mode, battery: battery.checked } }));
   }
 
   modes.forEach(button => button.addEventListener('click', () => {
@@ -222,7 +264,7 @@
   }));
   battery.addEventListener('change', () => apply());
   document.addEventListener('visibilitychange', syncLoop);
-  motion?.addEventListener?.('change', syncLoop);
+  motion?.addEventListener?.('change', () => { shownStep = -2; syncLoop(); });
 
   // The floating chat button yields only while the controls or the narration
   // actually pass under it. Geometry is read on setup and on resize, never per frame.

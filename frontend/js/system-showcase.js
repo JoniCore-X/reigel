@@ -176,3 +176,52 @@
   window.addEventListener('resize', schedule, { passive: true });
   reduced.addEventListener?.('change', () => setLive(!reduced.matches));
 })();
+
+// Indicadores de la aplicación en /soluciones ([data-sc-tabs]). Sin este
+// archivo los tres bloques quedan a la vista, uno tras otro, y la lista de
+// pestañas sigue oculta. Aquí se convierten en pestañas (flechas, Inicio y
+// Fin) y se enciende la marca externa junto al teléfono relacionado: la
+// captura no se toca.
+(() => {
+  const root = document.querySelector('[data-sc-tabs]');
+  if (!root) return;
+  const list = root.querySelector('[role="tablist"]');
+  const tabs = [...root.querySelectorAll('[role="tab"]')];
+  const panels = tabs.map(tab => document.getElementById(tab.getAttribute('aria-controls')));
+  const pins = [...(root.closest('.sc-app')?.querySelectorAll('[data-sc-pin]') || [])];
+  if (!list || tabs.length < 2 || panels.some(panel => !panel)) return;
+
+  function select(index, focus) {
+    tabs.forEach((tab, position) => {
+      const on = position === index;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      panels[position].classList.toggle('is-active', on);
+    });
+    pins.forEach(pin => pin.classList.toggle('is-active', pin.dataset.scPin === tabs[index].dataset.scTab));
+    if (focus) tabs[index].focus();
+  }
+
+  const KEYS = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => select(index, false));
+    tab.addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      let next = -1;
+      if (event.key in KEYS) next = (index + KEYS[event.key] + tabs.length) % tabs.length;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = tabs.length - 1;
+      if (next < 0) return;
+      event.preventDefault();
+      select(next, true);
+    });
+  });
+  panels.forEach((panel, index) => {
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', tabs[index].id);
+    panel.tabIndex = 0;
+  });
+  list.hidden = false;
+  root.classList.add('sc-app-live');
+  select(Math.max(0, tabs.findIndex(tab => tab.getAttribute('aria-selected') === 'true')), false);
+})();
