@@ -79,34 +79,89 @@ body.corporate-body .public-header .menu-toggle { border-radius: 3px; background
   body.corporate-body .corp-footer { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); }
 }
 
-/* Acceso flotante a R.E.I.G.E.L. */
+/* Acceso flotante a R.E.I.G.E.L.
+   Este bloque gana por especificidad al de `power-solar-identity.css`: es el único
+   sitio donde se decide cómo se ve el acceso flotante en las páginas públicas.
+   El halo que gira es la señal de que al otro lado hay algo encendido; se apaga
+   entero con `prefers-reduced-motion`. */
+@property --rc-halo {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 body.public-body .chat-launcher {
-  height: 48px;
-  min-height: 48px;
-  gap: 10px;
-  padding: 0 16px 0 0;
-  border: 1px solid #ffffff59;
-  border-radius: 3px;
-  background: var(--sol-navy, #071d43);
-  box-shadow: 0 4px 14px #020b1a59;
+  height: 56px;
+  min-height: 56px;
+  gap: 12px;
+  padding: 0 20px 0 0;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  background:
+    radial-gradient(120% 160% at 12% 0%, #1d59ae 0%, transparent 52%),
+    linear-gradient(118deg, #10407f 0%, #0a2b61 54%, #061d44 100%);
+  box-shadow:
+    0 18px 38px #020b1a4d,
+    0 6px 14px #020b1a38,
+    inset 0 1px 0 #ffffff2b;
   animation-fill-mode: backwards;
 }
-body.public-body .chat-launcher::before { display: none; }
-body.public-body .chat-launcher-symbol {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  min-height: 46px;
-  flex: 0 0 46px;
-  border: 0;
-  border-right: 1px solid #ffffff3d;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: #ff8a1f;
+
+/* Halo girando justo por fuera del borde: un anillo, no un resplandor difuso. */
+body.public-body .chat-launcher::after {
+  position: absolute;
+  z-index: 0;
+  inset: -2px;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--rc-halo),
+    transparent 0deg, #ff7900 48deg, #ffc247 86deg, transparent 150deg, transparent 360deg);
+  opacity: .85;
+  content: "";
+  pointer-events: none;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: rc-halo-turn 5.5s linear infinite;
 }
-body.public-body .chat-launcher-symbol svg { display: block; width: 24px; height: 24px; }
-body.public-body .chat-launcher strong { font-size: 13.5px; font-weight: 650; letter-spacing: 0; }
+body.public-body .chat-launcher::before {
+  display: block;
+  inset: 1px 1px auto;
+  height: 52%;
+  background: linear-gradient(180deg, #ffffff26 0%, #ffffff09 60%, transparent 100%);
+}
+
+body.public-body .chat-launcher-symbol {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  margin-left: 7px;
+  flex: 0 0 42px;
+  border: 1px solid #ffd3a799;
+  border-right: 1px solid #ffd3a799;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffa246 0%, #ff7900 58%, #e05d00 100%);
+  box-shadow: inset 0 1px 0 #ffffff7a, 0 4px 12px #ff790038;
+  /* Marino sobre naranja, no blanco: en móvil el texto se oculta y este icono es
+     todo el botón, así que necesita los 3:1 de un componente de interfaz. */
+  color: var(--sol-navy, #071d43);
+}
+/* Latido lento: el acceso está vivo sin pedir atención. */
+body.public-body .chat-launcher-symbol::after {
+  position: absolute;
+  inset: -4px;
+  border: 1px solid #ff9a3d;
+  border-radius: 50%;
+  content: "";
+  opacity: 0;
+  animation: rc-launcher-pulse 3.6s cubic-bezier(.2, .7, .3, 1) infinite;
+}
+body.public-body .chat-launcher-symbol svg { display: block; width: 23px; height: 23px; }
+body.public-body .chat-launcher strong {
+  font-size: 14px;
+  font-weight: 680;
+  letter-spacing: .002em;
+}
 /* «small» sigue en el nombre accesible, pero no ocupa espacio visual. */
 body.public-body .chat-launcher small {
   position: absolute;
@@ -117,21 +172,48 @@ body.public-body .chat-launcher small {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-body.public-body .chat-launcher:hover { transform: translateY(-1px); border-color: #ff7900; box-shadow: 0 4px 14px #020b1a59; }
-body.public-body .chat-launcher:hover .chat-launcher-symbol { transform: none; box-shadow: none; }
-body.public-body .chat-launcher:focus-visible { outline: 3px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 5px #071d43; }
-body.public-body .chat-launcher:active { transform: translateY(0); box-shadow: 0 2px 8px #020b1a59; }
+body.public-body .chat-launcher:hover {
+  transform: translateY(-3px);
+  border-color: #ffffff52;
+  box-shadow:
+    0 24px 48px #020b1a59,
+    0 8px 18px #020b1a45,
+    0 0 0 4px #ff79001f,
+    inset 0 1px 0 #ffffff3d;
+}
+body.public-body .chat-launcher:hover::after { opacity: 1; animation-duration: 2.4s; }
+body.public-body .chat-launcher:hover .chat-launcher-symbol {
+  transform: scale(1.06);
+  box-shadow: inset 0 1px 0 #ffffff99, 0 6px 16px #ff790052;
+}
+body.public-body .chat-launcher:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px #071d43, 0 18px 38px #020b1a59;
+}
+body.public-body .chat-launcher:active {
+  transform: translateY(-1px) scale(.985);
+  box-shadow: 0 8px 18px #020b1a4d, inset 0 2px 6px #020b1a3d;
+}
+
+@keyframes rc-halo-turn { to { --rc-halo: 360deg; } }
+@keyframes rc-launcher-pulse {
+  0% { opacity: .5; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(1.5); }
+}
 
 @media (max-width: 600px) {
   body.public-body .chat-launcher {
-    width: 48px;
-    max-width: 48px;
-    min-width: 48px;
+    width: 58px;
+    max-width: 58px;
+    min-width: 58px;
+    height: 58px;
+    min-height: 58px;
     justify-content: center;
     gap: 0;
     padding: 0;
   }
-  body.public-body .chat-launcher-symbol { border-right: 0; }
+  body.public-body .chat-launcher-symbol { margin-left: 0; border-right: 1px solid #ffd3a799; }
   body.public-body .chat-launcher > span:not(.chat-launcher-symbol) {
     position: absolute;
     width: 1px;
@@ -155,6 +237,11 @@ body.public-body.launcher-away .chat-launcher:not(:focus-visible) {
   body.public-body .chat-launcher { animation: none; transition: none; }
   body.public-body .chat-launcher:hover,
   body.public-body .chat-launcher:active { transform: none; }
+  /* Sin movimiento: el halo se queda quieto y el latido no existe. */
+  body.public-body .chat-launcher::after { animation: none; opacity: .6; }
+  body.public-body .chat-launcher:hover::after { animation: none; }
+  body.public-body .chat-launcher-symbol::after { display: none; }
+  body.public-body .chat-launcher:hover .chat-launcher-symbol { transform: none; }
 }
 
 @media (forced-colors: active) {

@@ -10,25 +10,6 @@ from zoneinfo import ZoneInfo
 
 ZONE = ZoneInfo("America/Puerto_Rico")
 
-# Origen: una charla sobre venta que el titular compartió el 26 nov 2026, con el encargo
-# de que fuera «su forma de pensar» y no un texto que se repita. Por eso aquí no hay una
-# sola frase de aquella charla: se conserva el criterio comercial y queda fuera todo su
-# marco religioso, que no tiene lugar en una conversación con un cliente de Power Solar.
-# Lo que sí cambia es el orden de prioridades del asistente: entender antes que exponer.
-STANCE = (
-    "Antes que vender, entiende qué necesita la persona que tienes delante. En cada mensaje, "
-    "tu primer trabajo es averiguar qué problema tiene, no exponer lo que tú sabes. "
-    "Escucha más de lo que hablas: pregunta una cosa y deja que conteste. "
-    "Di lo que le sirve a ella en el punto en el que está, no lo que a ti te gustaría contar, "
-    "y procura que cada respuesta le deje algo claro aunque no avance hacia una cita. "
-    "Cuida cada palabra: una frase mal dicha hace daño y una bien dicha ayuda de verdad. "
-    "Nunca presiones, metas prisa ni des a entender que pierde una oportunidad si no decide ahora; "
-    "decide ella, y cuando quiera. "
-    "Si no tienes nada que aportar a lo que te pregunta, dilo y ofrece hablar con el equipo: "
-    "eso vale más que llenar el mensaje. "
-    "Tú no convences a nadie; das información clara para que la persona decida por su cuenta."
-)
-
 STYLE = (
     "Estilo de conversación, como escribe un asesor de Team Caguas por mensajes: "
     "saluda con calidez y según la hora; si la persona dijo su nombre, úsalo. "
@@ -144,7 +125,7 @@ def guide(now=None):
     plain = " ".join(f"{speaker}: {text}" for speaker, text in PLAIN_EXAMPLE)
     glossary = "; ".join(f"{term}: {meaning}" for term, meaning in GLOSSARY)
     return (
-        f"{STANCE} {STYLE} {PLAIN} {INSTALLATION} Ahora en Puerto Rico corresponde decir «{greeting(now)}». "
+        f"{STYLE} {PLAIN} {INSTALLATION} Ahora en Puerto Rico corresponde decir «{greeting(now)}». "
         f"Explicaciones correctas que debes usar, con tus palabras, cuando pregunten por estos temas "
         f"(no inventes otras definiciones): {glossary}. "
         f"Ejemplos de estilo (otras conversaciones, no son datos de esta persona; no los copies palabra por palabra): "

@@ -52,10 +52,11 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   vencimiento; una deducción del modelo no se usa al hablar hasta que una persona la
   aprueba. `speaking_context` es la única puerta hacia un texto dirigido a un cliente.
   Retirar una creencia no la borra y no es una solicitud de eliminación de datos.
-- `voice.py`: la voz comercial, una sola fuente para las tres rutas del modelo. `STANCE`
-  fija el orden de prioridades —entender antes que exponer, escuchar más que hablar, no
-  presionar— a partir de material que aporta el titular; se conserva el criterio, nunca
-  su texto, y nada ajeno al trato con un cliente de Power Solar entra ahí.
+- `voice.py`: la voz comercial, una sola fuente para las tres rutas del modelo. Antes de
+  añadir una instrucción nueva al prompt, medirla: el 26 nov 2026 una guía de criterio
+  comercial no cambió nada medible y sí produjo la palabra prohibida «ahorrar», porque
+  `STYLE` ya imponía lo que pedía. El prompt ronda los 8 000 caracteres sobre un modelo
+  de 3B; cada añadido compite con lo que ya está.
 - `knowledge.py`: evidencia con fuentes y vencimiento; un fallo no renueva su vigencia.
 - `energy.py`: aritmética con parámetros explícitos, sin tarifas ni ahorros inventados.
 - `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.
@@ -102,7 +103,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1037 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1036 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.

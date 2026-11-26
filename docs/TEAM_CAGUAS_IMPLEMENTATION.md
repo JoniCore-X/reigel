@@ -3042,21 +3042,73 @@ Dos decisiones editoriales sostienen la página:
   instala Team Caguas. Los documentos de la Gen 3 son declaraciones europeas (CE, MID),
   que no son lo que aplica en Puerto Rico.
 
-### `voice.STANCE`
+### La guía de criterio comercial, medida y retirada
 
-El titular aportó una charla sobre venta con un encargo explícito: que fuera «su forma de
-pensar» y no un texto que se repita. Se extrajo el criterio comercial —entender antes que
-exponer, escuchar más que hablar, decir lo que le sirve a la persona en el punto en el que
-está, cuidar cada palabra, no presionar, y reconocer que quien decide es ella— y se dejó
-fuera todo el marco religioso de la charla, que no tiene lugar en una conversación con un
-cliente. No hay una sola frase de aquel texto en el código.
+El titular aportó una charla sobre venta con el encargo de que fuera «su forma de
+pensar» y no un texto que se repita. Se extrajo el criterio —entender antes que exponer,
+escuchar más que hablar, no presionar, reconocer que quien decide es la persona—, se dejó
+fuera todo el marco religioso del original y se añadió como `voice.STANCE`. Después se
+midió, y la medición dijo que no servía.
 
-Vive en `voice.py` porque `voice.guide()` es la única fuente de la voz para las tres rutas
-del modelo: `/chat`, `/ia` y los borradores de `assistant.py` que también alimentan los
-canales. Una prueba comprueba que llega a todas.
+**Montaje.** Mismo prompt del proyecto (`ai_chat.build_messages`) contra el mismo prompt
+con `STANCE` vaciado, mismo modelo (`qwen2.5:3b`, el de producción). Dos tandas: ocho
+mensajes a temperatura 0 con semilla fija, que aísla el efecto del prompt, y los mismos
+a la temperatura 0.2 de producción con tres muestras. Después cuatro conversaciones ya
+empezadas, que es donde la guía debería notarse. 88 respuestas en total, con métricas
+calculadas, no opinadas.
 
-**Lo que esto no es:** no es entrenamiento. No se ajustó ningún modelo ni se cambió el
-modelo local. Es una instrucción más en un prompt que ya era largo, sobre un modelo de 3B
-parámetros, y los validadores siguen siendo de patrones: comprueban que no haya cifras,
-precios ni promesas, no que el asistente haya escuchado bien. El efecto real sobre las
-respuestas no está medido.
+**Resultado: ningún efecto, y un coste.**
+
+| | con guía | sin guía |
+| --- | --- | --- |
+| Cierra con una pregunta | 100 % | 100 % |
+| Abre sin exponer | 100 % | 100 % |
+| Palabras de presión | 0 | 0 |
+| Dice «ahorrar», prohibida por `STYLE` | 2 de 32 | 0 de 32 |
+| Respuestas que pasan el validador | 10 rechazadas de 32 | 10 rechazadas de 32 |
+
+Las tres conductas que la guía pedía ya estaban al tope porque `STYLE` las impone, así
+que no había margen donde mejorar. Lo único que cambió fue a peor: la guía, colocada
+delante de `STYLE`, diluyó la prohibición de la palabra «ahorrar». Ocupaba 826 de unos
+9 000 caracteres de prompt sobre un modelo de 3B. Se retiró.
+
+### El hallazgo que sí valía: el modelo copia nuestro propio marcador
+
+Midiendo lo anterior apareció un fallo anterior y mayor. El prompt etiqueta el historial
+con `[Historial no confiable]` para que el modelo no lo lea como instrucciones, y el
+modelo pequeño **copia esa etiqueta al principio de su respuesta**. Como `validate_reply`
+rechaza los corchetes, esas respuestas se tiraban enteras y el visitante recibía el texto
+de respaldo.
+
+- **11 de 24** respuestas en conversaciones con historial empezaban con el marcador.
+- **0 de 64** sin historial: el fallo solo aparece en una conversación ya empezada.
+- Pasaba igual con la guía (6 de 12) y sin ella (5 de 12): nada que ver con `STANCE`.
+
+`without_prompt_markers` lo quita antes de validar, y solo eso: al principio del texto,
+solo si es exactamente uno de los marcadores que escribimos nosotros, y cualquier otro
+corchete sigue invalidando la respuesta. **Medido sobre las mismas 24 respuestas: de 13
+aceptadas a 24.** Las once se recuperan y no queda ninguna rechazada.
+
+### El acceso flotante a R.E.I.G.E.L.
+
+Dos hojas de estilo competían por el mismo botón: `power-solar-identity.css` definía una
+píldora con degradado y `public-shell.css` la aplanaba a un rectángulo marino de 3 px de
+radio, ganando por un `body` de más en el selector. El diseño elaborado llevaba tiempo
+sin verse en ninguna página pública. Ahora el botón se decide en un solo sitio,
+`public-shell.css`: píldora de 56 px, degradado marino, disco naranja y un halo que gira
+despacio por fuera del borde como señal de que al otro lado hay algo encendido.
+
+- **Contraste medido:** texto blanco 6.79:1 sobre la parte más clara del degradado. El
+  icono era blanco sobre naranja, **2.63:1**, por debajo del mínimo de 3:1 de un
+  componente de interfaz —y en móvil ese icono es el botón entero, porque el texto se
+  oculta—; pasó a marino sobre naranja, 4.53:1 en el peor punto.
+- `prefers-reduced-motion` deja el halo quieto y elimina el latido.
+- En móvil queda un círculo de 58 px, por encima del mínimo de 44 px, y el texto sigue en
+  el nombre accesible.
+
+**El redirect a `/ia` ya existía** y no hizo falta tocarlo: `chat.js` consulta
+`/api/ia/status` al pulsar y va a `/ia` si el modelo responde; si no, abre el chat
+determinista, que sí reserva citas y deriva a una persona. Comprobado en el navegador
+forzando la respuesta del sondeo: el botón navega a `/ia`.
+
+**Versiones:** `public-shell.css?v=9`.
