@@ -7,7 +7,9 @@ All accounts below belong solely to the new local preview.
 Google Authenticator is mandatory for every team account. Only here, in the
 synthetic preview, two demo accounts are pre-enrolled with a random secret that
 is generated for this run and printed with the demo passwords; a third account
-is left without it to show the forced QR enrollment. To compute the current
+is left without it to show the first registration, which needs the password and
+a one-time invitation code (synthetic, printed only by this preview) before the
+QR appears. To compute the current
 code without a phone:  python scripts\preview_team_caguas.py --codigo SECRETO
 """
 from __future__ import annotations
@@ -35,6 +37,8 @@ NEW_PASSWORD = "Preview-Nuevo-2026!"
 # Filled by build_preview() with a fresh random secret per run (base32, as Google Authenticator shows it).
 PREVIEW_TOTP_SECRET = ""
 ADVISOR_TOTP_SECRET = ""
+# Filled by build_preview(): invitation code of the synthetic account without Google Authenticator.
+NEW_INVITATION_CODE = ""
 
 
 def current_code(secret: str) -> str:
@@ -80,15 +84,17 @@ def build_preview():
             return JSONResponse({"detail": "Esta demostración sintética no recibe webhooks ni actualiza fuentes externas."}, status_code=503)
         return await call_next(request)
 
-    global PREVIEW_TOTP_SECRET, ADVISOR_TOTP_SECRET
+    global PREVIEW_TOTP_SECRET, ADVISOR_TOTP_SECRET, NEW_INVITATION_CODE
     store = app.state.store
     admin = store.create_user({"name": "Administración · DEMO", "email": PREVIEW_EMAIL, "password": PREVIEW_PASSWORD, "role": "admin"}, bootstrap=True)
     for email in (ADVISOR_EMAIL, NEW_EMAIL):
         store.allow_team_email(email, admin)
     advisor = store.create_user({"name": "Asesor · DEMO", "email": ADVISOR_EMAIL, "password": ADVISOR_PASSWORD}, admin)
-    store.create_user({"name": "Asesor nuevo · DEMO", "email": NEW_EMAIL, "password": NEW_PASSWORD}, admin)
+    newcomer = store.create_user({"name": "Asesor nuevo · DEMO", "email": NEW_EMAIL, "password": NEW_PASSWORD}, admin)
     PREVIEW_TOTP_SECRET = _pre_enroll(app, admin)
     ADVISOR_TOTP_SECRET = _pre_enroll(app, advisor)
+    # Same audited path an administrator uses in /app; synthetic and valid only in this temporary base.
+    NEW_INVITATION_CODE = app.state.identity.issue_grant(newcomer["id"], "enroll", "Demostración sintética", admin)["code"]
     store.update_user(advisor["id"], {"public_booking": True, "work_days": list(range(7))}, admin)
     lead = store.create_lead({"name": "Prospecto ficticio · DEMO", "email": "persona@example.test", "phone": "+17875550100", "municipality": "Caguas", "monthly_bill": 180, "consent": True, "advisor_id": advisor["id"]}, admin)
     day = (datetime.now(UTC) + timedelta(days=2)).date().isoformat()
@@ -134,6 +140,7 @@ def main():
     print(f"Acceso de prueba (asesor): {ADVISOR_EMAIL} / {ADVISOR_PASSWORD}", flush=True)
     print(f"  Google Authenticator sintético: {ADVISOR_TOTP_SECRET}", flush=True)
     print(f"Primer acceso con registro QR obligatorio: {NEW_EMAIL} / {NEW_PASSWORD}", flush=True)
+    print(f"  Código de invitación sintético (un solo uso): {NEW_INVITATION_CODE}", flush=True)
     print(r"Código actual sin teléfono: .venv\Scripts\python.exe scripts\preview_team_caguas.py --codigo CLAVE", flush=True)
     print("Estas claves solo existen en esta base sintética temporal.", flush=True)
     print("No se cargó .env, no se abrió la base comercial y no se programan refrescos externos.", flush=True)

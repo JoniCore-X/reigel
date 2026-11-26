@@ -4,6 +4,12 @@ Uso desde PowerShell (con .venv activado):
     python scripts/doctor.py
     python scripts/doctor.py --sin-pruebas
     python scripts/doctor.py --json
+    python scripts/doctor.py --sin-pruebas --base RUTA_DE_LA_BASE
+
+Con --base (y las mismas variables de entorno que usará el servidor) comprueba,
+antes de arrancar, que la clave de Google Authenticator esté disponible. Solo
+abre la base en modo lectura para contar cuentas registradas; no migra nada y
+nunca imprime la clave.
 
 Las pruebas de pytest usan las bases temporales definidas por el proyecto.
 """
@@ -14,6 +20,7 @@ import argparse
 import importlib.util
 import json
 import shutil
+import sqlite3
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -162,6 +169,31 @@ def check_timezone() -> Result:
     )
 
 
+def check_totp_key(db_path: str | None) -> Result:
+    """Fail closed before start: existing authenticators need their original key."""
+    name = "Clave de Google Authenticator"
+    if not db_path:
+        return Result(name, "AVISO", "Omitida: usa --base RUTA para comprobarla antes de arrancar el servidor")
+    path = Path(db_path)
+    if not path.is_file():
+        return Result(name, "ERROR", "No existe la base indicada; no se creó nada")
+    sys.path.insert(0, str(ROOT))
+    from reigel.identity import totp_key_status
+
+    def has_secrets() -> bool:
+        connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=15)
+        try:
+            return bool(connection.execute("SELECT EXISTS(SELECT 1 FROM team_totp)").fetchone()[0])
+        except sqlite3.Error:
+            return False
+        finally:
+            connection.close()
+
+    status, detail = totp_key_status(str(path), has_secrets)
+    level = "ERROR" if status in {"missing", "invalid"} else "OK"
+    return Result(name, level, detail)
+
+
 def check_git_privacy() -> Result:
     if shutil.which("git") is None or not (ROOT / ".git").exists():
         return Result(
@@ -305,7 +337,7 @@ def check_pytest() -> Result:
     )
 
 
-def diagnose(*, run_tests: bool = True) -> list[Result]:
+def diagnose(*, run_tests: bool = True, db_path: str | None = None) -> list[Result]:
     results = [
         check_structure(),
         check_python(),
@@ -313,6 +345,7 @@ def diagnose(*, run_tests: bool = True) -> list[Result]:
         check_timezone(),
         check_git_privacy(),
         check_javascript(),
+        check_totp_key(db_path),
     ]
 
     if run_tests:
@@ -346,8 +379,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Resultado estructurado para automatización",
     )
 
+    parser.add_argument(
+        "--base",
+        help="Base que usará el servidor; comprueba su clave de Google Authenticator (solo lectura)",
+    )
+
     args = parser.parse_args(argv)
-    results = diagnose(run_tests=not args.sin_pruebas)
+    extra = {"db_path": args.base} if args.base else {}
+    results = diagnose(run_tests=not args.sin_pruebas, **extra)
     success = all(result.status != "ERROR" for result in results)
 
     if args.json:

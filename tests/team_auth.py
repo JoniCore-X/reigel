@@ -2,7 +2,8 @@
 
 Every team login needs an allowed email and Google Authenticator. Tests about
 other features use these helpers to pass those checks through the real HTTP
-flow: the first login enrolls a fresh authenticator via the QR endpoints, later
+flow: the first login enrolls a fresh authenticator via the QR endpoints (with a
+one-time invitation code issued the same way scripts/team_recovery.py does), later
 logins send a code computed from the secret captured at enrollment.
 """
 from __future__ import annotations
@@ -42,14 +43,20 @@ def fresh_code(path, email, secret) -> str:
     return totp.code_at(secret, step)
 
 
-def login(client, email, password):
+def invitation(app, email) -> str:
+    """A fresh invitation code for a synthetic account (server-side, like the local script)."""
+    return app.state.identity.local_grant(email, "prueba sintética", "enroll")["code"]
+
+
+def login(client, email, password, invitation_code=None):
     """Password, then enrollment (first time) or the current code; returns the last response."""
     response = client.post("/api/auth/login", json={"email": email, "password": password})
     if response.status_code != 200:
         return response
     path, key = client.app.state.store.path, (client.app.state.store.path, email.lower())
     if response.json().get("enrollment_required"):
-        setup = client.post("/api/team-identity/totp/enroll")
+        code = invitation_code or invitation(client.app, email)
+        setup = client.post("/api/team-identity/totp/enroll", json={"invitation_code": code})
         assert setup.status_code == 200, setup.text
         secret = decode(setup.json()["setup"]["secret"])
         _SECRETS[key] = secret

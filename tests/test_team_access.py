@@ -60,7 +60,7 @@ def test_every_role_is_forced_through_enrollment_then_code(world):
     app, store, *_ = world
     for email in (OWNER, ADMIN, ADVISOR):
         first = TestClient(app, base_url="http://localhost").post("/api/auth/login", json={"email": email, "password": PASSWORD})
-        assert first.json() == {"mfa_required": True, "enrollment_required": True}
+        assert first.json() == {"mfa_required": True, "enrollment_required": True, "invitation_required": True}
         assert login(TestClient(app, base_url="http://localhost"), email, PASSWORD).status_code == 200
         again = TestClient(app, base_url="http://localhost").post("/api/auth/login", json={"email": email, "password": PASSWORD})
         assert again.json() == {"mfa_required": True}

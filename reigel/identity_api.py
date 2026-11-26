@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 
 from fastapi import Depends, Request
@@ -24,9 +25,10 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
     identity = lambda: app.state.identity
     limit = lambda request, key, maximum, seconds: app.state.limiter.check(request, key, maximum, seconds)
 
-    def require_csrf(request, cookie):
+    def require_csrf(request, cookie, realm, actor_id):
         token = request.cookies.get(cookie, "")
         if not token or not hmac.compare_digest(request.headers.get("x-reigel-csrf", ""), csrf_for(token)):
+            identity().audit_event(realm, actor_id, "security.csrf_rejected", actor_id)
             raise DomainError("La solicitud no pudo validarse. Recarga la página.", 403)
 
     def customer_actor(request: Request):
@@ -34,12 +36,12 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
 
     def customer_write(request: Request):
         customer = customer_actor(request)
-        require_csrf(request, CUSTOMER_COOKIE)
+        require_csrf(request, CUSTOMER_COOKIE, "customer", customer["id"])
         return customer
 
     def team_write(request: Request):
         user = team_actor(request)
-        require_csrf(request, team_cookie)
+        require_csrf(request, team_cookie, "team", user["id"])
         return user
 
     def with_customer_cookie(response, token):
@@ -58,7 +60,8 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         """A correct password only ever yields a second step; never the team session cookie."""
         if step["mfa"] == "enroll":
             ticket = identity().begin_enrollment(step["user_id"])
-            response = JSONResponse({"mfa_required": True, "enrollment_required": True})
+            # No QR yet: the next step asks for the one-time invitation code of this account.
+            response = JSONResponse({"mfa_required": True, "enrollment_required": True, "invitation_required": True})
             return with_totp_cookie(clear_totp_cookie(response, MFA_COOKIE), ENROLL_COOKIE, ticket, 600)
         response = clear_totp_cookie(JSONResponse({"mfa_required": True}), ENROLL_COOKIE)
         return with_totp_cookie(response, MFA_COOKIE, identity().begin_mfa(step["user_id"]), 300)
@@ -200,9 +203,11 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
 
     @app.post("/api/team-identity/totp/enroll")
     async def team_totp_enroll(request: Request):
-        """First login of an account without Google Authenticator: returns the QR."""
+        """First login of an account without Google Authenticator: the password step
+        plus a valid invitation code for that same account return the QR, once."""
         limit(request, "team_totp_enroll", 12, 900)
-        ticket, setup = identity().enrollment_setup(request.cookies.get(ENROLL_COOKIE))
+        data = await payload(request)
+        ticket, setup = identity().enrollment_setup(request.cookies.get(ENROLL_COOKIE), data.get("invitation_code"))
         return with_totp_cookie(JSONResponse({"setup": setup}), TOTP_SETUP_COOKIE, ticket, 600)
 
     @app.post("/api/team-identity/totp/enroll/confirm")
@@ -218,7 +223,13 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         limit(request, "team_totp_setup", 12, 900)
         data = await payload(request)
         user = team_write(request) if not data.get("grant_code") else None
-        ticket, setup = identity().totp_setup(user=user, email=data.get("email"), grant_code=data.get("grant_code"), current_code=data.get("current_code"))
+        if not user:
+            # Per-account bucket, independent of the address (H4); generic errors either way.
+            email = data.get("email")
+            account = email.strip().casefold()[:254] if isinstance(email, str) else ""
+            app.state.limiter.check(request, "team_grant_setup:" + hashlib.sha256(account.encode()).hexdigest(), 10, 3600, client="account")
+        ticket, setup = identity().totp_setup(user=user, email=data.get("email"), grant_code=data.get("grant_code"),
+                                              current_code=data.get("current_code"), password=data.get("password"))
         return with_totp_cookie(JSONResponse({"setup": setup}), TOTP_SETUP_COOKIE, ticket, 600)
 
     @app.post("/api/team-identity/totp/confirm")
@@ -226,7 +237,8 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         limit(request, "team_totp_confirm", 12, 900)
         data = await payload(request)
         user = team_write(request) if not data.get("with_grant") else None
-        result = identity().totp_confirm(request.cookies.get(TOTP_SETUP_COOKIE), data.get("code"), session_user=user)
+        result = identity().totp_confirm(request.cookies.get(TOTP_SETUP_COOKIE), data.get("code"), session_user=user,
+                                         keep_token=request.cookies.get(team_cookie) if user else None)
         return clear_totp_cookie(JSONResponse(result), TOTP_SETUP_COOKIE)
 
     # There is deliberately no route to turn Google Authenticator off. A lost
@@ -237,6 +249,10 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         limit(request, "team_grant", 12, 3600)
         data = await payload(request)
         return identity().issue_grant(user_id, data.get("purpose"), data.get("reason"), user)
+
+    @app.get("/api/team-identity/enrolled")
+    async def team_enrolled(user=Depends(team_actor)):
+        return {"enrolled": identity().enrolled_ids(user)}
 
     @app.put("/api/team-identity/users/{user_id}/role")
     async def team_set_role(user_id: str, request: Request, user=Depends(team_write)):

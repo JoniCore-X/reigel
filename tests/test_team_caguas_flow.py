@@ -216,5 +216,12 @@ def test_preview_builder_ignores_commercial_path_dotenv_and_external_services(tm
         assert dashboard["metrics"]["leads"] >= 1
         assert "DEMO" in client.get("/api/settings").json()["business"]["market"]
         assert all("ficticio" in item["name"] for item in client.get("/api/leads").json()["leads"])
+    with TestClient(app) as newcomer:
+        # The synthetic account without Google Authenticator needs its printed invitation code before the QR.
+        first = newcomer.post("/api/auth/login", json={"email": preview_team_caguas.NEW_EMAIL, "password": preview_team_caguas.NEW_PASSWORD})
+        assert first.status_code == 200 and first.json()["invitation_required"] is True
+        assert newcomer.post("/api/team-identity/totp/enroll", json={}).status_code == 401
+        setup = newcomer.post("/api/team-identity/totp/enroll", json={"invitation_code": preview_team_caguas.NEW_INVITATION_CODE})
+        assert setup.status_code == 200 and setup.json()["setup"]["qr"].startswith("data:image/svg+xml")
     assert calls and not environment_calls and not network_calls
     assert commercial_sentinel.read_bytes() == sentinel_bytes

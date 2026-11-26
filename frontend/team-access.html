@@ -7,7 +7,7 @@
   <title>Team Access · R.E.I.G.E.L.</title>
   <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
   <link rel="stylesheet" href="/static/css/identity.css?v=3">
-  <script src="/static/js/team-access.js?v=4" defer></script>
+  <script src="/static/js/team-access.js?v=5" defer></script>
 </head>
 <body class="team-access">
   <main class="id-card">
@@ -20,9 +20,11 @@
 
     <section id="guest-view" hidden>
       <form id="grant-setup-form">
-        <h2 class="id-subtitle">Tengo un código del administrador</h2>
+        <h2 class="id-subtitle">Tengo un código de invitación o de recuperación</h2>
+        <p class="id-note">El código lo entrega en persona quien te dio acceso. Se usa una sola vez y nadie del equipo te lo pedirá por correo ni por chat.</p>
         <label>Correo del equipo<input name="email" type="email" autocomplete="username" required></label>
-        <label>Código de registro<input name="grant_code" autocomplete="off" required></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+        <label>Código de un solo uso<input name="grant_code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXX-XXXX-XXXX-XXXX" required></label>
         <button class="id-button" type="submit">Configurar Google Authenticator</button>
       </form>
       <p class="id-note id-center">Sin registro público ni acceso por redes sociales</p>
@@ -54,7 +56,7 @@
       <div class="id-section">
         <h2>Google Authenticator</h2>
         <p id="totp-state" class="id-note"></p>
-        <p class="id-note">Es obligatorio para todo el equipo y no se puede desactivar. Si pierdes el teléfono, pide a un administrador un código de recuperación.</p>
+        <p class="id-note">Es obligatorio para todo el equipo y no se puede desactivar. Al cambiar de teléfono se cierran tus otras sesiones. Si pierdes el teléfono, pide a un administrador un código de recuperación.</p>
         <form id="manage-totp-form">
           <label>Código actual<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required></label>
           <div class="id-actions">
@@ -66,7 +68,8 @@
         <h2>Administración de accesos</h2>
         <form id="grant-form">
           <label>Persona<select name="user_id" id="grant-user" required></select></label>
-          <label>Tipo<select name="purpose"><option value="enroll">Primer registro</option><option value="recovery">Recuperación (reemplaza su autenticador)</option></select></label>
+          <label>Tipo<select name="purpose"><option value="enroll">Invitación (primer registro)</option><option value="recovery">Recuperación (reemplaza su autenticador)</option></select></label>
+          <p class="id-note">Un administrador emite códigos solo para asesores; solo el propietario los emite para administradores. Los códigos del propietario se obtienen en el servidor.</p>
           <label>Motivo<input name="reason" maxlength="200" required></label>
           <button class="id-button" type="submit">Emitir código de un solo uso</button>
         </form>

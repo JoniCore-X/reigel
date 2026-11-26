@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -29,6 +31,29 @@ class DomainError(ValueError):
         super().__init__(detail)
         self.detail = detail
         self.status = status
+
+
+# Network of the current request, already truncated (see client_network). Set by the
+# HTTP middleware; None outside a request (scripts, tests calling the store directly).
+CLIENT_NET: contextvars.ContextVar = contextvars.ContextVar("reigel_client_net", default=None)
+
+
+def client_network(host) -> str | None:
+    """Privacy-preserving form of a client address: IPv4 /24, IPv6 /48, never the full address."""
+    try:
+        address = ipaddress.ip_address(host)
+    except (TypeError, ValueError):
+        return None
+    if address.version == 6 and address.ipv4_mapped:
+        address = address.ipv4_mapped
+    prefix = 24 if address.version == 4 else 48
+    return str(ipaddress.ip_network(f"{address}/{prefix}", strict=False))
+
+
+def record_security(db, realm, actor_id, action, subject_id=None) -> None:
+    """Identity and security audit row; stores only the truncated client network."""
+    db.execute("INSERT INTO identity_audit(id,realm,actor_id,action,subject_id,created_at,client_net) VALUES(?,?,?,?,?,?,?)",
+               (uid(), realm, actor_id, action, subject_id, stamp(), CLIENT_NET.get()))
 
 
 def now() -> datetime:
@@ -343,12 +368,23 @@ class Store(OperationsMixin, TeamAccessMixin):
             raise DomainError("Campos de cuenta no válidos.", 422)
         if actor["role"] != "admin" and "active" in data:
             raise DomainError("Solo un administrador puede activar cuentas.", 403)
+        if "password" in data and actor["id"] == user_id:
+            # Your own password changes only through /api/auth/password, which asks for the current one.
+            raise DomainError("Cambia tu contraseña desde «Cambiar contraseña», con tu contraseña actual.", 403)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
             if not row:
                 raise DomainError("Cuenta no encontrada.", 404)
             old = user_dict(row)
+            if old["role"] == "admin" and not actor.get("is_owner"):
+                # Administrators manage advisors only. The owner alone changes another
+                # administrator or the owner; an administrator may adjust only the
+                # schedule of their own account, never its name, password or status.
+                if actor["id"] != user_id:
+                    raise DomainError("Solo el propietario puede modificar a un administrador o al propietario.", 403)
+                if {"name", "password", "active"} & set(data):
+                    raise DomainError("Solo el propietario puede cambiar el nombre, la contraseña o el estado de un administrador.", 403)
             if "active" in data and old["is_owner"] and data["active"] is not True:
                 raise DomainError("La cuenta del propietario no se puede desactivar.", 409)
             if "active" in data and old["role"] == "admin" and actor["id"] != user_id and not actor.get("is_owner"):
@@ -420,8 +456,10 @@ class Store(OperationsMixin, TeamAccessMixin):
                 enrolled = db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (row["id"],)).fetchone()
                 self.audit(db, user_dict(row), "auth.password_ok", row["id"])
                 return None, {"mfa": "totp" if enrolled else "enroll", "user_id": row["id"]}
-            # Same single write on every failure path, committed before the error.
-            self.audit(db, None, "auth.login_failed")
+            # Same writes on every failure path, committed before the error. The account id
+            # (never the password) is recorded when the email matches an active account.
+            self.audit(db, None, "auth.login_failed", row["id"] if row else None)
+            record_security(db, "team", None, "auth.login_failed", row["id"] if row else None)
         raise DomainError("Correo o contraseña incorrectos.", 401)
 
     def issue_session(self, db, user_id) -> str:

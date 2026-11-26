@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from .core import ROOT, DomainError, Store, calendar_file, site_origin, text
+from .core import CLIENT_NET, ROOT, DomainError, Store, calendar_file, client_network, site_origin, text
 from .ia_workspace import AIWorkspace, VISITOR_DAYS
 
 COOKIE = "powersolar_session"
@@ -74,8 +74,9 @@ class RateLimiter:
             raise DomainError("Demasiadas solicitudes. Vuelve a intentarlo más tarde.", 429)
         bucket.append(current)
 
-    def clear(self, request, key):
-        client = request.client.host if request.client else "unknown"
+    def clear(self, request, key, client=None):
+        if client is None:
+            client = request.client.host if request.client else "unknown"
         self.buckets.pop((key, client), None)
 
 
@@ -169,6 +170,8 @@ def create_app(db_path=None, *, load_env=None):
 
     @app.middleware("http")
     async def boundaries(request: Request, call_next):
+        # Audit rows keep only the truncated network of the client (IPv4 /24, IPv6 /48).
+        CLIENT_NET.set(client_network(request.client.host if request.client else None))
         frame_sources = "'self' https://docs.google.com" if request.url.path == "/contacto" else "'self'"
         headers = {
             "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -253,6 +256,8 @@ def create_app(db_path=None, *, load_env=None):
 
     from .identity_api import register_identity
     register_identity(app, production=production, team_cookie=COOKIE, team_actor=actor, payload=payload)
+    # Fail closed, loudly: existing authenticators without their key are never re-keyed.
+    app.state.identity.check_key_at_startup()
 
     @app.get("/health")
     async def health():
@@ -266,10 +271,15 @@ def create_app(db_path=None, *, load_env=None):
         data = await payload(request)
         account = data.get("email", "")
         account = account.strip().casefold() if isinstance(account, str) else ""
-        failure_key = "login:" + hashlib.sha256(account.encode()).hexdigest()
+        account_hash = hashlib.sha256(account.encode()).hexdigest()
+        failure_key = "login:" + account_hash
         app.state.limiter.check(request, failure_key, 8, 900)
+        # Per-account bucket shared by every address: 20 password attempts per hour (H4).
+        account_key = "login_account:" + account_hash
+        app.state.limiter.check(request, account_key, 20, 3600, client="account")
         _, step = app.state.store.login(data.get("email"), data.get("password"))
         app.state.limiter.clear(request, failure_key)
+        app.state.limiter.clear(request, account_key, client="account")
         # Google Authenticator is mandatory: the password never sets the session cookie here.
         return app.state.team_mfa_response(step)
 

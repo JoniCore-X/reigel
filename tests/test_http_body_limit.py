@@ -75,7 +75,7 @@ def test_valid_chunked_json_is_replayed_intact(isolated_app, body_size):
             # The replayed body reached the password check: a correct password
             # yields only the mandatory Google Authenticator enrollment step.
             assert response.status_code == 200
-            assert response.json() == {"mfa_required": True, "enrollment_required": True}
+            assert response.json() == {"mfa_required": True, "enrollment_required": True, "invitation_required": True}
             cookie = response.headers["set-cookie"].lower()
             assert "reigel_team_enroll=" in cookie and "httponly" in cookie and "samesite=strict" in cookie
             assert "powersolar_session=" not in cookie

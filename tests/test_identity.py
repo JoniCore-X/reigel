@@ -14,7 +14,7 @@ from reigel.api import COOKIE, create_app
 from reigel.core import password_matches
 from reigel.identity_api import CUSTOMER_COOKIE
 from reigel import totp
-from team_auth import allow, fresh_code, login as login_with_code, secret_for
+from team_auth import allow, fresh_code, invitation, login as login_with_code, secret_for
 
 PASSWORD = "Prueba-Identidad-2026!"
 BASE = "http://localhost"
@@ -294,14 +294,19 @@ def test_otpauth_uri_is_google_authenticator_compatible():
 def first_login(app, email):
     browser = client(app)
     response = browser.post("/api/auth/login", json={"email": email, "password": PASSWORD})
-    assert response.status_code == 200 and response.json() == {"mfa_required": True, "enrollment_required": True}
+    assert response.status_code == 200 and response.json() == {"mfa_required": True, "enrollment_required": True, "invitation_required": True}
     assert COOKIE not in browser.cookies
     return browser
 
 
+def enroll(browser, app, email):
+    """Second step of a first login: the invitation code of that same account shows the QR."""
+    return browser.post("/api/team-identity/totp/enroll", json={"invitation_code": invitation(app, email)})
+
+
 def test_setup_returns_a_qr_for_the_same_otpauth_uri(world):
     app, _, _, consultant, _ = world
-    setup = first_login(app, consultant["email"]).post("/api/team-identity/totp/enroll").json()["setup"]
+    setup = enroll(first_login(app, consultant["email"]), app, consultant["email"]).json()["setup"]
     assert setup["qr"].startswith("data:image/svg+xml")
     expected = segno.make(setup["otpauth_uri"], error="m", micro=False).svg_data_uri(scale=6, border=4, dark="#000", light="#fff")
     assert setup["qr"] == expected
@@ -341,7 +346,7 @@ def test_repeated_wrong_codes_lock_across_new_password_steps(world):
 def test_secret_is_encrypted_and_bound_to_its_user(world):
     app, _, _, consultant, other = world
     browser = first_login(app, consultant["email"])
-    setup = browser.post("/api/team-identity/totp/enroll").json()["setup"]
+    setup = enroll(browser, app, consultant["email"]).json()["setup"]
     secret = secret_of(setup)
     assert browser.post("/api/team-identity/totp/enroll/confirm", json={"code": step_code(secret)}).status_code == 200
     with sqlite3.connect(app.state.store.path) as db:
@@ -402,13 +407,15 @@ def test_recovery_is_admin_only_audited_single_use_and_replaces_secret(world):
     assert administrator.post(f"/api/team-identity/users/{owner['id']}/grant", json={"purpose": "recovery", "reason": "dueño"}).status_code == 403
     code = administrator.post(f"/api/team-identity/users/{consultant['id']}/grant", json={"purpose": "recovery", "reason": "teléfono perdido"}).json()["code"]
     device = client(app)
-    assert device.post("/api/team-identity/totp/setup", json={"email": "otro@example.test", "grant_code": code}).status_code == 401
-    setup = device.post("/api/team-identity/totp/setup", json={"email": consultant["email"], "grant_code": code}).json()["setup"]
+    assert device.post("/api/team-identity/totp/setup", json={"email": "otro@example.test", "password": PASSWORD, "grant_code": code}).status_code == 401
+    # The code alone is not enough: the password of that same account is required too.
+    assert device.post("/api/team-identity/totp/setup", json={"email": consultant["email"], "grant_code": code}).status_code == 401
+    setup = device.post("/api/team-identity/totp/setup", json={"email": consultant["email"], "password": PASSWORD, "grant_code": code}).json()["setup"]
     fresh = secret_of(setup)
     assert device.post("/api/team-identity/totp/confirm", json={"code": step_code(fresh), "with_grant": True}).status_code == 200
     assert team.get("/api/auth/me").status_code == 401
     assert password_step(app, consultant["email"]).post("/api/team-identity/totp/login", json={"code": step_code(lost, 1)}).status_code == 401
-    assert client(app).post("/api/team-identity/totp/setup", json={"email": consultant["email"], "grant_code": code}).status_code == 401
+    assert client(app).post("/api/team-identity/totp/setup", json={"email": consultant["email"], "password": PASSWORD, "grant_code": code}).status_code == 401
     with sqlite3.connect(app.state.store.path) as db:
         actions = {row[0] for row in db.execute("SELECT action FROM identity_audit WHERE realm='team'")}
         stored = db.execute("SELECT token_hash FROM team_access_grants").fetchone()[0]
@@ -423,7 +430,9 @@ def test_first_login_without_totp_must_enroll_before_any_session(world):
         assert browser.get(path).status_code == 401
     # The enrollment ticket cannot stand in for the code of an enrolled account.
     assert browser.post("/api/team-identity/totp/login", json={"code": "123456"}).status_code == 401
-    setup = browser.post("/api/team-identity/totp/enroll").json()["setup"]
+    # The password alone never shows the QR: an invitation code is required.
+    assert browser.post("/api/team-identity/totp/enroll", json={}).status_code == 401
+    setup = enroll(browser, app, owner["email"]).json()["setup"]
     secret = secret_of(setup)
     wrong = "000000" if step_code(secret) != "000000" else "111111"
     assert browser.post("/api/team-identity/totp/enroll/confirm", json={"code": wrong}).status_code == 401
@@ -436,20 +445,20 @@ def test_first_login_without_totp_must_enroll_before_any_session(world):
     # From now on the password leads to the code step, never to a second enrollment.
     later = client(app).post("/api/auth/login", json={"email": owner["email"], "password": PASSWORD})
     assert later.json() == {"mfa_required": True}
-    assert client(app).post("/api/team-identity/totp/enroll").status_code == 401
+    assert client(app).post("/api/team-identity/totp/enroll", json={}).status_code == 401
 
 
 def test_enrollment_ticket_never_replaces_an_existing_authenticator(world):
     app, _, _, consultant, _ = world
     early = first_login(app, consultant["email"])
-    assert early.post("/api/team-identity/totp/enroll").status_code == 200
+    assert enroll(early, app, consultant["email"]).status_code == 200
     secret = enrolled_secret(app, consultant["email"])
     with sqlite3.connect(app.state.store.path) as db:
         db.execute("INSERT INTO team_enroll_challenges VALUES(?,?,?)",
                    (hashlib.sha256(b"forged").hexdigest(), consultant["id"], "2999-01-01T00:00:00+00:00"))
     forged = client(app)
     forged.cookies.set("reigel_team_enroll", "forged", path="/api/team-identity/totp")
-    assert forged.post("/api/team-identity/totp/enroll").status_code == 409
+    assert forged.post("/api/team-identity/totp/enroll", json={"invitation_code": "AAAA-AAAA-AAAA-AAAA"}).status_code == 409
     assert secret_for(app.state.store, consultant["email"]) == secret
 
 
@@ -463,9 +472,10 @@ def test_old_sessions_without_totp_grant_no_access(world):
     for path in ("/api/auth/me", "/api/leads", "/api/team-identity/me"):
         assert legacy.get(path).status_code == 401
     assert legacy.get("/api/ia/bootstrap").json()["owner"] == "visitor"
-    # Only after the person enrolls does that account have access again.
+    # Registering Google Authenticator closes every earlier session: the old one never comes back.
     enrolled_secret(app, consultant["email"])
-    assert legacy.get("/api/auth/me").status_code == 200
+    assert legacy.get("/api/auth/me").status_code == 401
+    assert team_login(app, consultant["email"]).get("/api/auth/me").status_code == 200
 
 
 def test_legacy_scrypt_password_keeps_working_and_upgrades(world):

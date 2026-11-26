@@ -360,6 +360,9 @@
 .enroll-manual{margin:0 0 12px;font-size:13px}
 .enroll-manual summary{cursor:pointer;color:var(--blue,#1b55c4);font-weight:600}
 .enroll-secret{font-family:Consolas,monospace;font-size:15px;letter-spacing:.12em;word-break:break-all;user-select:all}
+/* Código de invitación o recuperación: se muestra una vez y se entrega en persona. */
+.grant-code{font-size:20px;text-align:center;margin:12px 0;padding:10px;border:1px dashed var(--line,#dde3ec);border-radius:10px}
+.grant-steps{margin:10px 0 14px;padding-left:20px;display:grid;gap:6px;font-size:14px}
 .allow-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}
 .allow-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line,#dde3ec);border-radius:10px;flex-wrap:wrap}
 .allow-list li>div{min-width:0;display:grid;gap:2px}

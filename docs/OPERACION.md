@@ -22,4 +22,16 @@ Los cambios de CRM y privacidad incluyen migraciones aditivas ejecutadas por `St
 
 Copias consistentes: `python scripts/backup.py` (o `--db RUTA` para una base concreta). El script abre la base en solo lectura y no construye `Store`, así que la copia refleja la base tal como estaba, antes de cualquier migración; si la base no existe, falla sin crear nada. Para recuperar, detener el servicio, conservar base/auxiliares, elegir una copia en una ubicación nueva y configurar REIGEL_DB_PATH. No restaurar sobre SQLite abierto ni compartirlo con OneDrive. Las copias no se suben a ningún servicio.
 
+Clave de Google Authenticator: los secretos TOTP del equipo se cifran con `REIGEL_TOTP_KEY` o, si no existe, con el archivo `<base>.totp.key` junto a la base. `scripts/backup.py` copia ese archivo junto a la copia como `<copia>.totp.key` y avisa de guardarlo aparte y en un lugar seguro; si la clave viene de `REIGEL_TOTP_KEY`, recuerda que no está en la copia. Quien tenga la base y la clave puede leer los secretos, así que no se guardan juntas ni en OneDrive ni en una carpeta compartida.
+
+Restaurar en una ruta nueva sin perder Google Authenticator:
+
+1. Detener el servicio.
+2. Copiar la base a la ruta nueva (por ejemplo `D:\PowerSolar\reigel.db`) y copiar la clave con el mismo nombre más `.totp.key` (`D:\PowerSolar\reigel.db.totp.key`). Si la clave está en `REIGEL_TOTP_KEY`, mantener esa variable con el mismo valor y no hace falta archivo.
+3. Definir `REIGEL_DB_PATH` con la ruta nueva.
+4. Comprobar antes de arrancar: `.\.venv\Scripts\python.exe scripts\doctor.py --sin-pruebas --base D:\PowerSolar\reigel.db`. Debe decir `[OK] Clave de Google Authenticator`.
+5. Arrancar y entrar con contraseña y código.
+
+Si falta la clave y hay cuentas registradas, el servidor no genera una clave nueva: las operaciones de Google Authenticator responden 503 y el registro del servidor y `doctor.py` indican qué restaurar. Solo cuando no existe ningún autenticador registrado se crea una clave nueva. Sin la clave original, la única salida es emitir un código de recuperación para cada persona.
+
 Esta instalación escucha sólo en la computadora local. Atender clientes externos requiere un servidor accesible y HTTPS; no hay publicación ni hosting verificados. Docker/Compose son preparación y no prueban despliegue ni que Ollama esté disponible dentro del contenedor. El modelo no está incluido en Docker.

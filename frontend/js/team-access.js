@@ -69,7 +69,8 @@
     $('admin-section').hidden = !isAdmin;
     if (isAdmin) {
       const {users} = await api('/api/team');
-      const others = users.filter(item => item.id !== user.id && item.active && (item.role !== 'admin' || user.is_owner));
+      // Mirrors the server rules (the server decides): never the owner; administrators only for the owner.
+      const others = users.filter(item => item.id !== user.id && item.active && !item.is_owner && (item.role !== 'admin' || user.is_owner));
       options($('grant-user'), others);
       options($('role-user'), others.filter(item => item.role !== 'admin'));
     }
@@ -108,7 +109,7 @@
       return;
     }
     await renderMember();
-    notify('Nuevo teléfono registrado en Google Authenticator.', true);
+    notify('Nuevo teléfono registrado en Google Authenticator. Se cerraron tus otras sesiones.', true);
   });
   submit('manage-totp-form', async (data, form) => {
     state.withGrant = false;
@@ -121,7 +122,8 @@
     form.elements.reason.value = '';
     $('grant-code').textContent = result.code;
     $('grant-code').hidden = false;
-    notify('Entrega este código por un canal seguro. Vence en 60 minutos y no se volverá a mostrar.', true);
+    const expires = new Date(result.expires_at).toLocaleString('es-PR', {dateStyle: 'medium', timeStyle: 'short'});
+    notify(`Entrega este código en persona; no lo envíes por correo ni por chat. Es de un solo uso, vence el ${expires} y no se volverá a mostrar.`, true);
   });
   submit('role-form', async data => {
     await api(`/api/team-identity/users/${encodeURIComponent(data.user_id)}/role`, {method: 'PUT', body: {role: data.role}});
