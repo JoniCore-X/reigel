@@ -4,9 +4,10 @@ Guía para poner R.E.I.G.E.L. en internet en un servidor propio o alquilado (VPS
 con un dominio. Está escrita para seguirla paso a paso, copiando los comandos.
 
 **Estado honesto (25 de noviembre de 2026):** los archivos están preparados y
-revisados, pero **nadie ha desplegado todavía**. En la computadora de desarrollo
-Docker está instalado pero apagado y no hay imágenes descargadas, así que la
-imagen nunca se construyó ni se arrancó. Lo que sí se comprobó y lo que no está
+revisados, pero **nadie ha desplegado todavía** en un servidor. El 26 de
+noviembre la pila se construyó y arrancó una vez en la computadora de desarrollo,
+con datos de demostración y el dominio `localhost` (ver el Registro). Lo que sí
+se comprobó y lo que no está
 en [Qué se probó y qué no](#qué-se-probó-y-qué-no). El primer arranque real es
 también la primera prueba real: hazlo con calma y sigue la lista de verificación.
 
@@ -546,17 +547,35 @@ Probado en la computadora de desarrollo, sin descargas:
   o no corresponde.
 - Sintaxis de `deploy/backup.sh` y `deploy/restore.sh` (`bash -n`).
 
-**No probado** (requiere descargas o un servidor):
+Probado el 26 de noviembre de 2026 con Docker Desktop en Windows, base nueva,
+cuenta ficticia y `DOMAIN=localhost` (certificado interno de Caddy):
 
-- Construir la imagen y arrancar los contenedores. En particular: que la
-  aplicación funcione con el sistema de archivos en solo lectura; que Caddy
-  arranque con `cap_drop: ALL` más `NET_BIND_SERVICE` y solo lectura; que Ollama
-  arranque sin capacidades y compartiendo la red de la aplicación.
-- La obtención del certificado HTTPS, que exige dominio y puertos reales.
-- La ejecución real de `deploy/backup.sh` y `deploy/restore.sh` con Docker.
-- La velocidad y el consumo de la IA en un servidor.
+- La imagen se construye; `app` queda «healthy» y Caddy arranca con
+  `cap_drop: ALL` más `NET_BIND_SERVICE` y solo lectura.
+- HTTP redirige a HTTPS (308); `/`, `/captacion`, `/proceso`, `/chat`, `/ia`,
+  `/app`, `/app/acceso` y `/health` responden 200; las rutas privadas, 401 sin
+  sesión. El puerto 8765 no es alcanzable desde fuera del contenedor.
+- Dentro del contenedor: uid 10001, sin capacidades, código en solo lectura,
+  `/app/data` con permisos 0700 y la clave con 0600.
+- Ruta A completa: `bootstrap.py`, invitación con `team_recovery.py`,
+  contraseña, registro de Google Authenticator y acceso. Tras
+  `docker compose restart app`, la sesión, la contraseña y la clave siguen
+  válidas (un código nuevo del mismo autenticador entra).
+- `deploy/backup.sh` (SHA256 verificado, base y clave en carpetas distintas) y
+  `deploy/restore.sh` con esa misma copia; el servicio vuelve a «healthy».
+- Apagado ordenado en 2 segundos, sin errores en los registros de la aplicación.
+  Consumo en reposo: unos 50 MB la aplicación y 12 MB Caddy.
+- `deploy_check.py` marca ERROR en «Dirección de los visitantes» en Docker
+  Desktop, como advierte la nota para Windows; en Linux debe quedar en OK.
+
+**No probado** (requiere un servidor o más descargas):
+
+- La obtención del certificado HTTPS público, que exige dominio y puertos reales.
+- Linux real: la dirección real del visitante y los permisos del volumen.
+- El perfil `ia`: Ollama sin capacidades y compartiendo la red de la aplicación;
+  la velocidad y el consumo de la IA.
 - La migración de la base comercial, que no se abrió ni se copió.
-- El Caddyfile se revisó leyéndolo; no se validó con `caddy validate`.
+- La retención de copias a 30 días y `caddy validate`.
 
 Si algo de la lista «no probado» falla en el primer arranque, lo esperable es
 un contenedor que no inicia y un mensaje claro en `docker compose logs`; los
@@ -591,3 +610,12 @@ en curso sobre el acceso del equipo y ese archivo es donde suele anotarse.)
   `REIGEL_LOCAL_MODEL` del `.env` local (un nombre de modelo, no un secreto).
   Las validaciones siguientes se hicieron en una carpeta temporal con un `.env`
   de ejemplo.
+
+**26 de noviembre de 2026 — primera prueba real con Docker.** Hecha en una copia
+aislada del commit `4fb002d`, con un `.env` de relleno; no se leyó el `.env`
+real ni la base comercial. Resultado en «Qué se probó y qué no». Dos avisos:
+una construcción hecha con el disco lleno dejó en la caché una capa con
+archivos vacíos y la aplicación no arrancaba; se resolvió con
+`docker compose build --no-cache`. Y `deploy/backup.sh` necesita permiso de
+escritura en las carpetas de destino (por defecto `/var/backups/reigel`).
+Al terminar se eliminaron contenedores, volúmenes e imágenes de la prueba.
