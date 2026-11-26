@@ -2894,3 +2894,71 @@ a medias.
 - **Sin verificar:** tema claro de la hoja, anchos de móvil, lectores de pantalla,
   Safari y Firefox.
 - **Versiones:** `operations.js?v=11`, `operations.css?v=14`.
+
+## Fase F · La conversación llena la memoria (26 de noviembre de 2026)
+
+`reigel/agent/extract.py`. Hasta aquí la memoria la escribía una persona. Ahora la
+conversación la llena sola, con una regla dura: **se extrae con patrones, nunca con el
+modelo, y lo que se guarda es una frase fija escrita de antemano**, no el texto del
+visitante.
+
+Las dos razones son de seguridad, no de estilo. Primera: una creencia vuelve al modelo
+en la respuesta siguiente (fase D), así que guardar texto escrito por un visitante
+abriría una vía para meterle instrucciones; dejando el texto original en la conversación
+y guardando frases fijas, esa vía queda cerrada. Segunda: lo que se extrae hay que poder
+auditarlo, y un patrón se lee, se prueba y se discute.
+
+La procedencia la declara cada patrón y decide si la creencia sirve para hablar:
+
+- Lo que la persona contestó a una pregunta directa del chat (municipio de una lista,
+  importe numérico, etiqueta fija) entra como `lead_said`: repetirlo no interpreta nada.
+- Una negativa literal («no me llamen») también es `lead_said`. No hace falta leer entre
+  líneas y tiene que llegar al plan de llamada, que solo muestra lo usable.
+- Todo lo demás entra como `pattern`, una procedencia nueva: **no se usa al hablar hasta
+  que alguien la aprueba**. Se revisa en `/api/memory/pending`, visible en la vista
+  R.E.I.G.E.L. («Lo que dedujo de las conversaciones»), con el ámbito de siempre: un
+  asesor solo revisa la memoria de sus registros.
+
+Reglas que impiden que la memoria derive: una lectura no sustituye lo que la persona
+contestó (`AUTHORITY`); repetir lo mismo no inserta nada; un mensaje deja como mucho
+cuatro creencias; y no se extrae de una baja comercial, de una solicitud de privacidad
+ni de una conversación sin ficha.
+
+### Verificación (local)
+
+- `tests/test_agent_extract.py`: 34 casos. Las cinco objeciones con su significado
+  propio, que ninguna afirmación lleva cifras, que nada escrito por el visitante viaja a
+  la memoria, un asunto por mensaje, el tope de cuatro, la deduplicación, la jerarquía de
+  procedencias, el recorrido por el chat público, la baja y la solicitud de privacidad
+  sin extraer nada, el canal, y el ámbito de la cola por asesor.
+- Suite completa de Python y de Node en verde (cifras en el commit).
+- **Navegador, vista previa sintética 8877:** una cita reservada por el chat público y
+  después el mensaje «Me interesa pero es muy caro y tengo que hablar con mi esposa»
+  deja dos creencias en la cola, con el nombre del registro, el asunto, la procedencia y
+  la confianza, ambas marcadas **«No se usa al hablar»**.
+
+### Hallazgos
+
+- **La etiqueta mentía sobre la procedencia.** La primera versión reutilizaba `inferred`
+  y la pantalla decía «Deducción del modelo» para una lectura donde no intervino ningún
+  modelo. En un módulo cuyo valor es la procedencia, eso es el defecto, no un detalle de
+  texto: se añadió la procedencia `pattern` («Leído por un patrón»), que no aparece en el
+  desplegable de escribir una creencia a mano, porque nadie debería atribuírsela.
+- **En `/chat`, «no me llamen» ya es una baja comercial** (`conversation._OPT_OUT` cubre
+  `no me llam\w*`), así que ahí no se extrae nada: la baja es más fuerte que la creencia.
+  En un canal no lo es (`channels._opt_out` solo cubre escribir y contactar), y ahí sí
+  queda la creencia que el plan de llamada necesita. **Vale la pena mirarlo:** rechazar
+  llamadas y rechazar todo mensaje no son lo mismo, y en `/chat` se tratan igual. No se
+  cambió: es una decisión de política comercial, no de implementación.
+- **`_learn_from` comprueba que exista la tabla de preferencias** en lugar de tragarse el
+  error: un `except` ahí habría minado una conversación dada de baja.
+
+### Límites
+
+- **El agente sigue sin hablar con nadie.** Esto llena la memoria; no envía nada.
+- **Un visitante anónimo no deja memoria.** Hasta que exista una ficha no hay a quién
+  atar la creencia, así que en `/chat` la extracción empieza al reservar.
+- **Los patrones son de español de Puerto Rico y sin tildes.** Un mensaje en inglés o con
+  otra forma de decirlo no deja nada: no falla, simplemente no extrae.
+- **Sin verificar:** la cola en tema claro, anchos de móvil, lectores de pantalla.
+- **Versiones:** `operations.js?v=13`, `app.js?v=14`, `operations.css?v=14`.

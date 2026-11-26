@@ -115,6 +115,11 @@ def register_routes(app, actor, payload):
 
     # Memoria del agente. El ámbito es el del propio registro: un asesor solo ve y
     # cambia la memoria de los suyos, porque `memory` pasa por `store._lead`.
+    @app.get("/api/memory/pending")
+    async def pending_beliefs(user=Depends(actor)):
+        """Lo que el agente dedujo y espera revisión. Un asesor ve la de sus registros."""
+        return memory.pending(app.state.store, user)
+
     @app.get("/api/leads/{lead_id}/memory")
     async def lead_memory(lead_id: str, user=Depends(actor)):
         return memory.history(app.state.store, lead_id, user)

@@ -33,13 +33,22 @@ SOURCES = {
     "team_entered": {"usable": True, "ttl_days": 365, "label": "El equipo lo registró"},
     "record": {"usable": True, "ttl_days": 90, "label": "Dato del propio registro"},
     "verified": {"usable": True, "ttl_days": 30, "label": "Fuente verificada"},
+    # Lo que leyó un patrón sobre el texto de la persona. No es una deducción del
+    # modelo —no intervino ninguno— y tampoco es lo que ella afirmó: es una lectura.
+    # Decirlo con su nombre es la mitad del valor de guardar la procedencia.
+    "pattern": {"usable": False, "ttl_days": 60, "label": "Leído por un patrón"},
     "inferred": {"usable": False, "ttl_days": 30, "label": "Deducción del modelo"},
 }
+# Lo que una persona puede declarar al escribir una creencia a mano. `pattern` no
+# está: lo escribe la extracción, y nadie debería poder atribuirse esa procedencia.
+HUMAN_SOURCES = ("lead_said", "team_entered", "record", "verified", "inferred")
 # Asuntos sobre los que el agente puede recordar algo. Uno por creencia vigente:
 # una creencia nueva sobre el mismo asunto sustituye a la anterior.
 SUBJECTS = {
     "vivienda": "Tipo de vivienda",
+    "ubicacion": "Dónde vive",
     "consumo": "Consumo o factura",
+    "respaldo": "Qué quiere respaldar",
     "motivo": "Qué busca resolver",
     "objecion": "Objeción expresada",
     "decisor": "Quién decide",
@@ -91,8 +100,10 @@ def usable(row, now):
 def view(row, now=None):
     now = now or datetime.now(UTC)
     source = SOURCES.get(row["source_kind"], {})
+    keys = row.keys()
     return {
         "id": row["id"], "lead_id": row["lead_id"], "subject": row["subject"],
+        "lead_name": row["lead_name"] if "lead_name" in keys else None,
         "subject_label": SUBJECTS.get(row["subject"], row["subject"]),
         "claim": row["claim"], "source_kind": row["source_kind"],
         "source_label": source.get("label", row["source_kind"]),
@@ -171,9 +182,38 @@ def history(store, lead_id, actor, *, now=None):
         "beliefs": rows,
         "usable": [row for row in rows if row["usable"]],
         "subjects": SUBJECTS,
-        "sources": {name: spec["label"] for name, spec in SOURCES.items()},
+        "sources": {name: SOURCES[name]["label"] for name in HUMAN_SOURCES},
         "notice": ("Una deducción del modelo no se usa al hablar con un cliente hasta que"
                    " alguien la aprueba. Nada se borra: lo antiguo queda sustituido."),
+    }
+
+
+# La cola de revisión: vigente, sin sustituir, sin retirar, sin aprobar y deducida.
+_PENDING = ("SELECT b.*,l.name lead_name FROM agent_beliefs b JOIN leads l ON l.id=b.lead_id"
+            " WHERE b.superseded_by IS NULL AND b.retracted_at IS NULL AND b.approved_at IS NULL"
+            " AND b.source_kind IN ('inferred','pattern')")
+_ORDER = " ORDER BY b.confidence DESC,b.observed_at DESC LIMIT ?"
+PENDING_ALL = _PENDING + _ORDER
+PENDING_MINE = _PENDING + " AND l.advisor_id=?" + _ORDER
+
+
+def pending(store, actor, *, limit=60, now=None):
+    """Lo que el agente dedujo y nadie ha revisado todavía.
+
+    Sin esta cola, extraer creencias solo acumularía deducciones que nunca llegan a
+    usarse: `usable` es falso hasta que una persona las aprueba.
+    """
+    now = now or datetime.now(UTC)
+    with store.connect() as db:
+        rows = (db.execute(PENDING_ALL, (limit,)) if actor["role"] == "admin"
+                else db.execute(PENDING_MINE, (actor["id"], limit)))
+        beliefs = [view(row, now) for row in rows]
+    return {
+        "beliefs": [item for item in beliefs if item["state"] == "active"],
+        "subjects": SUBJECTS,
+        "notice": ("Son lecturas de patrones sobre lo que escribió la persona, no afirmaciones"
+                   " suyas. Ninguna se usa al hablar hasta que la apruebas; retirarla no borra"
+                   " nada ni atiende una solicitud de eliminación."),
     }
 
 

@@ -526,7 +526,7 @@ function memoryBeliefRow(belief,reload) {
   const row=node('li',{class:belief.usable?'is-usable':''},[
     node('div',{},[
       node('strong',{text:belief.claim}),
-      node('p',{class:'muted',text:`${belief.subject_label} · ${belief.source_label} · confianza ${Math.round(Number(belief.confidence)*100)}%`}),
+      node('p',{class:'muted',text:`${belief.lead_name?`${belief.lead_name} · `:''}${belief.subject_label} · ${belief.source_label} · confianza ${Math.round(Number(belief.confidence)*100)}%`}),
       node('small',{text:belief.retracted_reason
         ? `Retirada: ${belief.retracted_reason}`
         : `Observada ${dateTime(belief.observed_at)}${belief.expires_at?` · vence ${dateTime(belief.expires_at)}`:''}`}),
@@ -622,6 +622,40 @@ async function appendLeadMemory(leadId) {
   } catch(problem) {
     if(dialog.open)parent.append(node('p',{class:'field-help',
       text:`Memoria del agente no disponible: ${problem.message}`}));
+  }
+}
+// Extraer creencias sin revisarlas solo acumularía deducciones que nunca se usan:
+// `usable` es falso hasta que una persona las aprueba, así que la cola es la mitad
+// que falta de la extracción.
+async function appendBeliefQueue() {
+  const parent=$('#view-content');
+  const reload=async()=>{const old=$('#belief-queue');if(old)old.remove();await appendBeliefQueue();};
+  try {
+    const data=await api('/api/memory/pending');
+    if(state.view!=='automation'||!state.user)return;
+    const beliefs=data.beliefs||[];
+    const section=node('section',{class:'panel belief-queue'},[
+      node('header',{class:'panel-head'},[
+        node('div',{},[node('p',{class:'section-kicker',text:'MEMORIA DEL AGENTE / POR REVISAR'}),
+                       node('h2',{text:'Lo que dedujo de las conversaciones'})]),
+        node('span',{class:`badge ${beliefs.length?'orange':'green'}`,
+          text:beliefs.length?`${beliefs.length} por revisar`:'Nada pendiente'}),
+      ]),
+      node('div',{class:'panel-body'},[
+        beliefs.length
+          ? node('ul',{class:'belief-list'},beliefs.map(belief=>memoryBeliefRow(belief,reload)))
+          : node('p',{class:'field-help',
+              text:'Cuando una conversación deje algo que deducir, aparecerá aquí antes de usarse.'}),
+        node('p',{class:'hint',text:data.notice||''}),
+      ]),
+    ]);
+    section.id='belief-queue';
+    // Aprobar o retirar reconstruye el panel: va antes del simulador para que no
+    // salte al final de la vista cada vez que se revisa una creencia.
+    parent.insertBefore(section,$('.trainer-panel'));
+  } catch(problem) {
+    if(state.view==='automation')parent.append(node('p',{class:'field-help',
+      text:`Cola de memoria no disponible: ${problem.message}`}));
   }
 }
 const agentModes={auto:'Automático',approval:'Requiere aprobación',draft:'Borrador'};

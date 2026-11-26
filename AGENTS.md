@@ -36,6 +36,13 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   qué necesita esa persona, qué contestó ya y qué falta por preguntar. Se arma con reglas,
   nunca con el modelo, porque hace falta justo cuando el modelo falló. La pregunta se guarda
   enmascarada. Se engancha en `webchat.message` (parámetro `needs`) y en `channels.py`.
+- `agent/extract.py`: la conversación llena la memoria. Se extrae con patrones, nunca con
+  el modelo, y se guarda una frase fija escrita de antemano: el texto del visitante no
+  viaja a la memoria, que vuelve al modelo en la respuesta siguiente. Lo contestado a una
+  pregunta directa entra como `lead_said`; una negativa literal también; el resto como
+  `pattern`, que no se usa al hablar hasta que alguien lo aprueba en la cola de revisión
+  (`/api/memory/pending`). Una lectura no sustituye lo que la persona contestó
+  (`AUTHORITY`). No se extrae de una baja, de una solicitud de privacidad ni sin ficha.
 - `agent/memory.py`: memoria del agente sobre cada cliente. Solo se inserta: una revisión
   enlaza la anterior y nada se sobrescribe. Cada creencia lleva procedencia, confianza y
   vencimiento; una deducción del modelo no se usa al hablar hasta que una persona la
@@ -84,7 +91,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` (`ba8c80b`): 876 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1004 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.

@@ -252,6 +252,18 @@ def create_app(db_path=None, *, load_env=None):
             logging.getLogger(__name__).warning("No se pudo leer la memoria del agente.")
             return []
 
+    def extract_beliefs(context):
+        """La memoria se llena con patrones, nunca con el modelo, y un fallo aquí no
+        puede estropear la respuesta al visitante."""
+        try:
+            from .agent import extract
+            items = extract.candidates(context.get("message"), context.get("profile"))
+            if items:
+                extract.apply(app.state.store, context["lead_id"], items,
+                              conversation_id=context.get("conversation_id"))
+        except Exception:
+            logging.getLogger(__name__).warning("No se pudieron extraer creencias de la conversación.")
+
     def record_need(context):
         """El informe nunca bloquea ni rompe una respuesta al visitante."""
         try:
@@ -488,11 +500,11 @@ def create_app(db_path=None, *, load_env=None):
             ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"],
                                            remembered=remembered_for(brief.get("lead_id")),
                                            **reviewed(brief["incoming"], "chat"))
-        gaps, pending = [], []
+        gaps, pending, learned = [], [], []
         result = app.state.webchat.message(
             token, data.get("text"), data.get("request_id"),
             ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None,
-            gaps=gaps, needs=pending,
+            gaps=gaps, needs=pending, beliefs=learned,
         )
         if brief and ai_reply is None:
             # The model was asked and its draft was missing or withdrawn: the fallback was used.
@@ -503,6 +515,9 @@ def create_app(db_path=None, *, load_env=None):
         # El equipo recibe qué necesita la persona, no solo que alguien quedó esperando.
         for context in pending[:1]:
             record_need(context)
+        # Lo que la conversación deja como memoria, para que el seguimiento no empiece de cero.
+        for context in learned[:1]:
+            extract_beliefs(context)
         return result
 
     @app.post("/api/public/chat/book")

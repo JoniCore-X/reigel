@@ -293,6 +293,36 @@ def _record_need(store, conversation, reason, incoming_text):
         logging.getLogger(__name__).warning("No se pudo registrar el informe de necesidad (%s).", reason)
 
 
+def _learn_from(store, conversation, incoming_text):
+    """Lo que el mensaje deja en la memoria del agente: patrones, nunca el modelo.
+
+    Se extrae en los dos modos —conteste el agente o lo lleve una persona—, porque la
+    conversación informa igual. No se extrae de una conversación dada de baja ni de una
+    sin ficha: una creencia sin registro al que atarla no tiene dueño.
+    """
+    if not conversation["lead_id"]:
+        return
+    try:
+        from .agent import extract
+        with store.connect() as db:
+            # La tabla de preferencias se crea con el primer webhook. Si todavía no
+            # existe no hay ninguna baja registrada, y se comprueba en lugar de
+            # suponerlo: tragarse el error aquí minaría una conversación dada de baja.
+            present = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                                 ("channel_preferences",)).fetchone()
+            stopped = present and db.execute(
+                "SELECT opted_out FROM channel_preferences WHERE conversation_id=?",
+                (conversation["id"],)).fetchone()
+        if stopped and stopped["opted_out"]:
+            return
+        found = extract.context(conversation, None, incoming_text)
+        if found:
+            extract.apply(store, found["lead_id"], found["items"],
+                          conversation_id=found["conversation_id"])
+    except Exception:
+        logging.getLogger(__name__).warning("No se pudieron extraer creencias de un canal.")
+
+
 async def _respond(store, conversation_id: str, event_id: str, incoming_text: str):
     """An acknowledged inbound message stays visible even if AI/provider fail."""
     lock = _reply_locks.setdefault(conversation_id, asyncio.Lock())
@@ -304,7 +334,10 @@ async def _respond_locked(store, conversation_id: str, event_id: str, incoming_t
     with store.connect() as db:
         conversation = db.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()
         history = [dict(row) for row in db.execute("SELECT direction,text FROM messages WHERE conversation_id=? ORDER BY created_at DESC LIMIT 10", (conversation_id,)).fetchall()][::-1]
-    if not conversation or conversation["mode"] != "ai" or not reply_permission(store, conversation)["allowed"]:
+    if not conversation:
+        return
+    _learn_from(store, conversation, incoming_text)
+    if conversation["mode"] != "ai" or not reply_permission(store, conversation)["allowed"]:
         return
     status = "human_required"
     try:

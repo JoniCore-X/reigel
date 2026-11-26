@@ -215,7 +215,12 @@ class WebChat:
         value = re.sub(r"(?<!\w)\+?(?:\d[ ()-]*){7,16}(?!\w)", "[número omitido; usa el formulario de cita]", value)
         return value
 
-    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None, needs=None):
+    # Una baja comercial y una solicitud de privacidad no alimentan la memoria: quien
+    # pide parar o pide sus datos no está contando algo para que lo recordemos.
+    NO_MEMORY_INTENTS = {"opt_out", "privacy_request"}
+
+    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None, needs=None,
+                beliefs=None):
         """``gaps``, when given, receives ``(reason, text)`` for answers the learning queue
         should see (no verified knowledge, generic fallback). The caller records them
         after this transaction commits; the text is the already-masked message.
@@ -223,7 +228,12 @@ class WebChat:
         ``needs`` receives the context for a need report when the conversation moves to a
         person: the reason, the conversation, its lead and what the visitor has answered
         so far. The caller builds and stores the report after the commit, for the same
-        reason as ``gaps``: this transaction stays short."""
+        reason as ``gaps``: this transaction stays short.
+
+        ``beliefs`` receives the raw material for the agent's memory: the conversation,
+        its lead, what the visitor has answered and the message itself. The caller runs
+        the extraction after the commit, and nothing is collected from a visitor who
+        opted out or asked about their data."""
         incoming = text(message_text, "mensaje", limit=2000, required=True)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -299,6 +309,12 @@ class WebChat:
                     gaps.extend((reason, incoming) for reason in reasons)
                 if needs is not None and reasons:
                     needs.append(self._need_context(reasons[0], conversation, profile, incoming))
+            if (beliefs is not None and conversation["lead_id"] and not session["opted_out"]
+                    and decision.intent not in self.NO_MEMORY_INTENTS):
+                beliefs.append({
+                    "conversation_id": conversation["id"], "lead_id": conversation["lead_id"],
+                    "profile": dict(profile), "message": incoming,
+                })
             db.execute("UPDATE web_chat_sessions SET profile_json=?,sources_json=? WHERE token_hash=?", (json.dumps(profile, ensure_ascii=False), json.dumps(sources, ensure_ascii=False), session["token_hash"]))
             if reply:
                 self._append(db, session["conversation_id"], "outbound", reply)
