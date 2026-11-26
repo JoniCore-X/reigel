@@ -1,0 +1,438 @@
+/* Acceso del equipo de R.E.I.G.E.L. (AUTH-004, fase A): solo presentación.
+   Se aplica a la pantalla de entrada de /app (#login-screen) y a /app/acceso
+   (body.team-access). El fondo es siempre azul marino; la tarjeta y sus campos
+   cambian juntos con el tema (theme.js, :root[data-theme]) para que nunca se
+   mezclen campos oscuros con una tarjeta clara. Naranja #ff7900 solo como acento
+   decorativo; el texto de color usa tonos con contraste AA medido.
+   En /app esta hoja va antes de solar-theme.css y de dark-mode.css: por eso sus
+   reglas se anclan en #login-screen. */
+
+#login-screen,
+body.team-access {
+  --auth-navy: #071d43;
+  --auth-navy-2: #0b2a66;
+  --auth-accent: #ff7900;
+  --auth-on-navy: #f3f7fe;
+  --auth-on-navy-muted: #c3d2ea;
+  --auth-on-navy-ok: #8ee6b5;
+  --auth-card: #ffffff;
+  --auth-ink: #0d2550;
+  --auth-muted: #4a5a73;
+  --auth-line: #d3dce9;
+  --auth-field: #f8fafd;
+  --auth-field-line: #71849f;
+  --auth-placeholder: #5d6b80;
+  --auth-link: #1b55c4;
+  --auth-accent-ink: #a84400;
+  --auth-error: #b42318;
+  --auth-error-bg: #fdecea;
+  --auth-ok: #0b6b4a;
+  --auth-ok-bg: #e6f6ee;
+  --auth-primary: #163171;
+  --auth-primary-hover: #0f2558;
+  --auth-focus: #1b55c4;
+  --auth-soft: #eef3fa;
+  --auth-shadow: 0 24px 70px #00000059;
+  --auth-font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --auth-mono: Consolas, "Courier New", monospace;
+}
+
+:root[data-theme="dark"] #login-screen,
+:root[data-theme="dark"] body.team-access {
+  --auth-card: #0c2756;
+  --auth-ink: #f3f7fe;
+  --auth-muted: #c3d2ea;
+  --auth-line: #2c4a80;
+  --auth-field: #071d43;
+  --auth-field-line: #6686bd;
+  --auth-placeholder: #a3b5d3;
+  --auth-link: #a9c8ff;
+  --auth-accent-ink: #ffb066;
+  --auth-error: #ffb4a8;
+  --auth-error-bg: #4a1d24;
+  --auth-ok: #8ee6b5;
+  --auth-ok-bg: #123a36;
+  --auth-primary: #2b63d9;
+  --auth-primary-hover: #2456c4;
+  --auth-focus: #ffb066;
+  --auth-soft: #12336b;
+  --auth-shadow: 0 24px 70px #00000080;
+}
+
+/* ---------- Piezas comunes: marca, pasos, icono ---------- */
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--auth-on-navy);
+  font-family: var(--auth-font);
+}
+.auth-sun { width: 34px; height: 34px; flex: none; color: var(--auth-accent); }
+.auth-brand-text { display: grid; gap: 3px; min-width: 0; }
+.auth-wordmark { margin: 0; font-size: 21px; font-weight: 700; line-height: 1; letter-spacing: .14em; color: var(--auth-on-navy); }
+.auth-wordmark .auth-dot { color: var(--auth-accent); }
+.auth-brand-sub { margin: 0; font-size: 11px; font-weight: 600; line-height: 1.3; letter-spacing: .14em; text-transform: uppercase; color: var(--auth-on-navy-muted); }
+
+.auth-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--auth-on-navy-muted);
+  font-family: var(--auth-font);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.auth-step { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.auth-step + .auth-step::before { width: clamp(10px, 4vw, 34px); height: 1px; flex: none; background: #ffffff4d; content: ""; }
+.auth-step.is-done + .auth-step::before { background: var(--auth-on-navy-ok); }
+.auth-step-mark {
+  position: relative;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #ffffff73;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+.auth-step-text { display: grid; white-space: nowrap; }
+.auth-step-text small { font-size: 11px; font-weight: 500; color: var(--auth-on-navy-muted); }
+.auth-step-text small:empty { display: none; }
+.auth-step[aria-current="step"] { color: var(--auth-on-navy); }
+.auth-step[aria-current="step"] .auth-step-mark { border-color: var(--auth-accent); background: var(--auth-accent); color: var(--auth-navy); }
+.auth-step.is-done .auth-step-mark { border-color: var(--auth-on-navy-ok); color: var(--auth-on-navy-ok); font-size: 0; }
+/* Absolute: the hidden digit is still a grid item and would push the tick into a second row. */
+.auth-step.is-done .auth-step-mark::after { position: absolute; top: 50%; left: 50%; width: 9px; height: 5px; border-bottom: 2px solid; border-left: 2px solid; transform: translate(-50%, -65%) rotate(-45deg); content: ""; }
+.auth-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.auth-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.auth-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--auth-line);
+  border-radius: 11px;
+  background: var(--auth-soft);
+  color: var(--auth-accent-ink);
+}
+.auth-icon svg { width: 22px; height: 22px; }
+
+@keyframes auth-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- /app: pantalla de entrada ---------- */
+#login-screen { background: var(--auth-navy); }
+#login-screen .login-side {
+  flex-direction: column;
+  border-left: 1px solid #ffffff17;
+  background:
+    radial-gradient(ellipse at 85% 0%, #1747a852, transparent 55%),
+    radial-gradient(ellipse at 8% 100%, #ff790017, transparent 45%),
+    var(--auth-navy);
+}
+#login-screen .auth-panel { display: grid; width: 100%; max-width: 430px; gap: 20px; }
+#login-screen .auth-panel > .auth-steps { margin-bottom: 2px; }
+
+#login-screen .login-card {
+  position: relative;
+  max-width: none;
+  margin: 0;
+  padding: clamp(22px, 3vw, 34px);
+  overflow: hidden;
+  border: 1px solid var(--auth-line);
+  border-radius: 16px;
+  background: var(--auth-card);
+  color: var(--auth-ink);
+  box-shadow: var(--auth-shadow);
+  font-family: var(--auth-font);
+  animation: auth-in 180ms ease-out both;
+}
+#login-screen .login-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--auth-accent), #ffb066 55%, #ffb06600);
+  content: "";
+}
+#login-screen .login-card .eyebrow { margin: 0; color: var(--auth-accent-ink); font-size: 11px; letter-spacing: .14em; }
+#login-screen .login-card h2 {
+  margin: 0 0 10px;
+  color: var(--auth-ink);
+  font-size: clamp(26px, 2.3vw, 31px);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+#login-screen .login-card :is(.muted, .login-help) { color: var(--auth-muted); font-size: 14px; line-height: 1.6; }
+#login-screen .login-card .login-help { margin: 18px 0 0; font-size: 13px; }
+#login-screen .login-card strong { color: var(--auth-ink); }
+#login-screen .login-card label { margin-top: 18px; gap: 7px; color: var(--auth-ink); font-size: 13px; font-weight: 600; }
+
+#login-screen .login-card input {
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid var(--auth-field-line);
+  border-radius: 10px;
+  background: var(--auth-field);
+  color: var(--auth-ink);
+  caret-color: var(--auth-ink);
+  font-size: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+#login-screen .login-card input::placeholder { color: var(--auth-placeholder); opacity: 1; }
+#login-screen .login-card input:hover { border-color: var(--auth-ink); }
+#login-screen .login-card input:focus-visible {
+  border-color: var(--auth-focus);
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 1px;
+  background: var(--auth-field);
+  box-shadow: none;
+}
+/* El relleno automático del navegador conserva los colores del tema. */
+#login-screen .login-card input:is(:-webkit-autofill, :autofill) {
+  -webkit-text-fill-color: var(--auth-ink);
+  box-shadow: 0 0 0 1000px var(--auth-field) inset;
+}
+#login-screen .login-card input[autocomplete="one-time-code"] {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: .3em;
+  padding-left: calc(14px + .3em); /* compensa el espaciado final para centrar los dígitos */
+  text-align: center;
+}
+#login-screen .login-card input[name="invitation_code"] { font-family: var(--auth-mono); letter-spacing: .08em; text-transform: uppercase; }
+#login-screen .login-card input[name="invitation_code"]::placeholder { letter-spacing: .04em; }
+
+#login-screen .login-card .password-field input { padding-right: 52px; }
+#login-screen .login-card .password-toggle {
+  right: 2px;
+  bottom: 2px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--auth-muted);
+}
+#login-screen .login-card .password-toggle:hover { background: var(--auth-soft); color: var(--auth-ink); }
+
+#login-screen .login-card .form-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--auth-error-bg);
+  color: var(--auth-error);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+#login-screen .login-card .form-error:empty { min-height: 0; margin: 0; padding: 0; }
+
+#login-screen .login-card .button.primary {
+  min-height: 48px;
+  margin-top: 18px;
+  border-color: var(--auth-primary);
+  border-radius: 10px;
+  background: var(--auth-primary);
+  color: #fff;
+  font-size: 15px;
+  white-space: normal;
+}
+#login-screen .login-card .button.primary:hover:not(:disabled) { border-color: var(--auth-primary-hover); background: var(--auth-primary-hover); box-shadow: 0 8px 18px #0000002e; }
+
+#login-screen .login-card .text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 6px;
+  color: var(--auth-link);
+  font-size: 13px;
+}
+#login-screen .login-card .text-link:hover { color: var(--auth-link); text-decoration: underline; }
+#login-screen .login-card .totp-back { display: flex; margin-top: 8px; }
+#login-screen :is(.login-card, .auth-panel) :is(a, button, summary):focus-visible { outline: 3px solid var(--auth-focus); outline-offset: 2px; }
+#login-screen .login-card .password-toggle:focus-visible { outline-offset: -3px; }
+
+/* QR: tamaño fijo y escaneable, zona blanca propia en ambos temas. */
+#login-screen .login-card .enroll-qr {
+  display: block;
+  box-sizing: content-box;
+  width: 208px;
+  height: 208px;
+  max-width: none;
+  margin: 18px auto 10px;
+  padding: 8px;
+  border: 1px solid var(--auth-line);
+  border-radius: 12px;
+  background: #fff;
+}
+#login-screen .login-card .enroll-manual { margin: 0; font-size: 14px; }
+#login-screen .login-card .enroll-manual summary { display: flex; min-height: 44px; align-items: center; gap: 8px; color: var(--auth-link); font-weight: 600; cursor: pointer; }
+#login-screen .login-card .enroll-manual summary::before { content: "+"; font-weight: 700; }
+#login-screen .login-card .enroll-manual[open] summary::before { content: "−"; }
+#login-screen .login-card .enroll-manual summary::-webkit-details-marker { display: none; }
+#login-screen .login-card .enroll-secret {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--auth-line);
+  border-radius: 10px;
+  background: var(--auth-soft);
+  color: var(--auth-ink);
+  font-family: var(--auth-mono);
+  font-size: 15px;
+  letter-spacing: .1em;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  user-select: all;
+}
+
+@media (max-width: 600px) {
+  #login-screen .login-side { border-top: 1px solid #ffffff17; border-left: 0; padding: 22px 16px 34px; }
+  #login-screen .login-card { padding: 22px 18px; border-radius: 14px; }
+  #login-screen .login-card h2 { font-size: 26px; }
+  #login-screen .login-card label { margin-top: 16px; }
+}
+@media (max-width: 850px) {
+  #login-screen .login-side { padding-inline: 20px; }
+  .auth-steps { gap: 8px 6px; }
+  .auth-step { gap: 6px; }
+  .auth-step + .auth-step::before { width: 10px; }
+}
+@media (max-width: 600px) {
+  #login-screen .login-side { padding-inline: 16px; }
+}
+@media (max-width: 400px) {
+  .auth-steps { font-size: 12px; }
+  .auth-wordmark { font-size: 19px; }
+}
+
+/* ---------- /app/acceso ---------- */
+body.team-access {
+  --id-bg: var(--auth-navy);
+  --id-panel: var(--auth-card);
+  --id-raised: var(--auth-soft);
+  --id-line: var(--auth-line);
+  --id-ink: var(--auth-ink);
+  --id-muted: var(--auth-muted);
+  --id-accent: var(--auth-accent-ink);
+  --id-blue: var(--auth-primary);
+  --id-error: var(--auth-error);
+  --id-ok: var(--auth-ok);
+  display: block;
+  padding: clamp(20px, 5vh, 56px) 16px 40px;
+  background:
+    radial-gradient(ellipse at 85% 0%, #1747a852, transparent 50%),
+    radial-gradient(ellipse at 8% 100%, #ff790017, transparent 40%),
+    var(--auth-navy);
+  color: var(--auth-on-navy);
+  font-family: var(--auth-font);
+}
+.team-access .auth-shell { display: grid; width: min(100%, 480px); margin-inline: auto; gap: 20px; }
+.team-access .id-card {
+  position: relative;
+  width: 100%;
+  padding: clamp(22px, 5vw, 34px);
+  overflow: hidden;
+  border: 1px solid var(--auth-line);
+  border-radius: 16px;
+  background: var(--auth-card);
+  color: var(--auth-ink);
+  color-scheme: light;
+  box-shadow: var(--auth-shadow);
+}
+:root[data-theme="dark"] .team-access .id-card { color-scheme: dark; }
+.team-access .id-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--auth-accent), #ffb066 55%, #ffb06600); content: ""; }
+.team-access .id-head { display: flex; justify-items: start; align-items: center; gap: 12px; margin-bottom: 18px; text-align: left; }
+.team-access .id-head h1 { font-size: clamp(22px, 5.4vw, 26px); font-weight: 650; line-height: 1.2; letter-spacing: -.02em; color: var(--auth-ink); }
+.team-access .id-head p { margin-top: 2px; color: var(--auth-muted); font-size: 13px; }
+.team-access .id-head .auth-icon svg { width: 22px; height: 22px; color: inherit; }
+.team-access :is(.id-note, .id-steps) { color: var(--auth-muted); font-size: 14px; line-height: 1.6; }
+.team-access .id-note strong, .team-access .id-steps strong { color: var(--auth-ink); }
+.team-access :is(.id-subtitle, .id-section h2) { color: var(--auth-ink); font-size: 17px; font-weight: 650; line-height: 1.3; }
+.team-access .id-section { gap: 12px; border-top-color: var(--auth-line); }
+.team-access .id-view { animation: auth-in 180ms ease-out both; }
+.team-access #setup-view { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.team-access label { gap: 7px; color: var(--auth-ink); font-size: 13px; font-weight: 600; }
+.team-access :is(input, select) {
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid var(--auth-field-line);
+  border-radius: 10px;
+  background: var(--auth-field);
+  color: var(--auth-ink);
+  caret-color: var(--auth-ink);
+}
+.team-access input::placeholder { color: var(--auth-placeholder); }
+.team-access :is(input, select):hover { border-color: var(--auth-ink); }
+.team-access :is(input, select):focus-visible { border-color: var(--auth-focus); outline: 2px solid var(--auth-focus); outline-offset: 1px; box-shadow: none; }
+.team-access input:is(:-webkit-autofill, :autofill) { -webkit-text-fill-color: var(--auth-ink); box-shadow: 0 0 0 1000px var(--auth-field) inset; }
+.team-access input[autocomplete="one-time-code"] { font-size: 22px; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: .3em; padding-left: calc(14px + .3em); text-align: center; }
+.team-access input[name="grant_code"] { font-family: var(--auth-mono); letter-spacing: .08em; text-transform: uppercase; }
+.team-access input[name="grant_code"]::placeholder { letter-spacing: .04em; }
+
+.team-access .id-button { min-height: 48px; border-radius: 10px; background: var(--auth-primary); color: #fff; font-weight: 600; }
+.team-access .id-button:hover:not(:disabled) { background: var(--auth-primary-hover); transform: none; }
+.team-access .id-button.quiet { border-color: var(--auth-field-line); background: transparent; color: var(--auth-ink); }
+.team-access .id-button.quiet:hover:not(:disabled) { background: var(--auth-soft); }
+.team-access .id-button.compact { min-height: 44px; padding: 8px 16px; font-size: 14px; }
+.team-access :is(button, a, summary):focus-visible { outline: 3px solid var(--auth-focus); outline-offset: 2px; }
+.team-access .id-link { display: inline-flex; min-height: 44px; align-items: center; color: var(--auth-link); font-weight: 600; }
+.team-access .id-note .id-link { display: inline; min-height: 0; }
+.team-access .id-center { margin-top: 10px; }
+.team-access .id-actions { gap: 8px; }
+
+.team-access .id-message { min-height: 0; margin-bottom: 14px; padding: 10px 12px; border-radius: 9px; background: var(--auth-error-bg); color: var(--auth-error); font-size: 14px; font-weight: 600; line-height: 1.5; scroll-margin-top: 16px; }
+.team-access .id-message.ok { background: var(--auth-ok-bg); color: var(--auth-ok); }
+.team-access .id-message:empty { margin: 0; padding: 0; }
+
+.team-access .id-qr {
+  box-sizing: content-box;
+  width: 224px;
+  height: 224px;
+  margin-block: 6px;
+  padding: 8px;
+  border: 1px solid var(--auth-line);
+  border-radius: 12px;
+  background: #fff;
+}
+.team-access .id-manual summary { display: flex; min-height: 44px; align-items: center; gap: 8px; color: var(--auth-link); font-weight: 600; text-decoration: none; }
+.team-access .id-manual summary::before { content: "+"; font-weight: 700; }
+.team-access .id-manual[open] summary::before { content: "−"; }
+.team-access .id-manual summary::-webkit-details-marker { display: none; }
+.team-access .id-manual { display: block; }
+.team-access .id-code {
+  padding: 12px 14px;
+  border: 1px solid var(--auth-line);
+  border-radius: 10px;
+  background: var(--auth-soft);
+  color: var(--auth-ink);
+  font-family: var(--auth-mono);
+  font-size: 15px;
+  letter-spacing: .1em;
+  line-height: 1.6;
+}
+.team-access #grant-code { font-size: 19px; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  #login-screen .login-card, .team-access .id-view { animation: none; }
+  .auth-step-mark { transition: none; }
+}
+@media (forced-colors: active) {
+  .auth-step[aria-current="step"] .auth-step-mark { border-color: Highlight; background: Highlight; color: HighlightText; }
+  .auth-sun, .auth-wordmark .auth-dot { color: Highlight; }
+}

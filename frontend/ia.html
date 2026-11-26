@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es-PR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#163171">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Espacio de conversación con R.E.I.G.E.L., el asistente de IA de Power Solar.">
+  <title>R.E.I.G.E.L. · Conversación con IA · Power Solar</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
+  <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="/static/css/ia.css?v=25">
+  <link rel="stylesheet" href="/static/css/reigel-loader.css?v=5">
+  <link rel="stylesheet" href="/static/css/site-loader.css?v=10">
+  <script src="/static/js/reigel-loader.js?v=6"></script>
+  <script src="/static/js/site-loader.js?v=8"></script>
+  <script src="/static/js/ia.js?v=19" defer></script>
+  <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
+  <link rel="stylesheet" href="/static/css/theme-switch.css?v=1">
+  <link rel="stylesheet" href="/static/css/dark-mode.css?v=1">
+  <script src="/static/js/theme.js?v=1"></script>
+</head>
+<body class="ia-body">
+  <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
+    <div class="ps-stage rl-mark" aria-hidden="true"><div class="rl-word"><span class="rl-glyph rl-glyph--letter">R</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">I</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">G</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">L</span><span class="rl-glyph rl-glyph--dot">.</span></div><span class="rl-line"></span></div>
+    <div class="ps-error" hidden>
+      <p class="ps-error-text" role="alert"></p>
+      <div class="ps-error-actions">
+        <button class="ps-retry" type="button">Reintentar</button>
+        <button class="ps-continue" type="button">Continuar al sitio</button>
+      </div>
+    </div>
+    <p class="ps-sr-only">Cargando Power Solar. La página estará lista en un momento.</p>
+  </div>
+  <a class="skip-link" href="#ia-text">Saltar al campo de mensaje</a>
+  <h1 class="ia-sr-only">Conversación con R.E.I.G.E.L.</h1>
+  <div class="ia-shell" id="ia-shell" data-sidebar="open">
+    <aside class="ia-sidebar" id="ia-sidebar" aria-label="Historial de conversaciones">
+      <div class="ia-sidebar-head">
+        <a class="wordmark light ia-wordmark" href="/captacion" aria-label="Power Solar, página de inicio"><span class="wordmark-copy"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>ENERGÍA QUE NOS MUEVE</small></span><svg class="sun-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9"/><path d="M24 2v7m0 30v7M2 24h7m30 0h7M8.4 8.4l5 5m21.2 21.2 5 5m0-31.2-5 5M13.4 34.6l-5 5"/></svg></a>
+        <button class="ia-icon-btn ia-collapse" id="ia-collapse" type="button" aria-label="Contraer historial" aria-controls="ia-sidebar" aria-expanded="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <button class="ia-new" id="ia-new" type="button"><span aria-hidden="true">+</span> Nueva conversación</button>
+      <div class="ia-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <label class="ia-sr-only" for="ia-search">Buscar en tus conversaciones</label>
+        <input id="ia-search" type="search" placeholder="Buscar conversaciones" maxlength="80" autocomplete="off">
+      </div>
+      <div class="ia-history-wrap">
+        <p class="ia-history-label" id="ia-history-label">Historial</p>
+        <nav class="ia-history" id="ia-history" aria-labelledby="ia-history-label"></nav>
+        <p class="ia-history-empty" id="ia-history-empty" hidden>Aún no hay conversaciones guardadas.</p>
+      </div>
+      <footer class="ia-sidebar-foot">
+        <p class="ia-owner" id="ia-owner">Sesión temporal</p>
+        <p class="ia-retention" id="ia-retention">Las conversaciones de visitantes se conservan siete días desde la última actividad.</p>
+      </footer>
+    </aside>
+    <button class="ia-scrim" id="ia-scrim" type="button" aria-label="Cerrar el historial" hidden></button>
+    <main class="ia-main" id="ia-main">
+      <header class="ia-topbar">
+        <button class="ia-icon-btn ia-menu" id="ia-menu" type="button" aria-label="Abrir historial" aria-controls="ia-sidebar" aria-expanded="false" hidden>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="ia-title">
+          <svg class="ia-title-mark" width="34" height="34" viewBox="0 0 100 100" focusable="false" aria-hidden="true"><path class="ia-sun-rays" d="M44.7 16.4L50.0 1.0L55.3 16.4ZM62.2 18.3L74.5 7.6L71.4 23.6ZM76.4 28.6L92.4 25.5L81.7 37.8ZM83.6 44.7L99.0 50.0L83.6 55.3ZM81.7 62.2L92.4 74.5L76.4 71.4ZM71.4 76.4L74.5 92.4L62.2 81.7ZM55.3 83.6L50.0 99.0L44.7 83.6ZM37.8 81.7L25.5 92.4L28.6 76.4ZM23.6 71.4L7.6 74.5L18.3 62.2ZM16.4 55.3L1.0 50.0L16.4 44.7ZM18.3 37.8L7.6 25.5L23.6 28.6ZM28.6 23.6L25.5 7.6L37.8 18.3Z"/><circle class="ia-sun-ring" cx="50" cy="50" r="34"/><circle class="ia-sun-core" cx="50" cy="50" r="26"/><path class="ia-sun-bolt" d="M56 27 41 54h10l-5 21 16-29H51l5-19Z"/></svg>
+          <div><strong>R.E.I.G.E.L.</strong><small id="ia-subtitle">Asistente de IA · Power Solar</small></div>
+        </div>
+        <!-- From Uiverse.io by Galahhad - https://uiverse.io/Galahhad/strong-squid-82
+     MIT License, Copyright (c) https://youtu.be/S6T6hrc8cQo, Galahhad (Galahad) -->
+<label class="ui-theme-switch" title="Modo claro u oscuro"><input type="checkbox" class="ui-theme-switch__checkbox" role="switch" aria-label="Modo oscuro"><span class="ui-theme-switch__container" aria-hidden="true"><span class="ui-theme-switch__clouds"></span><span class="ui-theme-switch__stars-container"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none" focusable="false"><path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z" fill="currentColor"></path></svg></span><span class="ui-theme-switch__circle-container"><span class="ui-theme-switch__sun-moon-container"><span class="ui-theme-switch__moon"><span class="ui-theme-switch__spot"></span><span class="ui-theme-switch__spot"></span><span class="ui-theme-switch__spot"></span></span></span></span></span></label>
+        <a class="ia-team" id="ia-team" href="/chat" aria-label="Citas y equipo: reservar una evaluación o hablar con una persona en el chat de coordinación">Citas y equipo</a>
+        <a class="ia-back" id="ia-back" href="/captacion">Volver</a>
+      </header>
+      <div class="ia-print-head" id="ia-print-head">
+        <p class="ia-print-brand"><strong>POWER SOLAR</strong> · R.E.I.G.E.L. · Conversación con IA</p>
+        <p class="ia-print-title" id="ia-print-title"></p>
+        <p class="ia-print-date" id="ia-print-date"></p>
+      </div>
+      <div class="ia-scroll" id="ia-scroll">
+        <div class="ia-thread" id="ia-thread" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversación">
+          <div class="ia-empty" id="ia-empty">
+            <svg class="ia-empty-logo" width="96" height="96" viewBox="0 0 100 100" focusable="false" aria-hidden="true"><path class="ia-sun-rays" d="M44.7 16.4L50.0 1.0L55.3 16.4ZM62.2 18.3L74.5 7.6L71.4 23.6ZM76.4 28.6L92.4 25.5L81.7 37.8ZM83.6 44.7L99.0 50.0L83.6 55.3ZM81.7 62.2L92.4 74.5L76.4 71.4ZM71.4 76.4L74.5 92.4L62.2 81.7ZM55.3 83.6L50.0 99.0L44.7 83.6ZM37.8 81.7L25.5 92.4L28.6 76.4ZM23.6 71.4L7.6 74.5L18.3 62.2ZM16.4 55.3L1.0 50.0L16.4 44.7ZM18.3 37.8L7.6 25.5L23.6 28.6ZM28.6 23.6L25.5 7.6L37.8 18.3Z"/><circle class="ia-sun-ring" cx="50" cy="50" r="34"/><circle class="ia-sun-core" cx="50" cy="50" r="26"/><path class="ia-sun-bolt" d="M56 27 41 54h10l-5 21 16-29H51l5-19Z"/></svg>
+            <p class="ia-empty-kicker">CONVERSACIÓN</p>
+            <h2>¿Qué quieres resolver hoy?</h2>
+            <p>Pregunta sobre energía solar, el proceso de evaluación o Power Solar. R.E.I.G.E.L. responde con el modelo local del equipo.</p>
+            <p class="ia-empty-note">Reservas, atención humana, bajas y privacidad van por <a href="/chat">Citas y equipo</a>: este chat no registra esas solicitudes. No escribas tu correo ni tu teléfono: se ocultan al guardar.</p>
+            <section class="ia-system" aria-labelledby="ia-system-title">
+              <h3 id="ia-system-title">Cómo funciona un sistema solar con batería</h3>
+              <div class="ia-system-grid">
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo convierten las placas solares la luz del sol en electricidad?"><img src="/static/assets/power-solar/sistema/placas.png" alt="" width="56" height="56"><span>Placas solares</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Qué hace el inversor de corriente en un sistema solar?"><img src="/static/assets/power-solar/sistema/microinversores.png" alt="" width="56" height="56"><span>Inversor</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Para qué sirve la batería durante un apagón?"><img src="/static/assets/power-solar/sistema/bateria.png" alt="" width="56" height="56"><span>Batería</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Qué es la medición neta en términos generales?"><img src="/static/assets/power-solar/sistema/medicion-neta.png" alt="" width="56" height="56"><span>Medición neta</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo se conecta un sistema solar a la red eléctrica?"><img src="/static/assets/power-solar/sistema/red-electrica.png" alt="" width="56" height="56"><span>Red eléctrica</span></button>
+                <button class="ia-system-card" type="button" data-ia-prompt="¿Cómo decido qué equipos de mi casa conviene respaldar?"><img src="/static/assets/power-solar/sistema/electrodomesticos.png" alt="" width="56" height="56"><span>Tus equipos</span></button>
+              </div>
+              <p class="ia-system-source">Explora un tema o selecciona una pregunta para conversar con R.E.I.G.E.L.</p>
+            </section>
+            <div class="ia-prompts">
+              <button type="button" data-ia-prompt="¿Cómo se evalúa un hogar antes de proponer un sistema solar?">Cómo funciona la evaluación</button>
+              <button type="button" data-ia-prompt="¿Qué debo considerar si quiero respaldo durante apagones?">Respaldo en apagones</button>
+              <button type="button" data-ia-prompt="¿Qué preguntas conviene preparar antes de hablar con un asesor?">Preparar mis preguntas</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ia-composer-shell">
+        <div class="ia-actions-menu" id="ia-actions-menu" role="menu" aria-label="Funciones de la conversación" hidden>
+          <div class="ia-actions-group" role="group" aria-labelledby="ia-actions-label-chat">
+            <p class="ia-actions-label" id="ia-actions-label-chat">Conversación</p>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" data-ia-menu="new">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14"/></svg></span>
+              <span class="ia-actions-text"><strong>Nueva conversación</strong><small>Empezar un tema limpio</small></span>
+            </button>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" aria-disabled="true" data-ia-menu="files" id="ia-actions-files">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M20.5 11.5 12.5 19.5a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3l7.5-7.5"/></svg></span>
+              <span class="ia-actions-text"><strong>Adjuntar documento</strong><small id="ia-actions-files-desc">PDF, .txt o .md</small></span>
+            </button>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" data-ia-menu="stop" id="ia-actions-stop">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></span>
+              <span class="ia-actions-text"><strong>Detener la respuesta</strong><small>Cortar la generación en curso</small></span>
+            </button>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" data-ia-menu="copy" id="ia-actions-copy">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+              <span class="ia-actions-text"><strong>Copiar última respuesta</strong><small>Guardar el texto en el portapapeles</small></span>
+            </button>
+          </div>
+          <div class="ia-actions-group" role="group" aria-labelledby="ia-actions-label-export">
+            <p class="ia-actions-label" id="ia-actions-label-export">Descargar conversación</p>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" data-ia-menu="export-pdf" id="ia-actions-pdf">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+              <span class="ia-actions-text"><strong>Guardar como PDF</strong><small>Abre la impresión: elige «Guardar como PDF»</small></span>
+            </button>
+            <button class="ia-actions-item" type="button" role="menuitem" tabindex="-1" data-ia-menu="export-txt" id="ia-actions-txt">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg></span>
+              <span class="ia-actions-text"><strong>Descargar como texto</strong><small>Archivo .txt con todos los mensajes</small></span>
+            </button>
+          </div>
+          <div class="ia-actions-group" role="group" aria-labelledby="ia-actions-label-go">
+            <p class="ia-actions-label" id="ia-actions-label-go">Ir a</p>
+            <a class="ia-actions-item" role="menuitem" tabindex="-1" href="/chat">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4m6-4v4"/></svg></span>
+              <span class="ia-actions-text"><strong>Citas y equipo</strong><small>Reservar o hablar con una persona</small></span>
+            </a>
+            <a class="ia-actions-item" role="menuitem" tabindex="-1" href="/captacion">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg></span>
+              <span class="ia-actions-text"><strong>Volver al sitio</strong><small>Página corporativa de Power Solar</small></span>
+            </a>
+          </div>
+          <div class="ia-actions-group ia-actions-group--off" role="group" aria-labelledby="ia-actions-label-off">
+            <p class="ia-actions-label ia-actions-sep" id="ia-actions-label-off">Aún no disponible</p>
+            <button class="ia-actions-item is-off" type="button" role="menuitem" tabindex="-1" aria-disabled="true" data-ia-menu="search">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+              <span class="ia-actions-text"><strong>Búsqueda web</strong><small>Consultar información en tiempo real</small></span>
+            </button>
+            <button class="ia-actions-item is-off" type="button" role="menuitem" tabindex="-1" aria-disabled="true" data-ia-menu="image">
+              <span class="ia-actions-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4-4 3 3 3-3 4 4"/></svg></span>
+              <span class="ia-actions-text"><strong>Crear imágenes</strong><small>Generar visuales</small></span>
+            </button>
+          </div>
+        </div>
+        <div class="ia-notice" id="ia-notice" role="status" hidden></div>
+        <div class="ia-attach-tray" id="ia-attach-tray" hidden>
+          <div class="ia-attach-chip" id="ia-attach-chip" hidden>
+            <span class="ia-attach-chip-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+            <span class="ia-attach-chip-text" aria-live="polite"><strong id="ia-attach-name"></strong><small id="ia-attach-meta"></small></span>
+            <button class="ia-attach-remove" id="ia-attach-remove" type="button" aria-label="Quitar el documento"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          </div>
+          <p class="ia-attach-error" id="ia-attach-error" role="alert" hidden></p>
+          <p class="ia-attach-note" id="ia-attach-note">No subas documentos con información personal que no quieras compartir. Ocultamos correos y teléfonos.</p>
+        </div>
+        <form class="ia-composer" id="ia-form">
+          <label class="sr-only" for="ia-text">Tu mensaje</label>
+          <textarea id="ia-text" rows="1" maxlength="4000" placeholder="Escribe tu mensaje…" required></textarea>
+          <div class="ia-composer-actions">
+            <button class="ia-plus" id="ia-plus" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="ia-actions-menu" aria-label="Funciones de la conversación">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ia-attach" id="ia-attach" type="button" aria-label="Adjuntar documento (PDF, .txt o .md)" aria-describedby="ia-attach-note" aria-pressed="false" hidden>
+              <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M20.5 11.5 12.5 19.5a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3l7.5-7.5"/></svg>
+            </button>
+            <input class="ia-file-input" id="ia-file" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" tabindex="-1" aria-hidden="true" disabled>
+            <span class="ia-counter" id="ia-counter" hidden></span>
+            <button class="ia-send" id="ia-send" type="submit" aria-label="Enviar mensaje">
+              <span id="ia-send-label">Enviar</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 19V5m0 0-6 6m6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </form>
+        <p class="ia-disclaimer">R.E.I.G.E.L. usa un modelo de lenguaje local y puede equivocarse. Confirma los datos importantes con el equipo.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

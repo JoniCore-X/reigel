@@ -1,37 +1,148 @@
+# R.E.I.G.E.L. en un servidor con Docker. Guía paso a paso: docs/DESPLIEGUE.md.
+#
+# Internet -> Caddy (80/443, HTTPS automático) -> app (red interna, sin puerto publicado)
+#
+# - La aplicación no publica puertos: solo Caddy llega a ella por la red «interna».
+# - La base SQLite y la clave de Google Authenticator viven en el volumen solar_data.
+# - La IA local (Ollama) es opcional: perfil «ia», apagado por defecto.
+# - Los secretos van en el archivo .env del servidor, que nunca se sube al repositorio.
+name: reigel
+
 services:
   app:
     build: .
+    image: reigel-app:local
     restart: unless-stopped
-    env_file: .env
+    init: true
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    env_file:
+      - .env
     environment:
       REIGEL_ENV: production
       REIGEL_DB_PATH: /app/data/reigel.db
       SITE_URL: https://${DOMAIN:?Configura DOMAIN en .env}
+      # Solo Caddy (dirección fija en la red interna) puede declarar la dirección
+      # real del cliente. Nunca "*": permitiría falsificarla y saltarse los límites.
+      FORWARDED_ALLOW_IPS: 172.30.87.2
+      HOME: /tmp
     volumes:
       - solar_data:/app/data
-    expose:
-      - "8765"
+    networks:
+      interna:
+        ipv4_address: 172.30.87.3
+      salida: {}
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    pids_limit: 256
+    mem_limit: ${REIGEL_APP_MEMORY:-768m}
+    cpus: ${REIGEL_APP_CPUS:-1.0}
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
     environment:
       DOMAIN: ${DOMAIN:?Configura DOMAIN en .env}
       CADDY_EMAIL: ${CADDY_EMAIL:?Configura CADDY_EMAIL en .env}
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      publica: {}
+      interna:
+        ipv4_address: 172.30.87.2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
     depends_on:
       app:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # IA local opcional. Se activa con COMPOSE_PROFILES=ia y REIGEL_CHAT_AI=ollama
+  # en .env. Comparte la red de la aplicación para que http://127.0.0.1:11434
+  # (dirección fija en el código) llegue a Ollama, y escucha solo en esa interfaz
+  # local: ni Caddy ni internet pueden alcanzarlo. La imagen y los modelos son
+  # descargas grandes que el titular debe autorizar (docs/DESPLIEGUE.md).
+  ollama:
+    profiles: ["ia"]
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    network_mode: "service:app"
+    environment:
+      OLLAMA_HOST: 127.0.0.1:11434
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+    volumes:
+      - ollama_models:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 512
+    mem_limit: ${OLLAMA_MEMORY:-5g}
+    cpus: ${OLLAMA_CPUS:-2.0}
+    depends_on:
+      app:
+        condition: service_started
+        restart: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  # Entrada desde internet: solo Caddy.
+  publica: {}
+  # Caddy <-> app. Sin salida a internet y con direcciones fijas, para que la
+  # aplicación solo confíe en las cabeceras de reenvío del proxy.
+  interna:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.87.0/24
+  # Salida de la aplicación (actualización de fuentes públicas cada seis horas,
+  # Telegram si el titular lo configura y descarga de modelos de Ollama).
+  salida: {}
+
 volumes:
   solar_data:
   caddy_data:
   caddy_config:
+  ollama_models:

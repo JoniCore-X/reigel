@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from reigel.api import create_app
 from reigel.core import DomainError
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -16,6 +17,7 @@ def qa_system(tmp_path, monkeypatch):
     app = create_app(tmp_path / "independent.db")
     store = app.state.store
     admin = store.create_user({"name": "QA Admin", "email": "admin@independent.test", "password": "independent-long-password", "role": "admin"}, bootstrap=True)
+    allow(store, admin, "advisor@independent.test")
     advisor = store.create_user({"name": "QA Advisor", "email": "advisor@independent.test", "password": "independent-long-password", "role": "advisor"}, admin)
     for person in (admin, advisor):
         store.update_user(person["id"], {"public_booking": True, "work_days": list(range(7))}, admin)
@@ -26,7 +28,7 @@ def qa_system(tmp_path, monkeypatch):
 def test_malformed_business_url_is_rejected_without_server_error(qa_system, bad_url):
     app, store, _, _ = qa_system
     with TestClient(app, raise_server_exceptions=False) as client:
-        assert client.post("/api/auth/login", json={"email": "admin@independent.test", "password": "independent-long-password"}).status_code == 200
+        assert team_login(client, "admin@independent.test", "independent-long-password").status_code == 200
         response = client.patch("/api/settings", json={"site_url": bad_url})
         assert response.status_code == 422, response.text
         assert store.settings()["site_url"] == ""
@@ -49,5 +51,5 @@ def test_successful_team_logins_do_not_exhaust_failure_budget(qa_system):
     app, _, _, _ = qa_system
     with TestClient(app) as client:
         for _ in range(12):
-            response = client.post("/api/auth/login", json={"email": "admin@independent.test", "password": "independent-long-password"})
+            response = team_login(client, "admin@independent.test", "independent-long-password")
             assert response.status_code == 200, response.text

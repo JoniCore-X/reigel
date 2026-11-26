@@ -1,0 +1,104 @@
+/* Modo oscuro de /app e /ia (activado por theme.js con :root[data-theme="dark"]).
+   Contraste AA: texto principal #e8eef8 y secundario #a9b7cc sobre #0e1729/#15213a;
+   enlaces #8fb6ff; los botones azules mantienen texto blanco sobre #2b63d9. */
+
+:root[data-theme="dark"] { color-scheme: dark; }
+
+:root[data-theme="dark"] :is(.workspace-body, .ia-body) {
+  --paper: #0b1322;
+  --white: #15213a;
+  --ink: #e8eef8;
+  --muted: #a9b7cc;
+  --line: #2a3a58;
+  --blue: #2b63d9;
+  --blue-dark: #1f4fb8;
+  --blue-light: #1b2d52;
+  --green: #5fd3a6;
+  --red: #ff8b97;
+  --shadow: 0 16px 40px #0006;
+  --ops-soft: #15213a;
+  --dark-surface: #15213a;
+  --dark-raised: #1b2945;
+  --dark-link: #8fb6ff;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ---------- /app ---------- */
+:root[data-theme="dark"] .workspace-body :is(.app-body, main, #main) { background: var(--paper); color: var(--ink); }
+:root[data-theme="dark"] .workspace-body :is(.topbar, .panel, .panel-head, .panel-body, .card, .metric, .team-member,
+  .appointment-card, .lead-card, .kanban-column, .table-wrap, table, .empty, .detail-summary, .plan-card, dialog, .toast) {
+  background-color: var(--dark-surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .workspace-body :is(th, td) { border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .workspace-body thead th { background: var(--dark-raised); color: var(--muted); }
+:root[data-theme="dark"] .workspace-body :is(input, select, textarea) {
+  background: #0f1a2e;
+  color: var(--ink);
+  border-color: #3a4d72;
+}
+:root[data-theme="dark"] .workspace-body :is(input, textarea)::placeholder { color: #8292ab; }
+:root[data-theme="dark"] .workspace-body :is(a, .text-link, .table-button):not(.button) { color: var(--dark-link); }
+/* The skip link keeps its white box in both themes: dark text on it. :not(.button) only matches the weight of the rule above. */
+:root[data-theme="dark"] .workspace-body .skip-link:not(.button) { color: #0b3d91; }
+:root[data-theme="dark"] .workspace-body .button:not(.primary):not(.danger):not(.orange) {
+  background: var(--dark-raised);
+  color: var(--ink);
+  border-color: #3a4d72;
+}
+:root[data-theme="dark"] .workspace-body :is(.muted, .field-help, small, .breadcrumb .muted) { color: var(--muted); }
+:root[data-theme="dark"] .workspace-body .badge { background: #22324f; color: #d5e0f2; }
+:root[data-theme="dark"] .workspace-body :is(.badge.blue, .badge.cita) { background: #1d3463; color: #a9c6ff; }
+:root[data-theme="dark"] .workspace-body :is(.badge.green, .badge.ganado, .badge.confirmed, .badge.sent, .badge.calificado) { background: #123a36; color: #7ee3cf; }
+:root[data-theme="dark"] .workspace-body :is(.badge.orange, .badge.nuevo, .badge.uncertain) { background: #3d2a12; color: #ffc98a; }
+:root[data-theme="dark"] .workspace-body :is(.badge.red, .badge.perdido, .badge.failed, .badge.cancelled) { background: #3d1820; color: #ffb3bc; }
+:root[data-theme="dark"] .workspace-body .hint { background: #1b2945; color: var(--ink); }
+:root[data-theme="dark"] .workspace-body .hint.orange { background: #33240f; color: #ffd8a8; }
+:root[data-theme="dark"] .workspace-body .appointment-code { background: #1d3463; color: #a9c6ff; }
+:root[data-theme="dark"] .workspace-body .usage-summary > div { background: var(--dark-raised); }
+:root[data-theme="dark"] .workspace-body .plan-price { color: #8fb6ff; }
+
+/* ---------- /ia ---------- */
+:root[data-theme="dark"] .ia-body :is(.ia-main, .ia-scroll, .ia-thread) { background: var(--paper); color: var(--ink); }
+:root[data-theme="dark"] .ia-body .ia-topbar { background: #0f1a2e; border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .ia-body .ia-title small { color: var(--muted); }
+:root[data-theme="dark"] .ia-body :is(.ia-system-card, .ia-composer, .ia-input-wrap, .ia-notice) {
+  background: var(--dark-surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .ia-body .ia-msg--assistant .ia-msg-body { color: var(--ink); }
+:root[data-theme="dark"] .ia-body :is(textarea, input) { background: transparent; color: var(--ink); }
+:root[data-theme="dark"] .ia-body .ia-back { color: var(--dark-link); }
+:root[data-theme="dark"] .ia-body :is(.ia-empty p, .ia-footnote, .ia-msg-state) { color: var(--muted); }
+:root[data-theme="dark"] .ia-body .ia-empty a { color: var(--dark-link); }
+
+@media (forced-colors: active) {
+  :root[data-theme="dark"] :is(.workspace-body, .ia-body) * { forced-color-adjust: auto; }
+}
+:root[data-theme="dark"] .ia-body .ia-back { background: var(--dark-raised); border-color: #3a4d72; }
+:root[data-theme="dark"] .ia-body .ia-composer-shell { background: var(--dark-surface); border-color: #3a4d72; box-shadow: none; }
+
+/* Posición del interruptor en /ia: a la derecha, junto a «Citas y equipo». */
+.ia-topbar .ui-theme-switch { margin-left: auto; }
+.ia-topbar .ui-theme-switch + .ia-team { margin-left: 10px; }
+:root[data-theme="dark"] .ia-body .ia-prompts button { background: var(--dark-surface); color: var(--ink); border-color: #3a4d72; }
+:root[data-theme="dark"] .ia-body .ia-prompts button:is(:hover, :focus-visible) { background: var(--dark-raised); }
+
+/* Revisión vista por vista de /app (auditoría de fondos claros y texto oscuro). */
+:root[data-theme="dark"] .workspace-body :is(.period-toolbar, .automation-facts, blockquote, .conversation-layout,
+  .conversation-list, .crm-view-switch, .copy-card, .privacy-policy-note, .stage-tile, .notification-list li.is-unread, li.is-unread) {
+  background: var(--dark-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .workspace-body .crm-view-switch button:not(.active):not([aria-pressed="true"]) { background: transparent; color: var(--ink); }
+:root[data-theme="dark"] .workspace-body #view-content :is(label, strong, li, blockquote, h1, h2, h3, h4, .period-note, .tagline, .copy-content),
+:root[data-theme="dark"] .workspace-body #view-content p:not(.muted):not(.field-help):not(.form-error) { color: var(--ink); }
+:root[data-theme="dark"] .workspace-body :is(.avatar, .empty-symbol) { background: #22324f; color: #d5e0f2; }
+:root[data-theme="dark"] .workspace-body #view-content span:not([class]) { color: var(--muted); }
+
+/* La pantalla de entrada (#login-screen) define sus propios colores por tema en
+   team-auth.css: tarjeta y campos cambian juntos, sin mezclar claro y oscuro. */

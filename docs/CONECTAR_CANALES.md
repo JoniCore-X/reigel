@@ -24,9 +24,9 @@ Solo chats privados y texto; grupos y otros tipos se omiten. El visitante debe i
 
 ## IA
 
-Configurar `OPENAI_API_KEY` de empresa y `OPENAI_MODEL` accesible en esa cuenta, con presupuesto autorizado. No hay modelo ficticio ni respuestas simuladas. Se utiliza `/v1/responses` y `store: false`; esto desactiva el almacenamiento del recurso de respuesta, no promete ausencia total de registros del proveedor.
+La generación de borradores usa Ollama local en `http://127.0.0.1:11434`, con el modelo instalado `qwen2.5:3b` por defecto. Ollama debe estar ejecutándose en esta computadora y el modelo debe estar instalado previamente; la aplicación no descarga modelos ni usa `OPENAI_API_KEY`, `OPENAI_MODEL` o un servicio de IA en la nube. Si se cambia el modelo, configurar `REIGEL_LOCAL_MODEL` con un nombre local permitido. La vista de automatización informa si Ollama está disponible y si falta el modelo.
 
-Primero generar/revisar un borrador; después activar IA en una conversación de prueba y escribir desde el canal real. El asistente dirige a la reserva web, sin reservar desde el chat ni prometer financiación. [Documentación oficial OpenAI](https://developers.openai.com/api/docs/guides/text).
+Los borradores requieren revisión humana. Excepción: con el modo IA activado en una conversación de canal permitida, la respuesta generada se envía sin revisión previa y un fallo devuelve la conversación a modo humano. El chat web utiliza su motor propio y el modelo no reserva, confirma citas ni decide precios o financiación. Para probar un canal externo, se necesita una cuenta y configuración válidas del propio canal; los transportes controlados de las pruebas no demuestran entrega real.
 
 ## Estados
 

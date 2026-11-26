@@ -1,0 +1,148 @@
+/* Page-entry overlay. The animated mark lives in reigel-loader.css.
+   Markup stays inert without JavaScript; the head script adds `ps-booting`
+   before first paint and removes it after the reveal. */
+
+html.ps-booting { overflow: hidden; }
+
+.ps-loader { display: none; }
+
+html.ps-booting .ps-loader {
+  --rl-scrim: rgb(6 13 28 / .74);
+  --rl-scrim-solid: rgb(7 15 31 / .95);
+  --rl-ink: #fff;
+  --rl-accent: #ff8a3d;
+  display: flex !important;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: max(22px, env(safe-area-inset-top)) 22px max(22px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  color: #fff;
+  background: var(--rl-scrim-solid);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  opacity: 1;
+  transition: opacity .36s ease;
+}
+
+/* When the loader joins the top layer as a manual popover it must stay
+   hidden until showPopover(); the fallback path keeps the fixed overlay. */
+@supports selector(:popover-open) {
+  html.ps-booting .ps-loader:not(:popover-open) {
+    display: none !important;
+  }
+}
+
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html.ps-booting .ps-loader:not(.rl-lite) {
+    background: var(--rl-scrim);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    backdrop-filter: blur(20px) saturate(1.15);
+  }
+}
+
+html.ps-booting .ps-loader.ps-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ps-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+/* Connection failure: the overlay stays put with an honest message and two
+   explicit actions instead of hiding the page behind an endless spinner. */
+.ps-loader .ps-error {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: min(360px, calc(100vw - 44px));
+  margin-top: 26px;
+  padding: 16px 20px 18px;
+  border: 1px solid #ffffff2e;
+  border-radius: 16px;
+  background: #071d43b8;
+  box-shadow: 0 18px 44px #020b1a52, inset 0 1px 0 #ffffff1f;
+  color: #eaf1ff;
+  text-align: center;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.ps-loader .ps-error[hidden] { display: none; }
+
+.ps-error-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+.ps-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+
+.ps-error button {
+  min-height: 42px;
+  padding: 9px 18px;
+  border: 1px solid #ffb173;
+  border-radius: 999px;
+  background: #ff7a001f;
+  color: #ffe4c9;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.ps-error button:hover,
+.ps-error button:focus-visible { border-color: #ffd0a3; background: #ff7a0038; color: #fff; }
+
+.ps-error button:focus-visible { outline: 3px solid #ffb173; outline-offset: 2px; }
+
+.ps-error .ps-continue { border-color: #ffffff2e; background: transparent; color: #c9d7ea; }
+
+.ps-error .ps-continue:hover,
+.ps-error .ps-continue:focus-visible { border-color: #ffffff52; background: #ffffff14; color: #fff; }
+
+.ps-failed .ps-stage { opacity: .72; transition: opacity .3s ease; }
+
+@media (max-width: 700px) {
+  .ps-loader .ps-error { width: min(320px, calc(100vw - 36px)); margin-top: 20px; padding: 14px 16px 16px; }
+  .ps-error-text { font-size: 13.5px; }
+}
+
+@media (max-height: 620px) {
+  .ps-loader .ps-error { margin-top: 14px; padding: 12px 16px 14px; }
+  .ps-error-text { font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.ps-booting { overflow: auto; }
+  html.ps-booting .ps-loader { display: none; }
+  .ps-stage {
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  html.ps-booting .ps-loader { display: none; }
+}

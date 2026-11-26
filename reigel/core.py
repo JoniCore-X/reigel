@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -16,7 +18,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-STAGES = ("nuevo", "contactado", "calificado", "cita", "ganado", "perdido")
+from argon2 import PasswordHasher
+from argon2.exceptions import Argon2Error, InvalidHashError
+
+STAGES = ("nuevo", "contacto_pendiente", "contactado", "calificado", "cita", "cita_realizada",
+          "propuesta_preparacion", "propuesta_presentada", "negociacion", "ganado", "perdido")
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -25,6 +31,29 @@ class DomainError(ValueError):
         super().__init__(detail)
         self.detail = detail
         self.status = status
+
+
+# Network of the current request, already truncated (see client_network). Set by the
+# HTTP middleware; None outside a request (scripts, tests calling the store directly).
+CLIENT_NET: contextvars.ContextVar = contextvars.ContextVar("reigel_client_net", default=None)
+
+
+def client_network(host) -> str | None:
+    """Privacy-preserving form of a client address: IPv4 /24, IPv6 /48, never the full address."""
+    try:
+        address = ipaddress.ip_address(host)
+    except (TypeError, ValueError):
+        return None
+    if address.version == 6 and address.ipv4_mapped:
+        address = address.ipv4_mapped
+    prefix = 24 if address.version == 4 else 48
+    return str(ipaddress.ip_network(f"{address}/{prefix}", strict=False))
+
+
+def record_security(db, realm, actor_id, action, subject_id=None) -> None:
+    """Identity and security audit row; stores only the truncated client network."""
+    db.execute("INSERT INTO identity_audit(id,realm,actor_id,action,subject_id,created_at,client_net) VALUES(?,?,?,?,?,?,?)",
+               (uid(), realm, actor_id, action, subject_id, stamp(), CLIENT_NET.get()))
 
 
 def now() -> datetime:
@@ -80,22 +109,34 @@ def site_origin(value: str) -> str:
     return value.rstrip("/")
 
 
+PASSWORDS = PasswordHasher()
+_MISSING_HASH = None
+
+
 def password_hash(password: str) -> str:
     if not isinstance(password, str) or len(password) < 12 or len(password) > 512:
         raise DomainError("Usa una contraseña de 12 a 512 caracteres.", 422)
-    salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
-    return f"scrypt${salt.hex()}${digest.hex()}"
+    return PASSWORDS.hash(password)
+
+
+def missing_password_hash() -> str:
+    """Keep verification cost equal when an account does not exist."""
+    global _MISSING_HASH
+    if _MISSING_HASH is None:
+        _MISSING_HASH = PASSWORDS.hash(secrets.token_urlsafe(24))
+    return _MISSING_HASH
 
 
 def password_matches(password: str, encoded: str) -> bool:
     try:
         if not isinstance(password, str) or len(password) > 512:
             return False
+        if encoded.startswith("$argon2id$"):
+            return PASSWORDS.verify(encoded, password)
         _, salt, digest = encoded.split("$")
         actual = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1)
         return hmac.compare_digest(actual.hex(), digest)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, Argon2Error, InvalidHashError):
         return False
 
 
@@ -104,6 +145,7 @@ def user_dict(row) -> dict:
     obj.pop("password_hash", None)
     obj["active"] = bool(obj["active"])
     obj["public_booking"] = bool(obj["public_booking"])
+    obj["is_owner"] = bool(obj.get("is_owner", 0))
     obj["work_days"] = json.loads(obj["work_days"])
     return obj
 
@@ -154,14 +196,81 @@ CREATE TABLE IF NOT EXISTS audit_events (
 """
 
 
-class Store:
+from .operations import OperationsMixin, migrate_operations
+from . import team_access
+from .team_access import TeamAccessMixin
+
+
+def default_db_path(db_path=None) -> str:
+    """Resolve the database path without opening or creating anything."""
+    runtime = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share")) / "PowerSolar"
+    return str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
+
+
+# Appointment codes people can read aloud and type: six characters from an
+# alphabet without look-alikes (0/O, 1/I/L, 2/Z, 5/S, 8/B), shown as ABC-DEF.
+REFERENCE_ALPHABET = "ACDEFGHJKMNPQRTUVWXY34679"
+REFERENCE_LENGTH = 6
+
+
+def new_reference(db):
+    for _ in range(25):
+        code = "".join(secrets.choice(REFERENCE_ALPHABET) for _ in range(REFERENCE_LENGTH))
+        if not db.execute("SELECT 1 FROM appointments WHERE reference=?", (code,)).fetchone():
+            return code
+    raise DomainError("No se pudo generar el código de la cita. Inténtalo de nuevo.", 503)
+
+
+def format_reference(code):
+    return f"{code[:3]}-{code[3:]}" if code else ""
+
+
+def normalize_reference(value):
+    """Accepts lower case, spaces and hyphens: 'k7m 4qx' -> 'K7M4QX'; anything else -> ''."""
+    if not isinstance(value, str):
+        return ""
+    code = re.sub(r"[\s-]", "", value).upper()
+    return code if len(code) == REFERENCE_LENGTH and all(ch in REFERENCE_ALPHABET for ch in code) else ""
+
+
+def migrate_appointment_reference(db):
+    """Additive: short appointment code; existing appointments receive one too."""
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(appointments)")}
+    if "reference" not in columns:
+        db.execute("ALTER TABLE appointments ADD COLUMN reference TEXT")
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS appointments_reference ON appointments(reference) WHERE reference IS NOT NULL")
+    for row in db.execute("SELECT id FROM appointments WHERE reference IS NULL").fetchall():
+        db.execute("UPDATE appointments SET reference=? WHERE id=?", (new_reference(db), row["id"]))
+
+
+def migrate_owner(db):
+    """Additive: the platform owner is an admin flagged with is_owner.
+
+    When no active owner exists, the oldest active admin becomes the owner, so an
+    existing database keeps exactly one account with control over plans and admins.
+    """
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(users)")}
+    if "is_owner" not in columns:
+        db.execute("ALTER TABLE users ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0")
+    if not db.execute("SELECT 1 FROM users WHERE is_owner=1 AND active=1").fetchone():
+        first = db.execute("SELECT id FROM users WHERE role='admin' AND active=1 ORDER BY created_at,id LIMIT 1").fetchone()
+        if first:
+            db.execute("UPDATE users SET is_owner=1 WHERE id=?", (first["id"],))
+
+
+class Store(OperationsMixin, TeamAccessMixin):
     def __init__(self, db_path=None):
-        runtime = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share")) / "PowerSolar"
-        self.path = str(db_path or os.environ.get("REIGEL_DB_PATH", runtime / "reigel.db"))
+        self.path = default_db_path(db_path)
         Path(self.path).resolve().parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(SCHEMA)
+            migrate_operations(db)
+            migrate_owner(db)
+            migrate_appointment_reference(db)
+            from .identity import migrate_identity
+            migrate_identity(db)
+            team_access.migrate_team_access(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",
@@ -208,6 +317,11 @@ class Store:
         return self.settings()
 
     @staticmethod
+    def require_owner(actor):
+        if not actor or actor.get("role") != "admin" or not actor.get("is_owner"):
+            raise DomainError("Esta acción está reservada al propietario de R.E.I.G.E.L.", 403)
+
+    @staticmethod
     def require_admin(actor):
         if not actor or actor["role"] != "admin":
             raise DomainError("Esta acción requiere una cuenta administradora.", 403)
@@ -224,6 +338,8 @@ class Store:
         role = data.get("role", "advisor")
         if not isinstance(role, str) or role not in {"admin", "advisor"}:
             raise DomainError("Rol no válido.", 422)
+        if role == "admin" and not bootstrap:
+            self.require_owner(actor)
         encoded = password_hash(data.get("password", ""))
         user_id = uid()
         try:
@@ -231,9 +347,15 @@ class Store:
                 db.execute("BEGIN IMMEDIATE")
                 if bootstrap and db.execute("SELECT 1 FROM users LIMIT 1").fetchone():
                     raise DomainError("Ya hay usuarios. Inicia sesión para administrar el equipo.", 409)
-                db.execute("INSERT INTO users(id,name,email,password_hash,role,timezone,created_at) VALUES(?,?,?,?,?,?,?)",
-                           (user_id, name, email, encoded, role, self.settings()["timezone"], stamp()))
+                if not bootstrap and not team_access.is_allowed(db, email):
+                    raise DomainError("Ese correo no está autorizado para el equipo. El propietario debe añadirlo a la lista de acceso "
+                                      "(con la regla «Power Solar» activa, debe contener «powersolar»).", 403)
+                db.execute("INSERT INTO users(id,name,email,password_hash,role,timezone,created_at,is_owner) VALUES(?,?,?,?,?,?,?,?)",
+                           (user_id, name, email, encoded, role, self.settings()["timezone"], stamp(), int(bootstrap)))
                 self.audit(db, actor, "user.create", user_id)
+                if bootstrap:
+                    # The first account is the owner; its email is always allowed (lockout protection).
+                    team_access.ensure_owner_allowed(db)
                 return user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
         except sqlite3.IntegrityError:
             raise DomainError("Ya existe una cuenta con ese correo.", 409) from None
@@ -246,12 +368,27 @@ class Store:
             raise DomainError("Campos de cuenta no válidos.", 422)
         if actor["role"] != "admin" and "active" in data:
             raise DomainError("Solo un administrador puede activar cuentas.", 403)
+        if "password" in data and actor["id"] == user_id:
+            # Your own password changes only through /api/auth/password, which asks for the current one.
+            raise DomainError("Cambia tu contraseña desde «Cambiar contraseña», con tu contraseña actual.", 403)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
             if not row:
                 raise DomainError("Cuenta no encontrada.", 404)
             old = user_dict(row)
+            if old["role"] == "admin" and not actor.get("is_owner"):
+                # Administrators manage advisors only. The owner alone changes another
+                # administrator or the owner; an administrator may adjust only the
+                # schedule of their own account, never its name, password or status.
+                if actor["id"] != user_id:
+                    raise DomainError("Solo el propietario puede modificar a un administrador o al propietario.", 403)
+                if {"name", "password", "active"} & set(data):
+                    raise DomainError("Solo el propietario puede cambiar el nombre, la contraseña o el estado de un administrador.", 403)
+            if "active" in data and old["is_owner"] and data["active"] is not True:
+                raise DomainError("La cuenta del propietario no se puede desactivar.", 409)
+            if "active" in data and old["role"] == "admin" and actor["id"] != user_id and not actor.get("is_owner"):
+                raise DomainError("Solo el propietario puede activar o desactivar administradores.", 403)
             merged = {**old, **data}
             values = {}
             if "name" in data:
@@ -300,18 +437,45 @@ class Store:
             return user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
 
     def login(self, email, password):
+        """Check the password; the result is only the next step, never a session.
+
+        Every team account must then pass Google Authenticator: "totp" when it is
+        enrolled, "enroll" (QR setup) on its first login. Unknown, inactive and
+        non-allowed emails cost the same password verification and get the same
+        error, so the response cannot reveal which emails exist or are listed.
+        """
         email = email_address(email, required=True)
         with self.connect() as db:
             row = db.execute("SELECT * FROM users WHERE email=? COLLATE NOCASE AND active=1", (email,)).fetchone()
-            encoded = row["password_hash"] if row else "scrypt$00000000000000000000000000000000$" + "00" * 64
+            allowed = bool(row) and team_access.is_allowed(db, row["email"], owner=bool(row["is_owner"]))
+            encoded = row["password_hash"] if allowed else missing_password_hash()
             matched = password_matches(password, encoded)
-            if not row or not matched:
-                raise DomainError("Correo o contraseña incorrectos.", 401)
-            token = secrets.token_urlsafe(36)
-            db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
-            db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), row["id"], (now() + timedelta(hours=12)).isoformat()))
-            self.audit(db, user_dict(row), "auth.login", row["id"])
-            return token, user_dict(row)
+            if allowed and matched:
+                if row["password_hash"].startswith("scrypt$"):
+                    db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(password), row["id"]))
+                enrolled = db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (row["id"],)).fetchone()
+                self.audit(db, user_dict(row), "auth.password_ok", row["id"])
+                return None, {"mfa": "totp" if enrolled else "enroll", "user_id": row["id"]}
+            # Same writes on every failure path, committed before the error. The account id
+            # (never the password) is recorded when the email matches an active account.
+            self.audit(db, None, "auth.login_failed", row["id"] if row else None)
+            record_security(db, "team", None, "auth.login_failed", row["id"] if row else None)
+        raise DomainError("Correo o contraseña incorrectos.", 401)
+
+    def issue_session(self, db, user_id) -> str:
+        """Only the second-factor steps in identity.py call this."""
+        token = secrets.token_urlsafe(36)
+        db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
+        db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), user_id, (now() + timedelta(hours=12)).isoformat()))
+        self.audit(db, {"id": user_id}, "auth.login", user_id)
+        return token
+
+    @staticmethod
+    def team_access_ok(db, row) -> bool:
+        """An account keeps access only while it is allowed and has Google Authenticator."""
+        if not db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (row["id"],)).fetchone():
+            return False
+        return team_access.is_allowed(db, row["email"], owner=bool(row["is_owner"]))
 
     def session_user(self, token):
         if not token or len(token) > 200:
@@ -319,7 +483,8 @@ class Store:
         with self.connect() as db:
             row = db.execute("SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1",
                              (hashlib.sha256(token.encode()).hexdigest(), stamp())).fetchone()
-            if not row:
+            # Sessions opened before TOTP became mandatory, or of an email taken off the list, grant nothing.
+            if not row or not self.team_access_ok(db, row):
                 raise DomainError("La sesión terminó. Vuelve a iniciar sesión.", 401)
             return user_dict(row)
 
@@ -393,6 +558,7 @@ class Store:
 
     def create_lead(self, data, actor=None):
         normalized = self.normalize_lead(data, public=actor is None)
+        metadata = self._lead_metadata(data) if actor else {}
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             advisor_id = data.get("advisor_id")
@@ -410,6 +576,8 @@ class Store:
                                         WHERE u.active=1 AND u.public_booking=1 GROUP BY u.id ORDER BY n,u.created_at LIMIT 1""").fetchone()
                 advisor_id = candidate["id"] if candidate else None
             lead_id = self._insert_lead(db, normalized, advisor_id)
+            for key, value in metadata.items():
+                db.execute(f"UPDATE leads SET {key}=? WHERE id=?", (value, lead_id))
             self.audit(db, actor, "lead.create", lead_id)
             return self._lead(db, lead_id, actor, public=actor is None)
 
@@ -444,36 +612,7 @@ class Store:
             return [{**dict(r), "consent": bool(r["consent"])} for r in rows]
 
     def update_lead(self, lead_id, data, actor):
-        if not isinstance(data, dict) or set(data) - {"stage", "advisor_id", "notes", "consent"}:
-            raise DomainError("Campos del contacto no válidos.", 422)
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            self._lead(db, lead_id, actor)
-            values = {}
-            if "stage" in data:
-                if not isinstance(data["stage"], str) or data["stage"] not in STAGES:
-                    raise DomainError("Etapa no válida.", 422)
-                values["stage"] = data["stage"]
-            if "advisor_id" in data:
-                self.require_admin(actor)
-                selected_advisor = text(data["advisor_id"], "asesor", limit=100) or None
-                if selected_advisor and not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (selected_advisor,)).fetchone():
-                    raise DomainError("Asesor no disponible.", 422)
-                values["advisor_id"] = selected_advisor
-                db.execute("UPDATE conversations SET advisor_id=? WHERE lead_id=?", (values["advisor_id"], lead_id))
-            if "notes" in data:
-                values["notes"] = text(data["notes"], "notas", limit=5000)
-            if "consent" in data:
-                if type(data["consent"]) is not bool:
-                    raise DomainError("Consentimiento no válido.", 422)
-                values["consent"] = int(data["consent"])
-                if not data["consent"]:
-                    db.execute("UPDATE conversations SET mode='human' WHERE lead_id=?", (lead_id,))
-            values["updated_at"] = stamp()
-            for key, value in values.items():
-                db.execute(f"UPDATE leads SET {key}=? WHERE id=?", (value, lead_id))
-            self.audit(db, actor, "lead.update", lead_id)
-            return self._lead(db, lead_id, actor)
+        return self.edit_lead(lead_id, data, actor)
 
     def _advisor(self, db, advisor_id, public):
         row = db.execute("SELECT * FROM users WHERE id=? AND active=1", (advisor_id,)).fetchone()
@@ -519,6 +658,8 @@ class Store:
                             JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id WHERE a.id=?""", (appointment_id,)).fetchone()
         if not row or (actor and actor["role"] != "admin" and row["advisor_id"] != actor["id"]):
             raise DomainError("Cita no encontrada.", 404)
+        if actor and actor["role"] != "admin":
+            self._lead(db, row["lead_id"], actor)
         return dict(row)
 
     def book(self, data, source="web", actor=None):
@@ -551,6 +692,7 @@ class Store:
                     raise DomainError("El contacto debe autorizar la gestión de su cita.", 422)
                 if actor["role"] != "admin" and lead["advisor_id"] != advisor_id:
                     raise DomainError("No puedes reservar para otro asesor.", 403)
+                self._transfer_lead(db, lead, advisor_id, actor)
                 duplicate = db.execute("SELECT 1 FROM appointments WHERE lead_id=? AND status='confirmed' AND start_at<? AND end_at>?", (lead_id, finish, begin)).fetchone()
             else:
                 # Match identities only for overlap protection, without exposing/reusing private CRM data.
@@ -564,50 +706,40 @@ class Store:
             if lead_id is None:
                 lead_id = self._insert_lead(db, public_data, advisor_id)
             appointment_id = uid()
-            db.execute("INSERT INTO appointments VALUES(?,?,?,?,?,?,?,?)", (appointment_id, lead_id, advisor_id, begin, finish, "confirmed", source, stamp()))
+            db.execute("""INSERT INTO appointments(id,lead_id,advisor_id,start_at,end_at,status,source,created_at,reference)
+                VALUES(?,?,?,?,?,?,?,?,?)""", (appointment_id, lead_id, advisor_id, begin, finish, "confirmed", source, stamp(), new_reference(db)))
+            db.execute("UPDATE tasks SET owner_id=?,updated_at=? WHERE lead_id=? AND status='pending'", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE leads SET stage='cita',advisor_id=?,updated_at=? WHERE id=?", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE conversations SET advisor_id=? WHERE lead_id=?", (advisor_id, lead_id))
             self.audit(db, actor, "appointment.book", appointment_id)
             result = self._appointment(db, appointment_id, actor)
             if actor is None:
-                return {key: result[key] for key in ("id", "start_at", "end_at", "advisor_name")}
+                return {key: result[key] for key in ("id", "reference", "start_at", "end_at", "advisor_name")}
             return result
 
     def list_appointments(self, actor, lead_id=None):
         clause, args = self._scope(actor, "a")
+        if actor["role"] != "admin":
+            clause += " AND l.advisor_id=?"
+            args += (actor["id"],)
         if lead_id:
             clause += " AND a.lead_id=?"
             args += (lead_id,)
         with self.connect() as db:
-            return [dict(r) for r in db.execute(f"""SELECT a.*,l.name lead_name,u.name advisor_name FROM appointments a
-                        JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id WHERE {clause} ORDER BY a.start_at DESC LIMIT 1000""", args)]
+            return [dict(r) for r in db.execute(f"""SELECT a.*,l.name lead_name,u.name advisor_name,coalesce(r.hours,24) reminder_hours FROM appointments a
+                        JOIN leads l ON l.id=a.lead_id JOIN users u ON u.id=a.advisor_id
+                        LEFT JOIN appointment_reminders r ON r.appointment_id=a.id
+                        WHERE {clause} ORDER BY a.start_at DESC LIMIT 1000""", args)]
 
     def cancel_appointment(self, appointment_id, actor):
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            self._appointment(db, appointment_id, actor)
-            db.execute("UPDATE appointments SET status='cancelled' WHERE id=?", (appointment_id,))
-            self.audit(db, actor, "appointment.cancel", appointment_id)
-            return self._appointment(db, appointment_id, actor)
+        return self.update_appointment(appointment_id, {"status": "cancelled"}, actor)
 
     def get_appointment(self, appointment_id, actor):
         with self.connect() as db:
             return self._appointment(db, appointment_id, actor)
 
     def dashboard(self, actor):
-        clause, args = self._scope(actor)
-        with self.connect() as db:
-            counts = {r["stage"]: r["n"] for r in db.execute(f"SELECT stage,count(*) n FROM leads WHERE {clause} GROUP BY stage", args)}
-            lead_count = sum(counts.values())
-            appointments = db.execute(f"SELECT count(*) FROM appointments WHERE {clause} AND status='confirmed' AND end_at>?", (*args, stamp())).fetchone()[0]
-            conversations = db.execute(f"SELECT count(*) FROM conversations WHERE {clause}", args).fetchone()[0]
-        return {
-            "metrics": {"leads": lead_count, "appointments": appointments, "conversations": conversations,
-                        "conversion_rate": round(counts.get("ganado", 0) * 100 / lead_count, 1) if lead_count else 0},
-            "stages": [{"stage": stage, "count": counts.get(stage, 0)} for stage in STAGES],
-            "recent_leads": self.list_leads(actor)[:5],
-            "upcoming_appointments": sorted((a for a in self.list_appointments(actor) if a["status"] == "confirmed" and a["end_at"] > stamp()), key=lambda a: a["start_at"])[:5],
-        }
+        return self.operations_dashboard(actor)
 
     def conversation(self, conversation_id, actor):
         with self.connect() as db:
@@ -657,7 +789,10 @@ class Store:
             if advisor_id and not db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (advisor_id,)).fetchone():
                 raise DomainError("Asesor no disponible.", 422)
             if lead_id:
+                self._transfer_lead(db, linked, advisor_id, actor)
                 db.execute("UPDATE leads SET advisor_id=?,updated_at=? WHERE id=?", (advisor_id, stamp(), lead_id))
+                if linked["advisor_id"] != advisor_id:
+                    db.execute("INSERT INTO lead_history VALUES(?,?,?,?,?,?,?)", (uid(), lead_id, actor["id"], "advisor_id", linked["advisor_id"], advisor_id, stamp()))
                 db.execute("UPDATE conversations SET advisor_id=?,mode='human',updated_at=? WHERE lead_id=?", (advisor_id, stamp(), lead_id))
             db.execute("UPDATE conversations SET advisor_id=?,lead_id=?,mode='human',updated_at=? WHERE id=?", (advisor_id, lead_id, stamp(), conversation_id))
             self.audit(db, actor, "conversation.assign", conversation_id)

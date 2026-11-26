@@ -3,130 +3,522 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#1F4298">
-  <meta name="description" content="Explora opciones de energía solar para tu hogar en Puerto Rico con Power Solar. Comparte tus necesidades y agenda una evaluación con nuestro equipo.">
+  <meta name="theme-color" content="#071d43">
+  <meta name="description" content="{{page_description}}">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_PR">
-  <meta property="og:site_name" content="Power Solar">
-  <meta property="og:title" content="Tu próximo paso hacia la energía solar · Power Solar">
-  <meta property="og:description" content="Comprende tus opciones de energía solar y reserva una evaluación en el horario que te funcione. Power Solar, Puerto Rico.">
+  <meta property="og:site_name" content="Power Solar · Team Caguas">
+  <meta property="og:title" content="{{page_title}}">
+  <meta property="og:description" content="{{page_description}}">
   <meta name="twitter:card" content="summary">
-  <title>Power Solar | Evaluación solar y citas en Puerto Rico</title>
+  <title>{{page_title}}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/power-solar/favicon-32.png">
+  <link rel="apple-touch-icon" href="/static/assets/power-solar/favicon-180.png">
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/brand-image.css?v=2">
-  <link rel="stylesheet" href="/static/css/google-form.css">
+  <link rel="stylesheet" href="/static/css/google-form.css?v=3">
   <link rel="stylesheet" href="/static/css/public-header.css?v=2">
   <link rel="stylesheet" href="/static/css/public-intents.css">
-  <link rel="stylesheet" href="/static/css/public-layout-refinement.css?v=1">
-  <script src="/static/js/chat.js?v=2" defer></script>
-  <script src="/static/js/header-menu.js" defer></script>
+  <link rel="stylesheet" href="/static/css/power-solar-identity.css?v=2">
+  <link rel="stylesheet" href="/static/css/corporate.css?v=7">
+  <link rel="stylesheet" href="/static/css/uiverse-components.css?v=4">
+  <link rel="stylesheet" href="/static/css/reigel-loader.css?v=5">
+  <link rel="stylesheet" href="/static/css/site-loader.css?v=10">
+  <link rel="stylesheet" href="/static/css/coordination-chat.css?v=4">
+  <script src="/static/js/reigel-loader.js?v=6"></script>
+  <script src="/static/js/site-loader.js?v=8"></script>
+  <script src="/static/js/chat.js?v=10" defer></script>
+  <script src="/static/js/header-menu.js?v=2" defer></script>
   <script src="/static/js/public-intents.js" defer></script>
+  <script src="/static/js/corporate.js?v=1" defer></script>
+  <script src="/static/js/energy-scene.js?v=8" defer></script>
+  <script src="/static/js/tesla-experience.js?v=1" defer></script>
+  <script src="/static/js/launcher-yield.js?v=2" defer></script>
+  <script src="/static/js/depth-3d.js?v=6" defer></script>
+  <script src="/static/js/system-showcase.js?v=7" defer></script>
+  <link rel="stylesheet" href="/static/css/energy-scene.css?v=8">
+  <link rel="stylesheet" href="/static/css/energy-view.css?v=6">
+  <link rel="stylesheet" href="/static/css/tesla-experience.css?v=6">
+  <link rel="stylesheet" href="/static/css/public-shell.css?v=8">
+  <link rel="stylesheet" href="/static/css/depth-3d.css?v=6">
+  <link rel="stylesheet" href="/static/css/system-showcase.css?v=10">
+  <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
 </head>
-<body class="public-body">
+<body class="public-body corporate-body">
+  <div class="ps-loader" id="ps-loader" role="status" aria-live="polite" popover="manual" hidden>
+    <div class="ps-stage rl-mark" aria-hidden="true"><div class="rl-word"><span class="rl-glyph rl-glyph--letter">R</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">I</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">G</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">E</span><span class="rl-glyph rl-glyph--dot">.</span><span class="rl-glyph rl-glyph--letter">L</span><span class="rl-glyph rl-glyph--dot">.</span></div><span class="rl-line"></span></div>
+    <div class="ps-error" hidden>
+      <p class="ps-error-text" role="alert"></p>
+      <div class="ps-error-actions">
+        <button class="ps-retry" type="button">Reintentar</button>
+        <button class="ps-continue" type="button">Continuar al sitio</button>
+      </div>
+    </div>
+    <p class="ps-sr-only">Cargando Power Solar. La página estará lista en un momento.</p>
+  </div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
   <header class="public-container public-header">
-    <a href="/" class="wordmark" aria-label="Power Solar, inicio"><span class="wordmark-copy"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>ENERGÍA QUE NOS MUEVE</small></span><svg class="sun-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9"/><path d="M24 2v7m0 30v7M2 24h7m30 0h7M8.4 8.4l5 5m21.2 21.2 5 5m0-31.2-5 5M13.4 34.6l-5 5"/></svg></a>
-    <button class="menu-toggle" id="public-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="public-nav" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
+    <a href="/captacion" class="wordmark brand-lockup" aria-label="Power Solar, Team Caguas, inicio"><img class="brand-symbol" src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="brand-wordmark"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>TEAM CAGUAS · PUERTO RICO</small></span></a>
+    <button class="menu-toggle" id="public-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="public-nav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <nav class="public-nav" id="public-nav" aria-label="Navegación principal">
-      <span class="team-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg><span>Team <strong>Caguas</strong></span></span>
-      <a href="#proceso">Cómo funciona</a>
-      <button class="nav-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">R.E.I.G.E.L.</button>
-      <a href="#preguntas">Preguntas frecuentes</a>
-      <a class="button primary" href="#evaluacion">Coordina tu evaluación <span aria-hidden="true">↗</span></a>
+      <div class="mobile-menu-dialog" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title" tabindex="-1">
+        <div class="mobile-menu-head">
+          <a class="mobile-menu-brand" href="/captacion" aria-label="Power Solar, Team Caguas, inicio"><img src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="mobile-menu-team"><small>POWER SOLAR</small><strong>TEAM CAGUAS</strong></span></a>
+          <button class="mobile-menu-close" type="button" data-close-menu aria-label="Cerrar menú" aria-controls="public-nav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="mobile-menu-heading"><span aria-hidden="true"></span><p id="mobile-menu-title">CONOCE POWER SOLAR</p></div>
+        <div class="mobile-menu-links">
+          <a class="mobile-menu-link" href="/captacion" data-site-page="inicio"><span class="mobile-menu-copy"><strong>Inicio</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/empresa" data-site-page="empresa"><span class="mobile-menu-copy"><strong>Empresa</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/equipo" data-site-page="equipo"><span class="mobile-menu-copy"><strong>Equipo</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/soluciones" data-site-page="soluciones"><span class="mobile-menu-copy"><strong>Soluciones</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/proceso" data-site-page="proceso"><span class="mobile-menu-copy"><strong>Evaluación</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/contacto" data-site-page="contacto"><span class="mobile-menu-copy"><strong>Contacto</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+          <a class="mobile-menu-link" href="/preguntas" data-site-page="preguntas"><span class="mobile-menu-copy"><strong>Preguntas</strong></span><span class="mobile-menu-chevron" aria-hidden="true">›</span></a>
+        </div>
+        <button class="mobile-menu-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="mobile-menu-chat-mark" aria-hidden="true">R.</span><span class="mobile-menu-chat-copy"><strong>R.E.I.G.E.L.</strong><small>Asistente virtual</small><span>Conversa sobre tus preguntas.</span></span><span class="mobile-menu-chat-arrow" aria-hidden="true">↗</span></button>
+        <p class="mobile-menu-note">Orientación y evaluación para tu hogar.</p>
+      </div>
+      <a href="/captacion" data-site-page="inicio">Inicio</a>
+      <a href="/empresa" data-site-page="empresa">Empresa</a>
+      <a href="/equipo" data-site-page="equipo">Equipo</a>
+      <a href="/soluciones" data-site-page="soluciones">Soluciones</a>
+      <a href="/proceso" data-site-page="proceso">Evaluación</a>
+      <a href="/contacto" data-site-page="contacto">Contacto</a>
+      <a href="/preguntas" data-site-page="preguntas">Preguntas</a>
+      <button class="nav-chat" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">R.E.I.G.E.L. <span aria-hidden="true">↗</span></button>
     </nav>
   </header>
+  <div class="mobile-menu-backdrop" id="public-menu-backdrop" hidden aria-hidden="true"></div>
   <main id="main">
-    <section class="public-hero ps2-layout" aria-labelledby="hero-title">
-      <div class="public-container">
-        <div class="hero-grid ps2-inner">
-          <div class="public-hero-copy ps2-copy">
-            <p class="eyebrow light-text ps2-eyebrow">PUERTO RICO / ENERGÍA CON PERSPECTIVA</p>
-            <h1 class="ps2-title" id="hero-title">Tu hogar merece<br>más opciones.</h1>
-            <p class="ps2-description">Explora alternativas de energía para tu hogar con orientación profesional, a tu ritmo y desde lo que más te importa.</p>
-            <div class="actions ps2-actions">
-              <button class="button orange" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false">Conversa con R.E.I.G.E.L. <span aria-hidden="true">↗</span></button>
-              <a class="hero-secondary" href="#evaluacion">Coordina una evaluación</a>
-            </div>
-            <small class="ps2-disclaimer">Cada opción requiere conocer las necesidades y condiciones de tu hogar.</small>
+<!--corporate:content:start-->
+    <section class="corp-home corp-container" aria-labelledby="home-title">
+      <div class="corp-home-copy">
+        <p class="corp-eyebrow">POWER SOLAR · TEAM CAGUAS</p>
+        <h1 id="home-title">Energía solar.<br>Información para decidir.</h1>
+        <p class="corp-lead">Conoce las opciones de energía para tu hogar en Puerto Rico y los aspectos que conviene evaluar antes de tomar una decisión.</p>
+        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/empresa">Conoce nuestro enfoque <span aria-hidden="true">→</span></a></div>
+      </div>
+      <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico-1384.webp" width="1384" height="1030" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
+    </section>
+    <section class="sc-why" aria-labelledby="sc-why-title">
+      <div class="corp-container">
+        <div class="sc-why-head" data-sc-reveal>
+          <div class="sc-r" style="--i:0">
+            <p class="corp-eyebrow">EL FUTURO DE TU ENERGÍA</p>
+            <h2 id="sc-why-title">Menos dependencia.<br>Más control.</h2>
           </div>
-          <section class="hero-intents ps2-panel" aria-labelledby="intent-title">
-            <div class="hero-intents-heading">
-              <p class="eyebrow ps2-panel-eyebrow">EMPECEMOS POR LO QUE TE IMPORTA</p>
-              <h2 class="ps2-panel-title" id="intent-title">¿Qué te gustaría mejorar?</h2>
-              <p class="ps2-panel-description">Elige un tema para preparar una pregunta. Tú decides si la envías.</p>
-            </div>
-            <div class="intent-options ps2-options">
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero entender cómo evaluar el consumo y los costos de energía de mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">01</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Reducir costos de energía</strong><small class="ps2-option-text">Entender el consumo y los costos de tu hogar.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero explorar qué tendría que evaluar para tener respaldo durante apagones." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">02</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Tener respaldo durante apagones</strong><small class="ps2-option-text">Conversar sobre prioridades y necesidades.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="Quiero orientación para explorar sistemas solares para mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">03</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">Explorar sistemas solares</strong><small class="ps2-option-text">Conocer posibilidades y preguntas para una evaluación.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-              <button class="intent-option ps2-option" type="button" data-open-chat data-chat-prefill="No sé qué necesito y quisiera orientación sobre las opciones para mi hogar." aria-controls="reigel-chat" aria-expanded="false">
-                <span class="intent-number ps2-option-number" aria-hidden="true">04</span>
-                <span class="intent-copy ps2-option-copy"><strong class="ps2-option-title">No sé qué necesito</strong><small class="ps2-option-text">Recibir orientación para dar el primer paso.</small></span>
-                <span class="intent-arrow ps2-option-arrow" aria-hidden="true">↗</span>
-              </button>
-            </div>
-          </section>
+          <p class="sc-why-lead sc-r" style="--i:1">Genera tu propia energía, reduce tu dependencia de LUMA y protege tu hogar durante las interrupciones eléctricas. Descubre una solución energética diseñada alrededor de tus necesidades.</p>
         </div>
-        <ol class="hero-footnote ps2-steps" aria-label="Un camino hacia la evaluación">
-          <li><b>01</b> Tu necesidad</li>
-          <li><b>02</b> Orientación clara</li>
-          <li><b>03</b> Evaluación profesional</li>
+        <ul class="sc-why-grid" data-sc-reveal>
+          <li class="sc-r" style="--i:0"><a class="sc-why-card" href="/proceso">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4.5h16a1.5 1.5 0 0 1 1.5 1.5v21l-3.2-2-3.1 2-3.2-2-3.2 2-3.1-2-3.2 2V6A1.5 1.5 0 0 1 8 4.5z"/><path class="sc-why-a" d="M11 11.5l4 4 2.5-2.5 3.5 4.5M21 14v3.5h-3.5"/></svg></span>
+            <h3>Ahorro mensual</h3>
+            <p>Reduce tu dependencia de las tarifas eléctricas. Lo que puedes ahorrar depende de tu consumo y se calcula en tu evaluación; las opciones de pago se revisan con el equipo.</p>
+            <span class="sc-why-more">Ver el proceso de evaluación <span aria-hidden="true">→</span></span>
+          </a></li>
+          <li class="sc-r" style="--i:1"><a class="sc-why-card" href="/soluciones#respaldo">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M5 14.5 16 5.5l11 9V25a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path class="sc-why-a" d="M17 12.5 13.5 18h5L15 23.5"/></svg></span>
+            <h3>Respaldo energético</h3>
+            <p>Mantén tus equipos esenciales funcionando durante apagones, según la capacidad de tu sistema.</p>
+            <span class="sc-why-more">Ver opciones de respaldo <span aria-hidden="true">→</span></span>
+          </a></li>
+          <li class="sc-r" style="--i:2"><a class="sc-why-card" href="/soluciones#energia-solar">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M9 18h14l3.5 9h-21zM16 18v9M7.2 22.5h17.6"/><g class="sc-why-a"><circle cx="16" cy="8.5" r="3"/><path d="M16 2.5V4M9.5 8.5H11M21 8.5h1.5M11.4 3.9l1.1 1.1M20.6 3.9l-1.1 1.1"/></g></svg></span>
+            <h3>Energía renovable</h3>
+            <p>Aprovecha la energía del sol para alimentar tu hogar y reducir tu dependencia de la red eléctrica.</p>
+            <span class="sc-why-more">Ver energía solar residencial <span aria-hidden="true">→</span></span>
+          </a></li>
+        </ul>
+        <div class="sc-why-cta" data-sc-reveal>
+          <div class="sc-r" style="--i:0"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Descubre tu potencial de ahorro <span aria-hidden="true">↗</span></a></div>
+          <p class="sc-r" style="--i:1">Sin compromiso. El resultado depende de tu consumo y de tu propiedad.</p>
+        </div>
+      </div>
+    </section>
+    <section class="corp-energy-view corp-container" aria-labelledby="energy-view-title">
+      <div class="corp-energy-copy">
+        <p class="corp-eyebrow">TU ENERGÍA, A LA VISTA</p>
+        <h2 id="energy-view-title">Mira cómo tu casa<br>aprovecha el sol.</h2>
+        <p class="corp-energy-lead">Un sistema solar reparte la energía entre las placas, tu hogar y la red. Te explicamos cómo funcionaría en tu casa antes de que decidas.</p>
+        <ul class="corp-energy-points">
+          <li><strong>Solar</strong><span>Lo que producen tus placas.</span></li>
+          <li><strong>Hogar</strong><span>Lo que consume tu casa.</span></li>
+          <li><strong>Red</strong><span>La energía que entra o sale.</span></li>
+        </ul>
+        <div class="ui-hero-actions"><a class="ui-hero-secondary" href="/soluciones">Ver cómo funciona <span aria-hidden="true">→</span></a></div>
+      </div>
+      <figure class="corp-energy-phone">
+        <img src="/static/assets/power-solar/app-energia-hogar-hd.webp" width="1161" height="1548" loading="lazy" decoding="async" alt="Aplicación de monitoreo con una casa con placas solares: 4.8 kW de solar, 0.4 kW para el hogar y 4.4 kW hacia la red.">
+        <figcaption>Imagen ilustrativa. Las cifras son un ejemplo y no representan la producción ni el ahorro de tu hogar. La aplicación y sus funciones dependen del equipo instalado.</figcaption>
+      </figure>
+    </section>
+    <section class="corp-tesla-panel tx" aria-labelledby="tesla-panel-title">
+      <div class="tx-hero" data-tx-reveal>
+        <figure class="tx-hero-media">
+          <img src="/static/assets/power-solar/techo-placas-negras-perfil-bajo.webp" width="1448" height="1086" loading="lazy" decoding="async" alt="Conjunto de placas solares negras de perfil bajo sobre un techo inclinado de tejas asfálticas, al atardecer">
+          <figcaption>Imagen de referencia. El equipo y el montaje se definen en tu evaluación.</figcaption>
+        </figure>
+        <div class="tx-wrap tx-hero-copy">
+          <p class="tx-kicker tx-r" style="--i:0">Tecnología Tesla · Instalador certificado</p>
+          <h2 id="tesla-panel-title"><span class="tx-title-line tx-r tx-mask" style="--i:1">Placas solares Tesla de</span> <span class="tx-figure tx-r tx-mask" style="--i:2">420 <small>W</small></span> <span class="tx-title-line tx-r tx-mask" style="--i:3">por placa. Negras y de perfil bajo.</span></h2>
+          <span class="tx-energy tx-r" style="--i:4" aria-hidden="true"></span>
+          <p class="tx-body tx-r" style="--i:5">Power Solar instala placas solares Tesla con acabado completamente negro.</p>
+          <div class="tx-actions tx-r" style="--i:6"><a class="tx-cta" href="/contacto#evaluacion">Evaluar mi techo <span aria-hidden="true">↗</span></a><a class="tx-link" href="/soluciones">Ver soluciones <span aria-hidden="true">→</span></a></div>
+        </div>
+      </div>
+      <div class="tx-wrap tx-surface" data-tx-reveal>
+        <div>
+          <p class="tx-kicker tx-r" style="--i:0">De cerca</p>
+          <h3 class="tx-r tx-mask" style="--i:1">Una superficie sobria, cerca del techo.</h3>
+          <p class="tx-body tx-r" style="--i:2">Acabado completamente negro y perfil bajo, con una apariencia limpia sobre el techo.</p>
+        </div>
+        <figure class="tx-r" style="--i:2">
+          <div class="tx-surface-stage">
+            <div class="tx-frame">
+              <img src="/static/assets/power-solar/placa-tesla-410w-hd.webp" width="1536" height="1152" loading="lazy" decoding="async" alt="Acercamiento a la superficie negra de las placas y a su borde, sobre las tejas">
+              <span class="tx-dot" style="--x:36%;--y:26%" aria-hidden="true">1</span>
+              <span class="tx-dot" style="--x:32.4%;--y:70%" aria-hidden="true">2</span>
+            </div>
+            <ul class="tx-marks">
+              <li style="--x:36%;--y:26%"><i aria-hidden="true">1</i><strong>Superficie negra</strong><span>Acabado uniforme.</span></li>
+              <li style="--x:32.4%;--y:70%"><i aria-hidden="true">2</i><strong>Perfil bajo</strong><span>Montaje cercano al techo.</span></li>
+            </ul>
+          </div>
+          <figcaption>Acercamiento de la misma imagen de referencia.</figcaption>
+        </figure>
+      </div>
+      <div class="tx-zones-band" id="power-zones">
+        <div class="tx-wrap tx-z" data-tx-reveal>
+          <div class="tx-z-copy">
+            <p class="tx-kicker tx-r" style="--i:0">Power Zones</p>
+            <h3 class="tx-r tx-mask" style="--i:1">Si cae una sombra, afecta una parte más pequeña.</h3>
+            <p class="tx-body tx-r" style="--i:2">La placa Tesla se divide en 18 zonas; una placa estándar, en 6. Compara qué parte alcanza la misma sombra.</p>
+          </div>
+          <fieldset class="tx-z-control tx-r" style="--i:3">
+            <legend>Comparar placas</legend>
+            <div class="tx-z-option"><input type="radio" name="tx-zones" id="tx-z18" value="18" checked><label for="tx-z18"><strong>18 zonas</strong>Placa Tesla</label></div>
+            <div class="tx-z-option"><input type="radio" name="tx-zones" id="tx-z6" value="6"><label for="tx-z6"><strong>6 zonas</strong>Placa estándar</label></div>
+          </fieldset>
+          <figure class="tx-z-figure tx-r" style="--i:2">
+            <svg viewBox="0 0 460 600" aria-hidden="true" focusable="false">
+              <defs><pattern id="tx-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="tx-svg-hatch" x1="0" y1="0" x2="0" y2="10"/></pattern></defs>
+              <g transform="translate(70 30)">
+                <rect class="tx-svg-frame" x="-6" y="-6" width="372" height="552"/>
+                <g class="tx-only18"><g class="tx-move-cell"><rect class="tx-svg-off" width="120" height="90"/><rect width="120" height="90" fill="url(#tx-hatch)"/></g></g>
+                <g class="tx-only6"><g class="tx-move-zone"><rect class="tx-svg-off" width="120" height="270"/><rect width="120" height="270" fill="url(#tx-hatch)"/></g></g>
+                <path class="tx-svg-zone tx-only18" d="M0 0H360V540H0ZM120 0V540M240 0V540M0 90H360M0 180H360M0 270H360M0 360H360M0 450H360"/>
+                <path class="tx-svg-zone tx-only6" d="M0 0H360V540H0ZM120 0V540M240 0V540M0 270H360"/>
+                <g class="tx-move-cell"><path class="tx-svg-cloud" d="M16 62C6 44 24 30 40 36C48 14 84 14 92 36C110 34 116 58 100 66C86 76 30 76 16 62Z"/></g>
+                <path class="tx-svg-cota" d="M-34 0V540M-40 0H-28M-40 540H-28"/>
+                <g class="tx-only18"><g class="tx-move-cota18"><path class="tx-svg-bracket" d="M-34 0V90M-42 0H-26M-42 90H-26"/></g></g>
+                <g class="tx-only6"><g class="tx-move-cota6"><path class="tx-svg-bracket" d="M-34 0V270M-42 0H-26M-42 270H-26"/></g></g>
+              </g>
+            </svg>
+            <figcaption class="tx-fine">Esquema ilustrativo. No representa el cableado real ni la distribución exacta de las zonas.</figcaption>
+          </figure>
+          <div class="tx-z-result tx-r" style="--i:4">
+            <p class="tx-z-read" role="status"><span class="tx-t18">Con 18 zonas, la sombra alcanza solo un bloque pequeño.</span><span class="tx-t6">Con 6 zonas, la misma sombra alcanza un bloque grande.</span></p>
+            <div class="tx-z-tools">
+              <ul class="tx-z-legend"><li><i aria-hidden="true"></i>Zona sin sombra</li><li><i aria-hidden="true"></i>Zona afectada</li></ul>
+              <button class="tx-z-pause" type="button" hidden>Pausar la sombra</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tx-wrap sc-maker" data-sc-reveal>
+        <div class="sc-maker-copy sc-r" style="--i:0">
+          <p class="tx-kicker">Comparación del fabricante</p>
+          <p class="tx-body">La misma diferencia, en el gráfico del fabricante: una placa estándar con 6 Power Zones y la placa Tesla con 18.</p>
+        </div>
+        <figure class="sc-maker-figure sc-r" style="--i:1">
+          <div class="sc-maker-sheet"><img src="/static/assets/power-solar/comparacion-power-zones-fabricante.webp" width="395" height="296" loading="lazy" decoding="async" alt="Gráfico del fabricante con dos placas: a la izquierda, una placa solar estándar con 6 Power Zones; a la derecha, una placa solar Tesla con 18 Power Zones."></div>
+          <figcaption>Comparación del fabricante.</figcaption>
+        </figure>
+      </div>
+      <div class="tx-wrap" data-tx-reveal>
+        <ul class="tx-specs tx-r" style="--i:0">
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M15.5 3 6 16h7l-1 9 10-14h-7z"/></svg><strong>420 W por placa</strong><span>Potencia indicada por placa. El modelo se confirma en tu evaluación.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M4 5h20v18H4zM4 11h20M4 17h20M11 5v18M17 5v18"/></svg><strong>Negro uniforme</strong><span>Una superficie sobria que acompaña tu techo.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 21h22M5 17h18v4H5zM8 13v-3M20 13v-3M5 10l3-3 3 3M17 10l3-3 3 3"/></svg><strong>Perfil bajo</strong><span>Cerca del techo, para una apariencia limpia.</span></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 5h9v7H3zM16 5h9v7h-9zM9 18h10v6H9zM7.5 12v3H14m6.5-3v3H14m0 0v3"/></svg><strong>Ecosistema Tesla</strong><span>Placas, inversores y baterías Powerwall.</span></li>
+        </ul>
+      </div>
+      <div class="tx-wrap sc-edge" data-sc-reveal>
+        <figure class="sc-edge-figure sc-r" style="--i:0">
+          <div class="sc-edge-frame"><img src="/static/assets/power-solar/borde-placa-perfil-bajo-tejas.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Acercamiento al borde negro de dos placas solares de perfil bajo sobre tejas asfálticas"></div>
+          <figcaption><strong>Negro uniforme · Perfil bajo</strong> Imagen de referencia del borde de las placas, cerca del techo.</figcaption>
+        </figure>
+      </div>
+      <div class="tx-wrap tx-close" data-tx-reveal>
+        <div>
+          <p class="tx-kicker tx-r" style="--i:0">Tu próximo paso</p>
+          <h3 class="tx-r tx-mask" style="--i:1">Veamos cómo se ajusta a tu techo.</h3>
+          <div class="tx-actions tx-r" style="--i:2"><a class="tx-link" href="/soluciones">Ver soluciones <span aria-hidden="true">→</span></a></div>
+        </div>
+        <p class="tx-fine tx-r" style="--i:3">La producción real depende de la orientación, la sombra, el clima y el tamaño del sistema. El modelo y la disponibilidad se confirman en tu evaluación.</p>
+      </div>
+    </section>
+    <section class="sc" aria-labelledby="sc-title" data-sc-reveal>
+      <div class="sc-wrap">
+        <div class="sc-head">
+          <div class="sc-r" style="--i:0">
+            <p class="corp-eyebrow">UN EJEMPLO COMPLETO</p>
+            <h2 id="sc-title">Así se ve un sistema completo.</h2>
+          </div>
+          <div class="sc-r" style="--i:1">
+            <p class="sc-lead">Placas en el techo y batería en la pared, trabajando juntas.</p>
+            <div class="ui-hero-actions"><a class="ui-hero-secondary" href="/soluciones">Ver soluciones <span aria-hidden="true">→</span></a></div>
+          </div>
+        </div>
+        <figure class="sc-figure sc-r" style="--i:2">
+          <div class="sc-stage">
+            <div class="sc-photo">
+              <img src="/static/assets/power-solar/sistema-completo-placas-powerwall.webp" width="1400" height="932" loading="lazy" decoding="async" alt="Casa moderna gris con placas solares negras en el techo inclinado y una batería Powerwall blanca instalada en la pared exterior, junto a un jardín">
+              <span class="sc-dot" style="--x:56.4%;--y:22.5%" aria-hidden="true">1</span>
+              <span class="sc-dot" style="--x:67.9%;--y:79%" aria-hidden="true">2</span>
+            </div>
+            <ul class="sc-marks" aria-label="Partes visibles del sistema">
+              <li class="sc-mark-up" style="--x:56.4%;--y:22.5%"><i aria-hidden="true">1</i>Placas solares</li>
+              <li class="sc-mark-left" style="--x:67.9%;--y:79%"><i aria-hidden="true">2</i>Batería Powerwall</li>
+            </ul>
+          </div>
+          <figcaption>Imagen de referencia de un sistema con placas y Powerwall. El equipo, la ubicación y el montaje se definen en tu evaluación.</figcaption>
+        </figure>
+      </div>
+    </section>
+    <section class="corp-directory corp-container" aria-labelledby="directory-title">
+      <div class="corp-section-label"><p class="corp-eyebrow">NUESTRO SITIO</p><h2 id="directory-title">Encuentra la información<br>que necesitas.</h2></div>
+      <div class="corp-directory-list">
+        <a class="corp-directory-item ui-corner-card" href="/empresa"><span class="corp-index" aria-hidden="true">01</span><span><strong>Empresa</strong><small>El equipo y nuestra forma de orientar.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/equipo"><span class="corp-index" aria-hidden="true">02</span><span><strong>Equipo</strong><small>Team Caguas y su contacto directo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/soluciones"><span class="corp-index" aria-hidden="true">03</span><span><strong>Soluciones</strong><small>Energía solar, consumo y respaldo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/proceso" id="proceso"><span class="corp-index" aria-hidden="true">04</span><span><strong>Evaluación</strong><small>El proceso y la información que conviene preparar.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/contacto#evaluacion" id="evaluacion"><span class="corp-index" aria-hidden="true">05</span><span><strong>Contacto</strong><small>Comparte tu interés o conversa con el equipo.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+        <a class="corp-directory-item ui-corner-card" href="/preguntas" id="preguntas"><span class="corp-index" aria-hidden="true">06</span><span><strong>Preguntas frecuentes</strong><small>Respaldo, evaluación y próximos pasos.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+    <section class="sc-storm" aria-labelledby="sc-storm-title" data-sc-reveal data-sc-outage>
+      <div class="sc-out-track">
+        <div class="sc-storm-band sc-out-stage">
+          <div class="sc-out-media">
+            <figure class="sc-storm-media">
+              <img src="/static/assets/power-solar/casa-iluminada-tormenta-noche.webp" srcset="/static/assets/power-solar/casa-iluminada-tormenta-noche-1000.webp 1000w, /static/assets/power-solar/casa-iluminada-tormenta-noche.webp 2000w" sizes="(max-width: 600px) 216vw, min(100vw, 1920px)" width="2000" height="1000" loading="lazy" decoding="async" alt="De noche, durante una tormenta eléctrica, una casa moderna mantiene las luces encendidas y se refleja en el agua, mientras las casas vecinas están a oscuras">
+              <figcaption>Imagen de referencia.</figcaption>
+            </figure>
+            <div class="sc-out-scene">
+            <svg class="sc-out-art" viewBox="0 0 1600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <defs>
+            <linearGradient id="sc-out-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#040b1f"/><stop offset=".62" stop-color="#0c2048"/><stop offset="1" stop-color="#17305c"/></linearGradient>
+            <radialGradient id="sc-out-warm"><stop offset="0" stop-color="#ffc670" stop-opacity=".42"/><stop offset="1" stop-color="#ffc670" stop-opacity="0"/></radialGradient>
+            <radialGradient id="sc-out-lamp"><stop offset="0" stop-color="#ffe0ad" stop-opacity=".5"/><stop offset=".45" stop-color="#ffd9a0" stop-opacity=".14"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+            <radialGradient id="sc-out-cell"><stop offset="0" stop-color="#8fd0ff" stop-opacity=".5"/><stop offset="1" stop-color="#8fd0ff" stop-opacity="0"/></radialGradient>
+            </defs>
+            <rect width="1600" height="800" fill="url(#sc-out-sky)"/>
+            <g fill="#dfe8f5"><circle cx="1292" cy="104" r="15" opacity=".82"/><circle cx="1292" cy="104" r="40" opacity=".05"/><circle cx="90" cy="70" r="1.6" opacity=".7"/><circle cx="212" cy="132" r="1.2" opacity=".5"/><circle cx="388" cy="58" r="1.5" opacity=".6"/><circle cx="540" cy="150" r="1.1" opacity=".5"/><circle cx="676" cy="84" r="1.6" opacity=".7"/><circle cx="820" cy="40" r="1.2" opacity=".5"/><circle cx="930" cy="128" r="1.4" opacity=".6"/><circle cx="1110" cy="62" r="1.2" opacity=".5"/><circle cx="1450" cy="56" r="1.5" opacity=".6"/><circle cx="1540" cy="170" r="1.2" opacity=".5"/></g>
+            <path d="M0 470Q150 380 330 430T640 400T930 440T1240 386T1600 440V620H0z" fill="#0a1a3a"/>
+            <g fill="none" stroke-width="2"><path d="M-20 204Q108 232 236 190Q620 262 1004 190Q1310 250 1620 204M-20 222Q108 248 270 190M202 190Q620 278 970 190M1038 190Q1310 266 1620 222" stroke="#24375d"/><path class="sc-out-g" d="M-20 204Q108 232 236 190Q620 262 1004 190Q1310 250 1620 204" stroke="#6fb0ff" stroke-width="1.6"/></g>
+            <path d="M122 600Q125.2 450 110 300h8Q137.2 450 135 600z" fill="#06122a"/>
+            <path d="M114 300Q69 259 24 320Q69 283 114 307z" fill="#06122a"/>
+            <path d="M114 300Q74 231 34 277Q74 258 114 307z" fill="#06122a"/>
+            <path d="M114 300Q98 229 81 255Q98 252 114 307z" fill="#06122a"/>
+            <path d="M114 300Q129 230 143 255Q129 253 114 307z" fill="#06122a"/>
+            <path d="M114 300Q153 230 191 274Q153 257 114 307z" fill="#06122a"/>
+            <path d="M114 300Q161 256 207 317Q161 281 114 307z" fill="#06122a"/>
+            <path d="M114 300Q148 286 181 349Q148 304 114 307z" fill="#06122a"/>
+            <path d="M114 300Q82 287 51 346Q82 304 114 307z" fill="#06122a"/>
+            <path d="M476 600Q485.2 431 494 262h8Q497.2 431 489 600z" fill="#06122a"/>
+            <path d="M498 262Q449 217 399 283Q449 243 498 269z" fill="#06122a"/>
+            <path d="M498 262Q454 186 410 237Q454 216 498 269z" fill="#06122a"/>
+            <path d="M498 262Q480 184 462 213Q480 209 498 269z" fill="#06122a"/>
+            <path d="M498 262Q514 185 530 213Q514 210 498 269z" fill="#06122a"/>
+            <path d="M498 262Q541 185 583 233Q541 215 498 269z" fill="#06122a"/>
+            <path d="M498 262Q549 213 600 281Q549 241 498 269z" fill="#06122a"/>
+            <path d="M498 262Q535 246 572 316Q535 266 498 269z" fill="#06122a"/>
+            <path d="M498 262Q463 247 428 313Q463 266 498 269z" fill="#06122a"/>
+            <path d="M956 600Q959.6 443 946 286h8Q971.6 443 969 600z" fill="#06122a"/>
+            <path d="M950 286Q905 245 860 306Q905 269 950 293z" fill="#06122a"/>
+            <path d="M950 286Q910 217 870 263Q910 244 950 293z" fill="#06122a"/>
+            <path d="M950 286Q934 215 917 241Q934 238 950 293z" fill="#06122a"/>
+            <path d="M950 286Q965 216 979 241Q965 239 950 293z" fill="#06122a"/>
+            <path d="M950 286Q989 216 1027 260Q989 243 950 293z" fill="#06122a"/>
+            <path d="M950 286Q997 242 1043 303Q997 267 950 293z" fill="#06122a"/>
+            <path d="M950 286Q984 272 1017 335Q984 290 950 293z" fill="#06122a"/>
+            <path d="M950 286Q918 273 887 332Q918 290 950 293z" fill="#06122a"/>
+            <path d="M1366 600Q1375.6 425 1386 250h8Q1387.6 425 1379 600z" fill="#06122a"/>
+            <path d="M1390 250Q1340 204 1289 272Q1340 231 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1345 173 1301 224Q1345 203 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1372 171 1353 200Q1372 196 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1406 172 1423 200Q1406 197 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1433 171 1477 221Q1433 202 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1442 200 1494 269Q1442 228 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1428 234 1465 305Q1428 255 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1354 235 1319 301Q1354 254 1390 257z" fill="#06122a"/>
+            <path d="M1542 600Q1546.4 459 1536 318h8Q1558.4 459 1555 600z" fill="#06122a"/>
+            <path d="M1540 318Q1500 281 1459 336Q1500 303 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1504 256 1468 297Q1504 280 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1525 254 1510 278Q1525 275 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1553 255 1566 278Q1553 275 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1575 255 1610 295Q1575 279 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1582 278 1624 333Q1582 301 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1570 305 1601 362Q1570 322 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1511 306 1483 359Q1511 321 1540 325z" fill="#06122a"/>
+            <rect x="232" y="168" width="8" height="432" fill="#0a1731"/>
+            <rect x="202" y="186" width="68" height="5" fill="#0a1731"/>
+            <rect x="224" y="214" width="24" height="34" rx="3" fill="#0f1f40"/>
+            <rect x="1000" y="168" width="8" height="432" fill="#0a1731"/>
+            <rect x="970" y="186" width="68" height="5" fill="#0a1731"/>
+            <rect x="992" y="214" width="24" height="34" rx="3" fill="#0f1f40"/>
+            <rect x="-40" y="430" width="250" height="170" fill="#22355c"/>
+            <rect x="-50" y="420" width="270" height="12" fill="#3d5586"/>
+            <rect x="-40" y="432" width="250" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="31" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="34" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="121" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="124" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="270" y="410" width="290" height="190" fill="#2a3f69"/>
+            <rect x="260" y="400" width="310" height="12" fill="#3d5586"/>
+            <rect x="270" y="412" width="290" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="289" y="467" width="66" height="54" fill="#3d5586"/>
+            <rect x="292" y="470" width="60" height="48" fill="#0b1730"/>
+            <rect x="364" y="512" width="34" height="88" fill="#101c38"/>
+            <rect x="405" y="467" width="64" height="54" fill="#3d5586"/>
+            <rect x="408" y="470" width="58" height="48" fill="#0b1730"/>
+            <rect x="482" y="484" width="70" height="116" fill="#0f1b37"/><rect x="514" y="484" width="5" height="116" fill="#2a3f69"/>
+            <rect x="650" y="290" width="150" height="310" fill="#253a66"/>
+            <rect x="640" y="280" width="170" height="12" fill="#3d5586"/>
+            <rect x="650" y="292" width="150" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="650" y="390" width="300" height="210" fill="#2c4372"/>
+            <rect x="640" y="380" width="320" height="12" fill="#3d5586"/>
+            <rect x="650" y="392" width="300" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="685" y="319" width="66" height="50" fill="#3d5586"/>
+            <rect x="688" y="322" width="60" height="44" fill="#0b1730"/>
+            <rect x="703" y="487" width="78" height="58" fill="#3d5586"/>
+            <rect x="706" y="490" width="72" height="52" fill="#0b1730"/>
+            <rect x="800" y="512" width="36" height="88" fill="#101c38"/>
+            <rect x="855" y="487" width="72" height="58" fill="#3d5586"/>
+            <rect x="858" y="490" width="66" height="52" fill="#0b1730"/>
+            <path d="M816 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <path d="M858 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <path d="M900 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <rect x="668" y="504" width="22" height="56" rx="3" fill="#c9d6ea"/><rect x="668" y="560" width="22" height="3" fill="#0b1730" opacity=".5"/>
+            <rect x="1040" y="310" width="160" height="290" fill="#22365f"/>
+            <rect x="1030" y="300" width="180" height="12" fill="#3d5586"/>
+            <rect x="1040" y="312" width="160" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1040" y="420" width="270" height="180" fill="#27406a"/>
+            <rect x="1030" y="410" width="290" height="12" fill="#3d5586"/>
+            <rect x="1040" y="422" width="270" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1077" y="337" width="62" height="50" fill="#3d5586"/>
+            <rect x="1080" y="340" width="56" height="44" fill="#0b1730"/>
+            <rect x="1065" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1068" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1150" y="512" width="34" height="88" fill="#101c38"/>
+            <rect x="1227" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1230" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1400" y="430" width="260" height="170" fill="#20335a"/>
+            <rect x="1390" y="420" width="280" height="12" fill="#3d5586"/>
+            <rect x="1400" y="432" width="260" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1427" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1430" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1517" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1520" y="480" width="56" height="46" fill="#0b1730"/>
+            <path d="M57 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="98" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <path d="M585 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="626" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <path d="M1335 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="1376" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <rect y="600" width="1600" height="24" fill="#1a2c52"/><rect y="622" width="1600" height="4" fill="#0b1730"/><rect y="626" width="1600" height="174" fill="#0a152d"/>
+            <path d="M40 714h90M250 714h90M460 714h90M670 714h90M880 714h90M1090 714h90M1300 714h90M1510 714h90" stroke="#2a3d66" stroke-width="5"/>
+            <circle cx="1004" cy="176" r="7" fill="#1b2c50" stroke="#3d5586" stroke-width="2"/>
+            <rect class="sc-out-shade" width="1600" height="800" fill="#020814"/>
+            <g class="sc-out-n"><ellipse cx="62" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="34" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="62" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="152" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="124" y="480" width="56" height="46" fill="#ffdca6"/><ellipse cx="152" cy="612" rx="50.4" ry="7" fill="#ffdca6" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="322" cy="494" rx="90" ry="76.8" fill="url(#sc-out-warm)"/><rect x="292" y="470" width="60" height="48" fill="#ffd08a"/><ellipse cx="322" cy="612" rx="54" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="437" cy="494" rx="87" ry="76.8" fill="url(#sc-out-warm)"/><rect x="408" y="470" width="58" height="48" fill="#b9d0ff"/><ellipse cx="437" cy="612" rx="52.2" ry="7" fill="#b9d0ff" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="718" cy="344" rx="90" ry="70.4" fill="url(#sc-out-warm)"/><rect x="688" y="322" width="60" height="44" fill="#ffd08a"/><ellipse cx="718" cy="612" rx="54" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-k"><ellipse cx="742" cy="516" rx="108" ry="83.2" fill="url(#sc-out-warm)"/><rect x="706" y="490" width="72" height="52" fill="#ffc670"/><ellipse cx="742" cy="612" rx="64.8" ry="7" fill="#ffc670" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="891" cy="516" rx="99" ry="83.2" fill="url(#sc-out-warm)"/><rect x="858" y="490" width="66" height="52" fill="#ffd08a"/><ellipse cx="891" cy="612" rx="59.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-k"><ellipse cx="818" cy="500" rx="46" ry="40" fill="url(#sc-out-warm)"/><circle cx="818" cy="500" r="4" fill="#ffe2b0"/></g>
+            <g class="sc-out-n"><ellipse cx="1108" cy="362" rx="84" ry="70.4" fill="url(#sc-out-warm)"/><rect x="1080" y="340" width="56" height="44" fill="#ffdca6"/><ellipse cx="1108" cy="612" rx="50.4" ry="7" fill="#ffdca6" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1096" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1068" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1096" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1258" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1230" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1258" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1458" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1430" y="480" width="56" height="46" fill="#b9d0ff"/><ellipse cx="1458" cy="612" rx="50.4" ry="7" fill="#b9d0ff" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1548" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1520" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1548" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-g"><ellipse cx="113" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="113" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="100" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><ellipse cx="641" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="641" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="628" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><ellipse cx="1391" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="1391" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="1378" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><circle cx="1004" cy="176" r="26" fill="url(#sc-out-cell)"/><circle cx="1004" cy="176" r="5" fill="#9fcbff"/></g>
+            <path d="M52.6667 480v46M71.3333 480v46M34 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M142.667 480v46M161.333 480v46M124 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M312 470v48M332 470v48M292 494h60" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M427.333 470v48M446.667 470v48M408 494h58" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M708 322v44M728 322v44M688 344h60" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M730 490v52M754 490v52M706 516h72" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M880 490v52M902 490v52M858 516h66" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1098.67 340v44M1117.33 340v44M1080 362h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1086.67 480v46M1105.33 480v46M1068 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1248.67 480v46M1267.33 480v46M1230 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1448.67 480v46M1467.33 480v46M1430 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1538.67 480v46M1557.33 480v46M1520 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <g class="sc-out-b"><ellipse cx="679" cy="532" rx="70" ry="74" fill="url(#sc-out-cell)"/><rect x="676" y="512" width="6" height="40" rx="3" fill="#a9dcff"/><path d="M679 504V258" stroke="#9cc3fb" stroke-width="1.5" opacity=".7" fill="none"/><rect x="630" y="214" width="98" height="44" rx="22" fill="#071d43" stroke="#9cc3fb" stroke-width="1.5"/><rect x="650" y="225" width="44" height="22" rx="4" fill="none" stroke="#e6efff" stroke-width="2"/><rect x="696" y="231" width="5" height="10" rx="1.5" fill="#e6efff"/><rect x="655" y="230" width="9" height="12" rx="1" fill="#a9dcff"/><rect x="667" y="230" width="9" height="12" rx="1" fill="#a9dcff"/><rect x="679" y="230" width="9" height="12" rx="1" fill="#a9dcff"/></g>
+            </svg>
+              <p class="sc-out-label">Representación ilustrativa.</p>
+            </div>
+            <a class="sc-out-skip" href="#sc-out-final">Saltar la secuencia <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="sc-out-foot">
+            <ol class="sc-out-caps">
+              <li><span aria-hidden="true">01</span>Una noche cualquiera, con el suministro de la red.</li>
+              <li><span aria-hidden="true">02</span>La red falla: se apagan la calle y el tendido.</li>
+              <li><span aria-hidden="true">03</span>Las casas sin respaldo quedan a oscuras.</li>
+              <li><span aria-hidden="true">04</span>Una casa con almacenamiento mantiene encendidos los circuitos respaldados.</li>
+            </ol>
+            <div class="sc-storm-copy">
+              <p class="corp-eyebrow">INDEPENDENCIA Y RESILIENCIA ENERGÉTICA</p>
+              <h2 id="sc-storm-title">Cuando la red falla, lo esencial sigue encendido.</h2>
+            </div>
+          </div>
+        </div>
+        <span class="sc-out-end" id="sc-out-final" tabindex="-1"></span>
+      </div>
+      <div class="sc-out-body">
+        <p class="sc-out-lead sc-r" style="--i:0">Almacena la energía que produces durante el día y utilízala cuando más la necesites. Protege tus actividades cotidianas con un sistema de respaldo diseñado para las necesidades de tu hogar.</p>
+        <div class="sc-r" style="--i:1">
+          <p class="sc-out-terms">El respaldo puede cubrir circuitos seleccionados o toda la vivienda, según el diseño y los equipos instalados. Su duración depende de la carga disponible y de lo que tengas conectado.</p>
+          <p><a class="sc-out-link" href="/contacto#evaluacion">¿Cuánto respaldo necesitas? Se calcula en tu evaluación <span aria-hidden="true">→</span></a></p>
+        </div>
+      </div>
+    </section>
+    <section class="corp-roof-cta corp-container" aria-labelledby="roof-cta-title">
+      <figure class="corp-roof-photo">
+        <img src="/static/assets/power-solar/techo-paneles-solares-hd.webp" width="1356" height="904" loading="lazy" decoding="async" alt="Paneles solares sobre el techo oscuro de una vivienda en un día soleado">
+        <figcaption>Imagen ilustrativa. Una evaluación no implica garantía de ahorro ni aprobación de financiación.</figcaption>
+      </figure>
+      <div class="corp-roof-copy">
+        <p class="corp-eyebrow">TU TECHO, TU PRÓXIMO PASO</p>
+        <h2 id="roof-cta-title">Tu techo ya recibe el sol.<br>Descubre qué puede hacer por tu hogar.</h2>
+        <p class="corp-roof-lead">Revisamos tu consumo, tu propiedad, el espacio disponible y tus necesidades de respaldo para orientarte con información clara.</p>
+        <ol class="corp-roof-steps">
+          <li>Comparte tus prioridades</li>
+          <li>Coordina la evaluación</li>
+          <li>Comprende la propuesta</li>
         </ol>
+        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/proceso">Ver el proceso <span aria-hidden="true">→</span></a></div>
       </div>
     </section>
-    <section class="public-section public-container" id="proceso" aria-labelledby="process-title"><header class="public-section-heading"><div><p class="eyebrow">UN PRIMER PASO SENCILLO</p><h2 id="process-title">Menos dudas.<br>Más información para decidir.</h2></div><p>La mejor conversación empieza por entender tu hogar. Así coordinas con el equipo de Power Solar.</p></header><div class="process-list"><article class="process-item"><span class="process-number">01 /</span><h3>Cuéntanos qué necesitas.</h3><p>Comparte tu municipio, cómo prefieres que te contactemos y, si lo deseas, una idea de tu factura mensual.</p></article><article class="process-item"><span class="process-number">02 /</span><h3>Elige un espacio para hablar.</h3><p>Completa el formulario con tus datos y el equipo podrá orientarte sobre una evaluación. También puedes coordinar una cita desde el chat.</p></article><article class="process-item"><span class="process-number">03 /</span><h3>Explora con más contexto.</h3><p>Conversa sobre consumo, espacio, respaldo y las condiciones que necesitas entender antes de dar el siguiente paso.</p></article></div></section>
-    <section class="evaluation-section" aria-labelledby="evaluation-title"><div class="public-container evaluation-layout"><div><p class="eyebrow">TU SITUACIÓN PRIMERO</p><h2 id="evaluation-title">Una buena decisión<br>necesita buenas preguntas.</h2><p>La energía solar tiene que evaluarse con datos de tu hogar. Nuestro primer paso es escucharte y coordinar una revisión de lo que necesitas.</p></div><ul class="evaluation-checks"><li>Tu consumo y tus prioridades de energía.</li><li>Las condiciones y el espacio de tu propiedad.</li><li>Lo que buscas en producción y respaldo.</li><li>El alcance, los costos y las condiciones de una propuesta.</li></ul></div></section>
-    <section class="public-section public-container" id="evaluacion" aria-labelledby="booking-title">
-      <div class="booking-layout">
-        <div class="booking-copy">
-          <p class="eyebrow">COMIENZA LA CONVERSACIÓN</p>
-          <h2 id="booking-title">Tu próximo paso,<br>en tu horario.</h2>
-          <p>Completa el formulario para compartir tu interés y las necesidades de tu hogar. Si prefieres coordinar una cita directamente, puedes hacerlo desde el chat de R.E.I.G.E.L.</p>
-          <div class="booking-note"><strong>Sin decisiones a ciegas.</strong>La evaluación ayuda a entender tus opciones. No implica aprobación de financiación, instalación ni una garantía de ahorro.</div>
-        </div>
-        <div class="booking-form google-form-card">
-          <h3>Formulario de evaluación</h3>
-          <iframe class="google-form-embed" src="https://docs.google.com/forms/d/e/1FAIpQLScbCm-67NFR1qFYLfD9oR-nMkCGsGionTB5iG9uR0JKWdZHMQ/viewform?embedded=true" title="Formulario de evaluación de Power Solar" loading="lazy">Cargando formulario…</iframe>
-        </div>
-      </div>
-    </section>
-    <section class="public-section public-container faq-section" id="preguntas" aria-labelledby="faq-title"><div class="public-faq"><div><p class="eyebrow">ANTES DE EMPEZAR</p><h2 id="faq-title">Tus preguntas<br>tienen espacio aquí.</h2></div><div class="faq-list"><details><summary>¿Pueden decirme cuánto voy a ahorrar?</summary><p>Para estimarlo hay que revisar tu consumo, la producción esperada, las tarifas y las condiciones de la propuesta. El resultado cambia según cada hogar; no prometemos una cifra de ahorro antes de la evaluación.</p></details><details><summary>¿La energía solar me dará respaldo en un apagón?</summary><p>El respaldo depende del diseño, de la batería, de las cargas que deseas mantener y de la instalación. Un sistema conectado a la red no implica respaldo por sí solo. Confirma estas características en la propuesta que evalúes.</p></details><details><summary>¿Qué pasa después de dejar mis datos?</summary><p>El equipo registra tu solicitud y puede contactarte por los medios que compartas. Si reservas un horario disponible, verás la confirmación de tu cita al terminar. Si solo solicitas contacto, aún no tienes una cita confirmada.</p></details><details><summary>¿Qué debo preparar para la evaluación?</summary><p>Ten una idea de tu consumo, las características de la propiedad y tus prioridades. El equipo puede orientarte sobre los datos necesarios. No necesitas subir una factura ni documentos personales en este formulario.</p></details><details><summary>¿La evaluación me obliga a contratar?</summary><p>Completar este formulario permite conversar sobre tus opciones y coordinar una evaluación. Cualquier contratación o financiación requiere una propuesta y condiciones que debes revisar por separado.</p></details></div></div></section>
-    <section class="public-container privacy-note" id="privacidad" aria-labelledby="privacy-title"><strong id="privacy-title">Tus datos, con un propósito claro.</strong><p>El formulario de esta página se ofrece mediante Google Forms. La información que envíes se transmite al titular del formulario para atender tu solicitud; revisa los avisos de privacidad que aparecen en el formulario y en Google. Las conversaciones y citas que inicies por el chat de Power Solar se guardan en el sistema del equipo y pueden ser consultadas por el administrador y el asesor responsable para dar seguimiento. No incluyas documentos, cuentas ni información sensible. Puedes solicitar que se detenga el contacto y pedir la revisión o eliminación de tus datos al equipo que te atienda.</p></section>
+    <div class="corp-container corp-home-note"><p>Cada hogar requiere una evaluación de sus condiciones, consumo y prioridades. Los resultados y las condiciones de una propuesta se revisan por separado.</p><a href="/contacto#privacidad" id="privacidad">Privacidad y uso de datos</a></div>
+<!--corporate:content:end-->
   </main>
-  <footer class="public-footer"><div class="public-container"><a href="/" class="wordmark light"><span class="sun-mark" aria-hidden="true"></span><span>POWER<span class="wordmark-solar">SOLAR</span></span></a><p>PUERTO RICO · UNA CONVERSACIÓN PUEDE SER EL COMIENZO.</p><div class="public-footer-links"><a href="#privacidad">Privacidad</a><a href="/app">Acceso del equipo ↗</a></div></div></footer>
-  <button class="chat-launcher" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="chat-launcher-symbol" aria-hidden="true">↗</span><span><strong>Habla con R.E.I.G.E.L.</strong><small>Tus preguntas. Tu evaluación.</small></span></button>
+  <footer class="public-footer corp-footer">
+    <div class="corp-container corp-footer-top"><a href="/captacion" class="wordmark light brand-lockup" aria-label="Power Solar, inicio"><img class="brand-symbol" src="/static/assets/power-solar/power-solar-logo-symbol.png" alt=""><span class="brand-wordmark"><span class="wordmark-power">POWER</span><span class="wordmark-solar">SOLAR</span><small>TEAM CAGUAS · PUERTO RICO</small></span></a><p>Orientación sobre energía solar<br>para hogares en Puerto Rico.</p><nav aria-label="Información y acceso"><a href="/equipo">Equipo</a><a href="/preguntas">Preguntas frecuentes</a><a href="/contacto#privacidad">Privacidad</a><a href="/app">Acceso del equipo <span aria-hidden="true">↗</span></a></nav></div>
+    <div class="corp-container corp-footer-bottom"><span>POWER SOLAR · TEAM CAGUAS</span><a href="/">Abrir el chat de R.E.I.G.E.L. <span aria-hidden="true">↗</span></a></div>
+  </footer>
+  <button class="chat-launcher" type="button" data-open-chat aria-controls="reigel-chat" aria-expanded="false"><span class="chat-launcher-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" focusable="false"><path d="M3.5 4.5h17v12H10l-4.5 3.8v-3.8h-2z"/><path d="M8 9h8M8 12.5h5"/></svg></span><span><strong>Habla con R.E.I.G.E.L.</strong><small>Tus preguntas. Tu evaluación.</small></span></button>
   <dialog class="reigel-chat" id="reigel-chat" aria-labelledby="chat-title">
-    <header class="chat-header"><div class="chat-identity"><span class="chat-emblem" aria-hidden="true">R.</span><div><h2 id="chat-title">R.E.I.G.E.L.</h2><p id="chat-mode">Asistente virtual de Power Solar</p></div></div><button class="icon-button" id="chat-close" type="button" aria-label="Cerrar conversación">×</button></header>
-    <div class="chat-scroll">
-      <div class="chat-welcome"><p class="eyebrow">TU HOGAR MERECE UNA BUENA CONVERSACIÓN</p><h3>Comienza por lo<br>que te importa.</h3><p>Explora tus opciones de energía solar y coordina una evaluación con el equipo. Sin prisa para decidir.</p></div>
-      <div class="chat-messages" id="chat-messages" role="log" aria-label="Tu conversación con Power Solar" aria-live="polite" aria-relevant="additions text"></div>
-      <p class="chat-human-note" id="chat-human-note" hidden>El equipo puede leer y responder esta conversación desde su bandeja. Su respuesta aparecerá aquí; mantén la conversación abierta o vuelve desde este navegador.</p>
-      <p class="chat-human-note" id="chat-optout-note" hidden>La atención comercial automática está detenida por tu solicitud. Para volver a recibir atención en este chat, escribe /start. También puedes contactar al equipo por otro medio.</p>
-      <div class="chat-suggestions" aria-label="Ideas para empezar"><button type="button" data-chat-prompt="¿Cómo funciona una evaluación solar?">¿Cómo funciona?</button><button type="button" data-chat-prompt="¿Tendré respaldo si se va la luz?">¿Y si se va la luz?</button><button type="button" data-chat-prompt="Me preocupa el costo del sistema solar.">Me preocupa el costo</button></div>
-      <div class="chat-sources" id="chat-sources" aria-label="Fuentes de información"></div>
-      <p class="chat-thinking" id="chat-thinking" role="status" hidden>R.E.I.G.E.L. está preparando tu respuesta…</p>
-      <section class="chat-appointment" id="chat-appointment" aria-label="Confirmación de tu cita" tabindex="-1" hidden></section>
-      <section class="chat-booking" id="chat-booking" aria-labelledby="chat-booking-title" hidden>
-        <div class="chat-booking-heading"><div><span class="chat-step">TU PRÓXIMO PASO</span><h3 id="chat-booking-title">Hagamos espacio para ti.</h3></div><button class="icon-button" id="chat-booking-close" aria-label="Cerrar formulario de reserva" type="button">×</button></div>
-        <p class="field-help" id="chat-booking-status" role="status"></p>
-        <form id="chat-book-form"><div class="form-grid"><label>Asesor<select id="chat-advisor" name="advisor_id" required><option value="">Selecciona un asesor</option></select></label><label>Fecha<input type="date" id="chat-date" required></label><div class="span-2"><span class="chat-field-label">Horarios disponibles</span><input type="hidden" name="start_at" id="chat-start"><div class="slots" id="chat-slots" role="group" aria-label="Horarios disponibles"><p class="slot-empty">Selecciona un asesor y una fecha.</p></div><p class="calendar-zone" id="chat-zone"></p></div><label class="span-2">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label><label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email"></label><label>Teléfono<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+1 787…"></label><label>Municipio<input name="municipality" maxlength="100" autocomplete="address-level2"></label><label>Factura mensual aproximada (USD)<input name="monthly_bill" type="number" min="0" max="100000" step="0.01" placeholder="Opcional"></label></div><p class="field-help">Incluye al menos un correo o teléfono. No compartas documentos, cuentas ni información bancaria.</p><label class="checkbox"><input name="consent" type="checkbox" required><span>Autorizo a Power Solar a guardar estos datos, contactarme y coordinar esta evaluación. <a href="#privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.</span></label><p class="form-error" id="chat-book-error" role="alert"></p><button class="button primary full" id="chat-book-confirm" type="submit">Confirmar mi cita ↗</button></form>
-      </section>
-    </div>
-    <div class="chat-bottom"><div class="chat-next-actions"><button type="button" data-chat-book>Coordinar evaluación ↗</button><button type="button" data-chat-human>Hablar con el equipo</button></div><form id="chat-form"><label class="sr-only" for="chat-text">Tu mensaje</label><textarea id="chat-text" maxlength="4000" required rows="2" placeholder="¿Qué te gustaría resolver en tu hogar?"></textarea><button id="chat-send" type="submit" class="button primary">Enviar ↗</button></form><p id="chat-status" class="form-error" role="alert"></p><p class="chat-privacy">Conversación guardada en el sistema del equipo. Evita compartir datos sensibles.</p></div>
+    <header class="chat-header"><div class="chat-identity"><img class="rc-logo" src="/static/assets/power-solar/reigel-logo.png" alt="" width="28" height="28" decoding="async"><h2 id="chat-title">R.E.I.G.E.L.</h2><p class="rc-mode"><span id="chat-mode">Asistente automático<span class="rc-mode-detail"> · el equipo puede intervenir</span></span></p></div><button class="icon-button rc-icon-button" id="chat-close" type="button" aria-label="Cerrar conversación"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></header>
+    <div class="chat-scroll"><div class="chat-messages" id="chat-messages" role="log" aria-label="Tu conversación con Power Solar" aria-live="polite" aria-relevant="additions text"></div><section class="rc-welcome" aria-label="Temas para empezar"><ul class="rc-intents"><li><button type="button" class="rc-intent" data-chat-prompt="Quiero entender cómo reducir mi dependencia de la red eléctrica en casa.">Bajar lo que pago de luz</button></li><li><button type="button" class="rc-intent" data-chat-prompt="Quiero explorar qué opciones de respaldo existen para cuando se va la luz.">Respaldo en apagones</button></li><li><button type="button" class="rc-intent" data-chat-prompt="Quiero orientación sobre energía solar para mi negocio.">Para mi negocio</button></li></ul></section><p class="chat-human-note" id="chat-human-note" hidden>El equipo puede leer y responder esta conversación desde su bandeja. Su respuesta aparecerá aquí; mantén la conversación abierta o vuelve desde este navegador.</p><p class="chat-human-note" id="chat-optout-note" hidden>La atención comercial automática está detenida por tu solicitud. Para volver a recibir atención en este chat, escribe /start. También puedes contactar al equipo por otro medio.</p><div class="chat-suggestions" aria-label="Ideas para empezar"><button type="button" data-chat-prompt="¿Cómo funciona una evaluación solar?">¿Cómo funciona?</button><button type="button" data-chat-prompt="¿Tendré respaldo si se va la luz?">¿Y si se va la luz?</button><button type="button" data-chat-prompt="Me preocupa el costo del sistema solar.">Me preocupa el costo</button></div><div class="chat-sources" id="chat-sources" aria-label="Fuentes de información"></div><p class="chat-thinking" id="chat-thinking" role="status" hidden><span class="rc-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>R.E.I.G.E.L. está preparando tu respuesta…</span></p><section class="chat-appointment" id="chat-appointment" aria-label="Confirmación de tu cita" tabindex="-1" hidden></section><section class="chat-booking" id="chat-booking" aria-labelledby="chat-booking-title" hidden><div class="chat-booking-heading"><div><span class="chat-step">TU PRÓXIMO PASO</span><h3 id="chat-booking-title">Coordina tu evaluación</h3></div><button class="icon-button rc-icon-button" id="chat-booking-close" aria-label="Cerrar formulario de reserva" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></div><p class="field-help" id="chat-booking-status" role="status"></p><form id="chat-book-form"><div class="rc-progress" id="chat-book-progress" hidden><svg class="rc-arc" viewBox="0 0 240 72" aria-hidden="true" focusable="false"><path class="rc-arc-track" d="M14 62 A160 160 0 0 1 226 62"/><path class="rc-arc-fill" id="chat-book-arc" d="M14 62 A160 160 0 0 1 226 62" pathLength="100"/><circle class="rc-arc-sun" id="chat-book-sun" cx="14" cy="62" r="8"/></svg><ol class="rc-progress-steps" aria-label="Pasos para coordinar tu evaluación"><li data-book-marker="1" aria-current="step"><span class="rc-progress-num" aria-hidden="true">1</span><span>Horario</span></li><li data-book-marker="2"><span class="rc-progress-num" aria-hidden="true">2</span><span>Tus datos</span></li><li data-book-marker="3"><span class="rc-progress-num" aria-hidden="true">3</span><span>Confirmar</span></li></ol></div><fieldset class="rc-step" data-book-step="1"><legend class="rc-step-title" tabindex="-1">Elige tu horario</legend><div class="form-grid"><label>Asesor<select id="chat-advisor" name="advisor_id" required><option value="">Selecciona un asesor</option></select></label><label>Fecha<input type="date" id="chat-date" required></label><div class="span-2"><span class="chat-field-label">Horarios disponibles</span><input type="hidden" name="start_at" id="chat-start"><div class="slots" id="chat-slots" role="group" aria-label="Horarios disponibles"><p class="slot-empty">Selecciona un asesor y una fecha.</p></div><p class="calendar-zone" id="chat-zone"></p></div></div></fieldset><fieldset class="rc-step" data-book-step="2"><legend class="rc-step-title" tabindex="-1">Tus datos de contacto</legend><div class="form-grid"><label class="span-2">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label><label>Correo electrónico<input name="email" type="email" maxlength="254" autocomplete="email"></label><label>Teléfono<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+1 787…"></label><label>Municipio<input name="municipality" maxlength="100" autocomplete="address-level2"></label><label>Factura mensual aproximada (USD)<input name="monthly_bill" type="number" min="0" max="100000" step="0.01" placeholder="Opcional, la declaras tú"></label></div><p class="field-help">Incluye al menos un correo o teléfono. No compartas documentos, cuentas ni información bancaria.</p></fieldset><fieldset class="rc-step" data-book-step="3"><legend class="rc-step-title" tabindex="-1">Revisa y confirma</legend><dl class="rc-summary" id="chat-book-summary" hidden></dl><label class="checkbox ui-consent"><input name="consent" type="checkbox" required><span class="ui-consent-mark" aria-hidden="true">✓</span><span class="ui-consent-copy">Autorizo a Power Solar a guardar estos datos, contactarme y coordinar esta evaluación. <a href="/contacto#privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.</span></label></fieldset><p class="form-error rc-alert" id="chat-book-error" role="alert"></p><div class="rc-step-nav"><button type="button" class="rc-step-back" id="chat-book-back" hidden><span aria-hidden="true">←</span> Atrás</button><button type="button" class="rc-step-next" id="chat-book-next" hidden>Continuar <span aria-hidden="true">→</span></button><button class="button primary full ui-action" id="chat-book-confirm" type="submit">Confirmar mi cita ↗</button></div></form></section></div>
+    <div class="chat-bottom"><div class="chat-next-actions rc-dock"><button type="button" class="rc-dock-action rc-dock-book" data-chat-book><span class="rc-dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15.2" r="1.7"/></svg></span><span class="rc-dock-copy"><strong>Coordinar evaluación</strong><small>Elige asesor y horario</small></span></button><button type="button" class="rc-dock-action rc-dock-human" data-chat-human><span class="rc-dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="3.7"/><path d="M4.8 20.2c.9-3.9 3.7-6.1 7.2-6.1s6.3 2.2 7.2 6.1"/></svg></span><span class="rc-dock-copy"><strong>Hablar con el equipo</strong><small>Pide atención de una persona</small></span></button></div><form id="chat-form" class="rc-composer"><label class="sr-only" for="chat-text">Tu mensaje</label><textarea id="chat-text" maxlength="4000" required rows="1" placeholder="Escribe tu mensaje…"></textarea><button id="chat-send" type="submit" class="rc-send"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5.5M5.8 11.4 12 5.2l6.2 6.2"/></svg><span class="rc-send-label">Enviar</span></button></form><p id="chat-status" class="form-error rc-alert" role="alert"></p><p class="chat-privacy">El historial de esta conversación se guarda para el equipo. Evita datos sensibles.</p></div>
   </dialog>
 </body>
 </html>

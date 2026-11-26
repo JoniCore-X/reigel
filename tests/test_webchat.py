@@ -1,9 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+import json
 
 import pytest
 
 from reigel.core import DomainError, Store, stamp
+from reigel.knowledge import KnowledgeBase
 from reigel.webchat import WebChat
 
 
@@ -12,6 +14,9 @@ class Knowledge:
         return {"freshness": "unavailable", "sources": []}
 
     def answer(self, query):
+        return None
+
+    def answer_technical(self, query):
         return None
 
 
@@ -35,7 +40,7 @@ def booking(store, advisor, **extra):
 def test_session_tokens_are_hashed_and_public_histories_are_isolated(chat):
     service, store, admin, token, first = chat
     other_token, other = service.start()
-    result = service.message(token, "Quiero reducir mi factura, vivo en Ponce y pago 200", "message-first-001")
+    result = service.message(token, "Quiero reducir mi factura, vivo en Ponce y pago 200 al mes", "message-first-001")
     assert result["profile"] == {"priority": "factura", "municipality": "Ponce", "monthly_bill": 200.0}
     assert first["conversation_id"] != other["conversation_id"]
     assert len(service.state(other_token)["messages"]) == 1
@@ -185,12 +190,193 @@ def test_unverified_company_info_and_prices_are_not_invented(chat):
     assert "aprobación" in price["reply"]
 
 
+def test_technical_knowledge_answers_with_citations_without_company_claims(tmp_path):
+    store = Store(tmp_path / "technical-chat.db")
+    service = WebChat(store, KnowledgeBase(store))
+    token, _ = service.start()
+
+    answer = service.message(
+        token,
+        "¿Las placas funcionan durante un apagón?",
+        "technical-outage-001",
+    )
+
+    assert "se desconecta" in answer["reply"]
+    assert "compatible" in answer["reply"]
+    assert answer["sources"][0]["organization"] == "U.S. Department of Energy"
+    assert answer["sources"][0]["url"].startswith("https://www.energy.gov/")
+    assert "Power Solar" not in answer["reply"]
+
+
+def test_technical_chat_abstains_on_unverified_luma_billing(tmp_path):
+    store = Store(tmp_path / "luma-chat.db")
+    service = WebChat(store, KnowledgeBase(store))
+    token, _ = service.start()
+
+    answer = service.message(
+        token,
+        "¿Qué cargos de LUMA significa este recibo?",
+        "technical-luma-001",
+    )
+
+    assert "no tengo una fuente técnica vigente" in answer["reply"].lower()
+    assert answer["sources"] == []
+    assert answer["actions"] == ["human"]
+
+
+def test_technical_chat_abstains_on_unverified_maintenance_guidance(tmp_path):
+    store = Store(tmp_path / "maintenance-chat.db")
+    service = WebChat(store, KnowledgeBase(store))
+    token, _ = service.start()
+
+    answer = service.message(
+        token,
+        "¿Qué mantenimiento preventivo debo hacer a los paneles?",
+        "technical-maintenance-001",
+    )
+
+    # Maintenance gets the fixed safety reply: no instructions, a qualified technician.
+    assert "técnico cualificado" in answer["reply"]
+    assert answer["sources"] == []
+    assert answer["actions"] == ["human"]
+
+
 def test_public_history_does_not_show_failed_draft_or_private_fields(chat):
     service, store, admin, token, first = chat
     store.record_outbound(first["conversation_id"], "BORRADOR PRIVADO NO ENTREGADO", {"status": "failed"}, admin)
     state = service.state(token)
     assert "BORRADOR PRIVADO" not in str(state)
     assert set(state["messages"][0]) == {"direction", "text", "created_at"}
+
+
+def test_bill_frequency_is_confirmed_before_reporting_monthly_amount(chat):
+    service, _, _, token, _ = chat
+
+    pending = service.message(token, "Mi factura es de $300", "message-bill-period-001")
+
+    assert "monthly_bill" not in pending["profile"]
+    assert "¿Corresponde a tu factura mensual?" in pending["reply"]
+
+    confirmed = service.message(token, "Sí, mensual", "message-bill-period-002")
+
+    assert confirmed["profile"]["monthly_bill"] == 300
+    assert "$300" in confirmed["reply"]
+    assert "factura mensual" in confirmed["reply"]
+
+
+def test_bill_correction_replaces_previous_amount(chat):
+    service, _, _, token, _ = chat
+    service.message(token, "Pago $300 al mes", "message-bill-correction-001")
+
+    corrected = service.message(
+        token,
+        "Me equivoqué, en realidad son $250 mensuales",
+        "message-bill-correction-002",
+    )
+
+    assert corrected["profile"]["monthly_bill"] == 250
+    assert "corrección" in corrected["reply"].lower()
+
+
+def test_conflicting_bill_amounts_request_clarification_without_storing_either(chat):
+    service, _, _, token, _ = chat
+
+    result = service.message(
+        token,
+        "Mi factura es de $300 y pago $250",
+        "message-bill-conflict-001",
+    )
+
+    assert "no quiero asumir" in result["reply"].lower()
+    assert "monthly_bill" not in result["profile"]
+
+
+def test_corrected_municipality_uses_latest_value(chat):
+    service, _, _, token, _ = chat
+    service.message(token, "Vivo en Ponce", "message-municipality-001")
+
+    result = service.message(
+        token,
+        "No, me equivoqué: vivo en Caguas",
+        "message-municipality-002",
+    )
+
+    assert result["profile"]["municipality"] == "Caguas"
+    assert "corrección" in result["reply"].lower()
+
+
+def test_contextual_monthly_bill_answer_is_saved_and_acknowledged(chat):
+    service, _, _, token, _ = chat
+    service.message(token, "No sé cuántos kWh consumo", "message-bill-question-001")
+
+    result = service.message(token, "Son unos 280 dólares", "message-bill-answer-001")
+
+    assert result["profile"]["monthly_bill"] == 280
+    assert "$280" in result["reply"]
+    assert "mensual" in result["reply"].lower()
+
+
+def test_contextual_municipality_answer_is_acknowledged(chat):
+    service, _, _, token, _ = chat
+    service.message(token, "Quiero reducir mi factura", "message-location-question-001")
+
+    result = service.message(token, "Bayamón", "message-location-answer-001")
+
+    assert result["profile"]["municipality"] == "Bayamón"
+    assert "bayamón" in result["reply"].lower()
+
+
+def test_annual_bill_is_not_misclassified_as_monthly_confirmation(chat):
+    service, store, _, token, _ = chat
+    service.message(token, "Pago $500", "message-annual-period-001")
+
+    result = service.message(token, "Es anual, no mensual", "message-annual-period-002")
+
+    assert result["profile"].get("monthly_bill") is None
+    assert "$500" not in result["reply"]
+    with store.connect() as db:
+        profile = json.loads(
+            db.execute(
+                "SELECT profile_json FROM web_chat_sessions WHERE token_hash=?",
+                (service._token_hash(token),),
+            ).fetchone()["profile_json"]
+        )
+    assert profile["bill_period"] == "annual"
+
+
+def test_extended_context_and_correction_flow(chat):
+    service, _, _, token, _ = chat
+
+    priority = service.message(token, "Quiero reducir mi factura", "message-long-flow-001")
+    location = service.message(token, "Bayamón", "message-long-flow-002")
+    consumption = service.message(
+        token,
+        "No sé cuántos kWh consumo",
+        "message-long-flow-003",
+    )
+    bill = service.message(token, "Son unos 280 dólares", "message-long-flow-004")
+    correction = service.message(
+        token,
+        "Perdón, quise decir 320 al mes",
+        "message-long-flow-005",
+    )
+
+    assert priority["profile"]["priority"] == "factura"
+    assert "bayamón" in location["reply"].lower()
+    assert "no hace falta" in consumption["reply"].lower()
+    assert "$280" in bill["reply"]
+    assert correction["profile"]["monthly_bill"] == 320
+    assert "corrección" in correction["reply"].lower()
+    assert len(correction["messages"]) == 11
+
+
+def test_definitive_decline_does_not_offer_booking(chat):
+    service, _, _, token, _ = chat
+
+    result = service.message(token, "No me interesa", "message-decline-001")
+
+    assert result["actions"] == []
+    assert "no insistiré" in result["reply"].lower()
 
 
 @pytest.mark.parametrize("phrase", ["No me escribas", "No deseo recibir más mensajes", "Darme de baja", "Elimina mis datos", "/stop"])
@@ -223,7 +409,7 @@ def test_message_retry_uses_current_cancelled_appointment_and_human_mode(chat):
 
 def test_only_explicit_visitor_start_resumes_optout_and_preserves_profile(chat):
     service, store, admin, token, first = chat
-    service.message(token, "Vivo en Ponce y pago 200 de factura", "message-context-resume-001")
+    service.message(token, "Vivo en Ponce y pago 200 al mes de factura", "message-context-resume-001")
     stopped = service.message(token, "/stop", "message-before-resume-001")
     assert stopped["opted_out"] is True
     store.set_conversation_mode(first["conversation_id"], "ai", admin)

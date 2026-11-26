@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tu cuenta · R.E.I.G.E.L.</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
+  <link rel="stylesheet" href="/static/css/identity.css?v=3">
+  <script src="/static/js/account.js?v=1" defer></script>
+</head>
+<body>
+  <main class="id-card">
+    <header class="id-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+      <h1 id="account-title">Bienvenido a R.E.I.G.E.L.</h1>
+      <p>Tu espacio personal de energía inteligente</p>
+    </header>
+    <p id="account-message" class="id-message" role="status"></p>
+
+    <section id="auth-view" hidden>
+      <div class="id-tabs" role="tablist" aria-label="Acceso">
+        <button id="tab-login" type="button" role="tab" aria-selected="true" aria-controls="login-form">Iniciar sesión</button>
+        <button id="tab-register" type="button" role="tab" aria-selected="false" aria-controls="register-form">Crear cuenta</button>
+      </div>
+      <form id="login-form">
+        <label>Correo, teléfono o usuario<input name="identifier" autocomplete="username" required placeholder="Introduce tu identificador"></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="id-button" type="submit">Iniciar sesión</button>
+        <p class="id-center"><button id="show-recovery" class="id-link" type="button">Olvidé mi contraseña</button></p>
+      </form>
+      <form id="register-form" hidden>
+        <label>Nombre de usuario<input name="username" autocomplete="username" required minlength="3" maxlength="30" placeholder="ana.rivera"></label>
+        <label>Correo electrónico<input name="email" type="email" autocomplete="email" placeholder="tu@correo.com"></label>
+        <label>Teléfono<input name="phone" type="tel" autocomplete="tel" placeholder="787 555 0100"></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="512"></label>
+        <p class="id-note">Añade un correo o un teléfono. La contraseña debe tener al menos 12 caracteres.</p>
+        <button class="id-button" type="submit">Crear cuenta</button>
+      </form>
+      <div id="social-block" hidden>
+        <p class="id-divider">O continúa con</p>
+        <div id="social-buttons" class="id-social"></div>
+      </div>
+    </section>
+
+    <section id="recovery-view" hidden>
+      <form id="recover-start">
+        <label>Correo o teléfono verificado<input name="identifier" autocomplete="username" required></label>
+        <button class="id-button" type="submit">Enviar código</button>
+      </form>
+      <form id="recover-finish" class="id-section">
+        <label>Código<input name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+        <label>Nueva contraseña<input name="new_password" type="password" autocomplete="new-password" required minlength="12" maxlength="512"></label>
+        <button class="id-button" type="submit">Cambiar contraseña</button>
+      </form>
+      <p class="id-center"><button id="back-login" class="id-link" type="button">Volver a iniciar sesión</button></p>
+    </section>
+
+    <section id="profile-view" hidden>
+      <div class="id-section">
+        <h2>Datos de acceso</h2>
+        <ul id="identifier-list" class="id-list"></ul>
+        <form id="verify-form" hidden>
+          <label>Código de verificación<input name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+          <button class="id-button" type="submit">Verificar</button>
+        </form>
+      </div>
+      <div id="provider-section" class="id-section" hidden>
+        <h2>Cuentas vinculadas</h2>
+        <ul id="provider-list" class="id-list"></ul>
+      </div>
+      <div class="id-section">
+        <h2>Mis accesos</h2>
+        <ul id="entitlement-list" class="id-list"></ul>
+      </div>
+      <div class="id-section"><button id="logout" class="id-button quiet" type="button">Cerrar sesión</button></div>
+    </section>
+  </main>
+</body>
+</html>

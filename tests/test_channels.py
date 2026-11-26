@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from reigel import assistant, channels
 from reigel.core import Store
+from team_auth import allow, login as team_login
 
 REAL_ASYNC_CLIENT = httpx.AsyncClient
 
@@ -158,6 +159,76 @@ def test_draft_is_local_only_with_no_tools(monkeypatch):
     assert len(seen) == 2
 
 
+def test_draft_uses_bounded_configuration_and_sanitized_recent_history(monkeypatch):
+    monkeypatch.setenv("REIGEL_LOCAL_MODEL", "test-model")
+    monkeypatch.setenv("REIGEL_LOCAL_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("REIGEL_LOCAL_NUM_CTX", "3072")
+    monkeypatch.setenv("REIGEL_LOCAL_NUM_PREDICT", "300")
+    monkeypatch.setenv("REIGEL_LOCAL_TEMPERATURE", "0.1")
+    captured = {}
+
+    def handler(request):
+        body = json.loads(request.content)
+        if request.url.path == "/api/show":
+            return httpx.Response(200, json={"model_info": {}})
+        captured.update(body)
+        return httpx.Response(200, json={
+            "done": True,
+            "message": {"content": "Podemos coordinar una evaluación."},
+        })
+
+    transport(monkeypatch, handler)
+    history = [
+        {"direction": "inbound", "text": f"mensaje antiguo {index}"}
+        for index in range(4)
+    ]
+    history.extend([
+        {
+            "direction": "inbound",
+            "text": "Mi correo es cliente@example.test y mi teléfono es +1 (787) 555-1234",
+        },
+        {"direction": "outbound", "text": "Último turno revisado"},
+    ])
+
+    run(assistant.draft("Explica el proceso", {}, history=history))
+
+    assert captured["options"] == {
+        "temperature": 0.1,
+        "num_predict": 300,
+        "num_ctx": 3072,
+    }
+    history_messages = captured["messages"][1:-1]
+    assert len(history_messages) == 6
+    serialized = json.dumps(history_messages, ensure_ascii=False)
+    assert "cliente@example.test" not in serialized
+    assert "555-1234" not in serialized
+    assert all(len(item["content"]) <= 850 for item in history_messages)
+    assert all("contenido no confiable" in item["content"] for item in history_messages)
+
+
+def test_local_model_outage_fails_clearly_without_remote_fallback(monkeypatch):
+    monkeypatch.setenv("REIGEL_LOCAL_MODEL", "test-model")
+    destinations = []
+
+    def unavailable(request):
+        destinations.append(request.url.host)
+        raise httpx.ConnectError("local model offline", request=request)
+
+    transport(monkeypatch, unavailable)
+
+    with pytest.raises(RuntimeError, match="Ollama local"):
+        run(assistant.draft("Explica el proceso", {}))
+
+    assert destinations == ["127.0.0.1"]
+
+
+def test_local_model_configuration_rejects_out_of_range_values(monkeypatch):
+    monkeypatch.setenv("REIGEL_LOCAL_NUM_CTX", "100000")
+
+    with pytest.raises(ValueError, match="REIGEL_LOCAL_NUM_CTX"):
+        assistant._generation_settings()
+
+
 def test_cloud_model_alias_is_blocked_before_generation(monkeypatch):
     monkeypatch.setenv("REIGEL_LOCAL_MODEL", "test-model")
     seen = []
@@ -176,6 +247,16 @@ def test_draft_rejects_invented_booking_completion(monkeypatch):
     transport(monkeypatch, handler)
     with pytest.raises(RuntimeError):
         run(assistant.draft("Confirma una cita que no existe", {}))
+
+
+@pytest.mark.parametrize("draft", [
+    "Hola [Nombre del Cliente], entendemos tu pregunta.",
+    "Hola [NOMBRE], podemos revisar las condiciones.",
+    "Para confirmar, consulta la fecha: pendiente.",
+])
+def test_draft_rejects_unfilled_customer_placeholders(draft):
+    with pytest.raises(RuntimeError, match="marcadores sin completar"):
+        assistant.validate_draft(draft)
 
 
 @pytest.mark.parametrize("channel", ["whatsapp", "instagram", "messenger"])
@@ -237,6 +318,7 @@ def test_inbound_assigns_least_loaded_available_user_and_preserves_owner(server,
     app, client = server
     store = app.state.store
     owner = store.create_user({"name": "Asesor A", "email": "a@example.test", "password": "TestPassword-WithEntropy1", "role": "admin"}, bootstrap=True)
+    allow(store, owner, "b@example.test")
     other = store.create_user({"name": "Asesor B", "email": "b@example.test", "password": "TestPassword-WithEntropy2", "role": "advisor"}, actor=owner)
     with store.connect() as db:
         db.execute("UPDATE users SET public_booking=1")

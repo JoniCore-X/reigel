@@ -1,0 +1,44 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "reigel-preview-sintetica",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "scripts/preview_team_caguas.py",
+        "--port",
+        "8877"
+      ],
+      "port": 8877
+    },
+    {
+      "name": "reigel-preview-ia",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "scripts/preview_team_caguas.py",
+        "--port",
+        "8878",
+        "--ia-local",
+        "--ia-modelo",
+        "llama3.2:3b"
+      ],
+      "port": 8878
+    },
+    {
+      "name": "reigel-publico-temporal",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "scripts/preview_team_caguas.py",
+        "--port",
+        "8880",
+        "--ia-local",
+        "--ia-modelo",
+        "llama3.2:3b"
+      ],
+      "env": {
+        "REIGEL_ALLOWED_HOSTS": "simplified-spec-arab-circles.trycloudflare.com"
+      },
+      "port": 8880
+    }
+  ]
+}

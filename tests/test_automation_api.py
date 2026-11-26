@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from reigel.api import create_app
+from team_auth import allow, login as team_login
 
 @pytest.fixture
 def system(tmp_path, monkeypatch):
@@ -15,7 +16,7 @@ def system(tmp_path, monkeypatch):
     return app,store,admin
 
 def login(client):
-    assert client.post('/api/auth/login',json={'email':'qa@example.test','password':'long-private-test-password'}).status_code==200
+    assert team_login(client, 'qa@example.test', 'long-private-test-password').status_code==200
 
 def test_chat_http_cookie_isolation_origin_and_admin_scope(system):
     app,_,_=system
