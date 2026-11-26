@@ -116,8 +116,12 @@ credencial para leerlo (sustituye la dirección por la de tu repositorio):
 sudo mkdir -p /opt/reigel && sudo chown "$USER" /opt/reigel
 git clone https://github.com/USUARIO/REPOSITORIO.git /opt/reigel
 cd /opt/reigel
-git checkout rediseno-reigel   # o la rama que el titular haya decidido publicar
 ```
+
+`git clone` deja el repositorio en `main`, que es la rama que se publica. No hace
+falta cambiar de rama. (Hasta el 26 de noviembre de 2026 esta guía mandaba hacer
+`git checkout rediseno-reigel`; esa rama se fusionó en `main` y se borró, así que
+seguir aquella instrucción fallaba.)
 
 ## Paso 2 · Escribir `.env` (lo haces tú)
 
@@ -567,6 +571,29 @@ cuenta ficticia y `DOMAIN=localhost` (certificado interno de Caddy):
   Consumo en reposo: unos 50 MB la aplicación y 12 MB Caddy.
 - `deploy_check.py` marca ERROR en «Dirección de los visitantes» en Docker
   Desktop, como advierte la nota para Windows; en Linux debe quedar en OK.
+
+Vuelto a comprobar el 26 de noviembre de 2026 por la noche, con el código de
+`main` ya con el motor autónomo, la extracción de creencias y la página de
+certificaciones, antes de preparar el primer despliegue real:
+
+- La imagen se construye desde cero: 253 MB.
+- Arranca «healthy» con las mismas restricciones que aplica `compose.yaml`
+  —solo lectura, `/tmp` en memoria, uid 10001, todas las capacidades retiradas,
+  sin privilegios nuevos— y un volumen de datos nuevo.
+- Responden 200: `/health`, `/captacion`, `/proceso`,
+  `/soluciones/certificaciones`, `/chat`, `/ia`, `/app`, `/robots.txt` y
+  `/sitemap.xml`. `/api/leads` y `/api/agent` responden 401 sin sesión.
+- Dentro del contenedor: uid 10001, `/app/data` con permisos 700, y `touch` en
+  `/app/reigel` falla con «Read-only file system».
+- La base sobrevive a `docker restart` con el mismo SHA256; apagado ordenado en
+  0,7 s y cero trazas de error en el registro.
+- `scripts/deploy_check.py` dentro del contenedor marca un único ERROR, «ninguno:
+  ejecutar scripts/bootstrap.py», que es lo correcto en una base recién creada.
+
+Se hizo con un contenedor suelto y un volumen temporal, no con `docker compose
+up`, para no mezclar el `.env` de desarrollo de la computadora; el contenedor, el
+volumen y la imagen se borraron al terminar. Caddy y el certificado no entraron
+en esta comprobación: eso ya se había probado por la mañana con `DOMAIN=localhost`.
 
 **No probado** (requiere un servidor o más descargas):
 
