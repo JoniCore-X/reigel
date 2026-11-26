@@ -3112,3 +3112,38 @@ determinista, que sí reserva citas y deriva a una persona. Comprobado en el nav
 forzando la respuesta del sondeo: el botón navega a `/ia`.
 
 **Versiones:** `public-shell.css?v=9`.
+
+### El banco de medición, guardado: `scripts/medir_prompt.py`
+
+La comparación que retiró la guía y encontró el marcador copiado existía solo como un
+script suelto. Ahora es una herramienta del proyecto, general en lugar de atada a aquella
+guía concreta:
+
+- **Sin `--quitar`** hace una pasada y dice cuántas respuestas tira el validador y por
+  qué. Es la revisión de salud del prompt tal como está.
+- **Con `--quitar NOMBRE`** vacía esa constante de `voice.py` en una segunda variante y
+  compara las dos sobre los mismos casos.
+- **Con `--historial`** usa cuatro conversaciones ya empezadas —alguien que duda, alguien
+  que insiste en el precio, alguien que pide que no lo presionen y alguien que
+  probablemente no encaja— en lugar de primeros mensajes. Ahí es donde el prompt se pone
+  a prueba, y es lo que destapó el marcador copiado.
+- `--temperatura 0` con `--semilla` fija aísla el efecto del prompt; `--temperatura 0.2`
+  es la de producción y pide varias `--muestras`.
+
+Mide diez cosas contadas, no opinadas, entre ellas si la respuesta cierra preguntando, si
+pregunta por la situación de la persona, si usa palabras de presión, si usa palabras
+prohibidas, si repite un marcador nuestro y si pasa el validador.
+
+No abre la base, no lee `.env`, no descarga modelos y no escribe en ninguna conversación;
+si Ollama no responde o el modelo no está instalado, lo dice y sale. `tests/test_medir_prompt.py`
+cubre las métricas, el armado del prompt, que vaciar una constante la restaure después y
+esas tres garantías; la parte que habla con el modelo no corre en la suite.
+
+**Primera revisión de salud tras el arreglo del marcador**, con `--historial`: 8 de 8
+respuestas válidas, frente a 13 de 24 antes. El modelo todavía copia el marcador una de
+cada cuatro veces, pero ya no le cuesta la respuesta.
+
+**Aviso de interpretación.** Una corrida de demostración con `--quitar PLAIN` dio 0.62
+frente a 0.88 de respuestas válidas, que parecería decir que la regla de hablar llano
+estorba. Son ocho respuestas por variante: dos de diferencia. No es un hallazgo, es ruido,
+y está aquí como recordatorio de que estas tablas engañan con pocas muestras.

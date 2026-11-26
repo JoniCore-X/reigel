@@ -103,12 +103,24 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1036 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1044 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
 Una ejecución de Python deja un aviso de obsolescencia de `starlette.testclient`
 originado en FastAPI, no en este código.
+
+Antes de añadir o quitar una instrucción del prompt, medirla contra el modelo:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\medir_prompt.py
+.\.venv\Scripts\python.exe scripts\medir_prompt.py --quitar STYLE --historial --muestras 3
+```
+
+Sin `--quitar` cuenta cuántas respuestas tira el validador y por qué; con `--quitar`
+compara el prompt completo contra el mismo prompt sin esa constante de `voice.py`. No
+abre la base ni lee `.env`, y necesita Ollama con el modelo instalado. Con pocas muestras
+una diferencia pequeña es ruido: subir `--muestras` antes de concluir nada.
 
 Para una demostración con cuentas ficticias y una base temporal nueva:
 
