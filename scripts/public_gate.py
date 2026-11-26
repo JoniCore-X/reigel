@@ -32,7 +32,8 @@ CHUNK = 8192
 # Mirrors reigel/seo.py PUBLIC_PAGES plus the AI conversation. Exact, case-sensitive.
 PUBLIC_PAGES = frozenset({
     "/captacion", "/empresa", "/equipo", "/soluciones",
-    "/soluciones/tesla-panel-mount-flat", "/proceso", "/contacto", "/preguntas",
+    "/soluciones/tesla-panel-mount-flat", "/soluciones/certificaciones",
+    "/proceso", "/contacto", "/preguntas",
 })
 READ_EXACT = PUBLIC_PAGES | {
     "/", "/ia", "/robots.txt", "/sitemap.xml", "/favicon.ico",
@@ -40,7 +41,7 @@ READ_EXACT = PUBLIC_PAGES | {
 }
 # Only the stylesheets and scripts that the public pages and /ia reference.
 STATIC_CSS = frozenset({
-    "coordination-chat", "corporate", "dark-mode", "depth-3d", "energy-scene", "energy-view",
+    "certificaciones", "coordination-chat", "corporate", "dark-mode", "depth-3d", "energy-scene", "energy-view",
     "google-form", "ia", "panel-mount", "power-solar-identity", "public-header", "public-intents",
     "public-shell", "reigel-loader", "site-loader", "solar-theme", "styles", "system-showcase",
     "tesla-experience", "theme-switch", "uiverse-components",

@@ -1,0 +1,48 @@
+/* Certificaciones de los equipos Tesla. Hereda la paleta corporativa: estas páginas
+   son de tema claro, igual que el resto del sitio público. */
+.corporate-body .cert-h2 { max-width: 16em; margin: 0 0 14px; color: var(--corp-navy); font-size: clamp(26px, 3.4vw, 38px); font-weight: 650; line-height: 1.16; letter-spacing: -.02em; }
+.corporate-body .cert-note { max-width: 680px; margin: 0 0 26px; color: var(--corp-muted); font-size: 15px; line-height: 1.7; }
+.corporate-body .cert-label { margin: 0 0 8px; color: var(--corp-blue); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.corporate-body .cert-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* Qué dice y qué no dice */
+.corporate-body .cert-meaning { padding-block: 46px 10px; }
+.corporate-body .cert-meaning-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 48px; padding-top: 10px; border-top: 1px solid var(--corp-line); }
+.corporate-body .cert-meaning-grid p:not(.cert-label) { margin: 0; color: var(--corp-muted); font-size: 16px; line-height: 1.75; }
+.corporate-body .cert-says, .corporate-body .cert-says-not { padding-top: 26px; }
+.corporate-body .cert-says-not ul { margin: 0; padding: 0; list-style: none; }
+.corporate-body .cert-says-not li { padding: 13px 0; border-top: 1px solid var(--corp-line); color: var(--corp-muted); font-size: 16px; line-height: 1.7; }
+.corporate-body .cert-says-not li:first-child { border-top: 0; padding-top: 0; }
+
+/* Tablas */
+.corporate-body .cert-docs, .corporate-body .cert-norms { padding-block: 44px 10px; }
+.corporate-body .cert-table { width: 100%; border-collapse: collapse; text-align: left; }
+.corporate-body .cert-table :is(thead th, tbody th, td) { border: 0; background: transparent; vertical-align: top; }
+.corporate-body .cert-table thead th { padding: 4px 18px 8px 0; color: var(--corp-muted); font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+.corporate-body .cert-table tbody tr { border-top: 1px solid var(--corp-line); }
+.corporate-body .cert-table tbody th { padding: 14px 18px 14px 0; color: var(--corp-navy); font-size: 16px; font-weight: 650; }
+.corporate-body .cert-table td { padding: 14px 18px 14px 0; color: var(--corp-muted); font-size: 14.5px; line-height: 1.6; }
+.corporate-body .cert-table a { color: var(--corp-blue); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.corporate-body .cert-table a:hover { color: #0a285b; }
+.corporate-body .cert-scope { display: block; margin-top: 7px; font-size: 13.5px; font-style: italic; }
+.corporate-body .cert-docs .cert-table tbody th { width: 17%; }
+.corporate-body .cert-docs .cert-table td:nth-child(2) { width: 15%; }
+.corporate-body .cert-docs .cert-table td:nth-child(3) { width: 15%; }
+.corporate-body .cert-docs .cert-table td:nth-child(5) { width: 14%; }
+.corporate-body .cert-norm-table tbody th { width: 22%; }
+.corporate-body .cert-norm-table td { width: 39%; }
+.corporate-body .cert-norm-table td:last-child { color: var(--corp-navy); }
+
+@media (max-width: 900px) {
+  .corporate-body .cert-meaning-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .corporate-body .cert-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .corporate-body .cert-table,
+  .corporate-body .cert-table tbody,
+  .corporate-body .cert-table tr,
+  .corporate-body .cert-table tbody th,
+  .corporate-body .cert-table td { display: block; width: 100%; }
+  .corporate-body .cert-table tbody tr { padding-block: 14px; }
+  .corporate-body .cert-table tbody th { padding: 0 0 6px; font-size: 18px; }
+  .corporate-body .cert-table td { padding: 5px 0; }
+  .corporate-body .cert-table td::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--corp-blue); font-size: 12px; font-weight: 600; letter-spacing: .06em; }
+}

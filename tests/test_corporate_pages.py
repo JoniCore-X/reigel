@@ -105,8 +105,9 @@ def test_corporate_metadata_and_sitemap_use_each_public_route(corporate_app):
             assert "x-robots-tag" not in response.headers
         sitemap = ElementTree.fromstring(client.get("/sitemap.xml").text)
         locations = [element.text for element in sitemap.findall("{*}url/{*}loc")]
-        assert set(locations) == {origin + path for path in [*PAGES, "/soluciones/tesla-panel-mount-flat"]}
-        assert len(locations) == len(PAGES) + 1
+        subpages = ["/soluciones/tesla-panel-mount-flat", "/soluciones/certificaciones"]
+        assert set(locations) == {origin + path for path in [*PAGES, *subpages]}
+        assert len(locations) == len(PAGES) + len(subpages)
         robots = client.get("/robots.txt").text
         assert all(f"Allow: {path}\n" in robots for path in PAGES)
         assert "Disallow: /$\n" in robots

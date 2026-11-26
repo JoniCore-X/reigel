@@ -3000,3 +3000,63 @@ dejar una creencia. Ahora las dos cosas son una sola y distinguen lo que se rech
   `_known_and_missing` lee la ficha del CRM, y lo que el visitante contesta en el chat no
   se escribe en ella. No se tocó: pasar el perfil del chat a la ficha es una decisión
   aparte, no un arreglo de texto.
+
+## Certificaciones de los equipos y forma de pensar del asistente (26 de noviembre de 2026)
+
+### `/soluciones/certificaciones`
+
+Página pública con los documentos de certificación del fabricante para los equipos Tesla
+que instala Team Caguas: placas, inversor, MCI-1, MCI-2, Powerwall 3, Powerwall 3
+Expansion, Gateway 3 y Backup Switch. Doce documentos, cada uno con su referencia
+enlazada a `energylibrary.tesla.com`, sus normas y su fecha de emisión, transcritos tal
+como los publica Tesla.
+
+Dos decisiones editoriales sostienen la página:
+
+- **Solo lo que se instala.** Las cartas de conformidad cubren además Powerwall 2,
+  Powerwall+, Backup Gateway 2 y Tesla Remote Meter. Esos equipos no se nombran: publicar
+  la certificación de algo que no se instala induce a error. Hay una prueba que lo impide.
+- **Cada norma dice también lo que no significa.** Es la columna que da valor a la tabla:
+  un certificado no cubre la instalación, no es una garantía y no dice cuánto se produce
+  ni cuánto se ahorra. La página lo afirma expresamente, y hay pruebas de que «ahorro» y
+  «garantía» solo aparecen negados o remitidos a la propuesta por escrito.
+
+### Verificación (local)
+
+- `tests/test_certifications_page.py`: 12 casos. Cada documento con su enlace, el ámbito
+  por equipo, que ninguna norma se queda sin su «qué no significa», que no hay cifras,
+  porcentajes ni importes, y el enlace desde `/proceso`.
+- **Los doce enlaces se comprobaron uno a uno:** todos responden 200.
+- **Navegador, vista previa sintética 8877 a 1280×950:** la página entra en el armazón
+  corporativo con «Soluciones» marcado, y las dos tablas se leen completas.
+
+### Hallazgos
+
+- **Un enlace del propio fabricante estaba roto.** Tesla publica el documento UL 3741
+  (`104873297LAX-002`) con una dirección de `energylibrary-stg.tesla.com`, un host de
+  pruebas que no resuelve. El mismo documento sí responde en el host público. Primero se
+  dejó fuera por falta de fuente; comprobando los enlaces apareció la dirección buena y
+  la norma entró. Hay una prueba que impide que vuelva a colarse una dirección `-stg`.
+- **Quedó pendiente de decidir** qué hacer con Solar Roof, Powershare, Wall Connector y
+  Mobile Connector: son de otra línea de producto y no constan como parte de lo que
+  instala Team Caguas. Los documentos de la Gen 3 son declaraciones europeas (CE, MID),
+  que no son lo que aplica en Puerto Rico.
+
+### `voice.STANCE`
+
+El titular aportó una charla sobre venta con un encargo explícito: que fuera «su forma de
+pensar» y no un texto que se repita. Se extrajo el criterio comercial —entender antes que
+exponer, escuchar más que hablar, decir lo que le sirve a la persona en el punto en el que
+está, cuidar cada palabra, no presionar, y reconocer que quien decide es ella— y se dejó
+fuera todo el marco religioso de la charla, que no tiene lugar en una conversación con un
+cliente. No hay una sola frase de aquel texto en el código.
+
+Vive en `voice.py` porque `voice.guide()` es la única fuente de la voz para las tres rutas
+del modelo: `/chat`, `/ia` y los borradores de `assistant.py` que también alimentan los
+canales. Una prueba comprueba que llega a todas.
+
+**Lo que esto no es:** no es entrenamiento. No se ajustó ningún modelo ni se cambió el
+modelo local. Es una instrucción más en un prompt que ya era largo, sobre un modelo de 3B
+parámetros, y los validadores siguen siendo de patrones: comprueban que no haya cifras,
+precios ni promesas, no que el asistente haya escuchado bien. El efecto real sobre las
+respuestas no está medido.

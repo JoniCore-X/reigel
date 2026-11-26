@@ -22,9 +22,11 @@ PUBLIC_PAGES = {
     "/proceso": ("proceso", "Evaluación | Power Solar · Team Caguas", "Conoce el proceso de orientación, evaluación y revisión de una propuesta de energía para tu hogar."),
     "/contacto": ("contacto", "Contacto | Power Solar · Team Caguas", "Comparte tu interés mediante el formulario de Power Solar o conversa con R.E.I.G.E.L. para coordinar una evaluación."),
     "/soluciones/tesla-panel-mount-flat": ("panel-mount-flat", "Tesla Panel Mount Flat | Power Solar · Team Caguas", "Cómo funciona esta estructura para techos de madera de baja pendiente, sus piezas, normas y condiciones. Requiere evaluación estructural."),
+    "/soluciones/certificaciones": ("certificaciones", "Certificaciones de los equipos | Power Solar · Team Caguas", "Los documentos de certificación del fabricante para los equipos Tesla que instala Team Caguas, con su referencia, sus normas y qué no significa cada una."),
     "/preguntas": ("preguntas", "Preguntas frecuentes | Power Solar · Team Caguas", "Respuestas sobre evaluación, consumo, respaldo, contacto y condiciones de una propuesta de energía solar."),
 }
-NAV_PARENT = {"panel-mount-flat": "soluciones"}  # Subpáginas que marcan su sección en el menú.
+# Subpáginas que marcan su sección en el menú.
+NAV_PARENT = {"panel-mount-flat": "soluciones", "certificaciones": "soluciones"}
 CONTENT_START = "<!--corporate:content:start-->"
 CONTENT_END = "<!--corporate:content:end-->"
 

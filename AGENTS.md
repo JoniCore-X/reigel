@@ -52,6 +52,10 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   vencimiento; una deducción del modelo no se usa al hablar hasta que una persona la
   aprueba. `speaking_context` es la única puerta hacia un texto dirigido a un cliente.
   Retirar una creencia no la borra y no es una solicitud de eliminación de datos.
+- `voice.py`: la voz comercial, una sola fuente para las tres rutas del modelo. `STANCE`
+  fija el orden de prioridades —entender antes que exponer, escuchar más que hablar, no
+  presionar— a partir de material que aporta el titular; se conserva el criterio, nunca
+  su texto, y nada ajeno al trato con un cliente de Power Solar entra ahí.
 - `knowledge.py`: evidencia con fuentes y vencimiento; un fallo no renueva su vigencia.
 - `energy.py`: aritmética con parámetros explícitos, sin tarifas ni ahorros inventados.
 - `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.
@@ -61,6 +65,9 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   registra bajas ni solicitudes de privacidad, y lo remite a `/chat` («Citas y
   equipo»). `/chat`: chat de coordinación con reserva, atención humana, baja y
   privacidad. `/captacion`: landing existente. Conservar sus enlaces configurados.
+  `/soluciones/certificaciones`: documentos de certificación del fabricante, transcritos
+  con su referencia y enlazados a `energylibrary.tesla.com`. Solo equipos que Team Caguas
+  instala, y cada norma dice también lo que **no** significa.
 
 ## Datos y seguridad
 
@@ -95,7 +102,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1021 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1037 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.

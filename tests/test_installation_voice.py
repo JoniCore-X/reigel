@@ -187,3 +187,39 @@ def test_invitation_only_for_installation_questions_without_one():
     assert not ai_chat.installation_invitation("¿Qué es la medición neta?", reply)
     assert not ai_chat.installation_invitation("¿Mi techo sirve?", "Pide la evaluación en «Citas y equipo».")
     assert not ai_chat.installation_invitation("¿Mi techo sirve?", ai_chat.SAFE_REPLACEMENT)
+
+
+# --- La forma de pensar, no el texto -------------------------------------------
+
+RELIGIOUS = ("dios", "jesús", "jesus", "mesías", "mesias", "biblia", "torá", "tora",
+             "alma", "espiritual", "divin", "profeta", "sagrad", "judaísmo", "judaismo",
+             "cristian", "religi", "fe ", "bendi", "pecado", "sanar", "luz del mundo")
+
+
+def test_the_stance_carries_no_religious_vocabulary():
+    """La charla que la originó era religiosa. Eso se queda fuera: R.E.I.G.E.L. habla
+    con clientes de Power Solar, no predica."""
+    stance = voice.STANCE.lower()
+    for word in RELIGIOUS:
+        assert word not in stance, word
+
+
+def test_the_stance_puts_understanding_before_selling():
+    guide = voice.guide()
+    assert "entiende qué necesita la persona" in guide
+    assert "Escucha más de lo que hablas" in guide
+    assert "decide ella" in guide
+
+
+def test_the_stance_reaches_every_route_that_talks_to_a_person():
+    """Chat, espacio de IA, borradores y canales usan la misma guía: una sola fuente."""
+    from reigel import ai_chat, assistant
+    instructions = ai_chat._instructions({}, "")
+    assert voice.STANCE in instructions
+    assert voice.STANCE in assistant._instructions({})
+
+
+def test_the_stance_never_asks_for_pressure(monkeypatch):
+    """Lo contrario de lo que pedía la charla sería presionar; la guía lo prohíbe."""
+    guide = voice.guide()
+    assert "Nunca presiones" in guide and "pierde una oportunidad" in guide

@@ -37,3 +37,36 @@ Datos de empresa en `/empresa` (origen, año de fundación, pertenencia a Power 
 - `placas-borde-tejas-macro.webp`, `placa-esquina-faldon-macro.webp` y `placas-union-faldon-macro.webp` (1200 × 870; 260, 215 y 202 KB), con versiones `-800.webp` (800 × 580, calidad 95; 132, 130 y 109 KB) — acercamientos al borde, la esquina y la unión de placas negras sobre tejas. Aportada por el titular el 2026-11-25; parece material del fabricante. No es Puerto Rico ni una instalación de Power Solar, y el sitio no lo afirma. El archivo principal es una copia exacta del WebP aportado (sin recodificar, sin ampliar, recortar, retocar, cambiar color ni quitar logotipos; perfil sRGB incluido). Usadas solo en `/soluciones`, secuencia «Tres detalles» después de «La placa, de cerca»; no se usan en `/soluciones/tesla-panel-mount-flat` porque muestran techos inclinados de tejas con otro montaje. **Permiso de uso comercial pendiente de confirmar antes de publicar.**
 - `app-tesla-tres-telefonos.webp` (2000 × 1000, 52 KB) y `app-tesla-tres-telefonos-1000.webp` (1000 × 500, calidad 95, 28 KB) — tres teléfonos con la aplicación Tesla en modo oscuro sobre fondo gris claro. Aportada por el titular el 2026-11-25; es una imagen de mercadeo de la aplicación Tesla. El archivo principal es una copia exacta del WebP aportado (sin recodificar, sin ampliar, recortar, retocar, cambiar color ni quitar logotipos; perfil ICC incluido); la versión de 1000 px es una reducción real para teléfonos. Usada en `/soluciones`, sección de la aplicación (titulada «Toda tu energía. En la palma de tu mano.» desde el 2026-11-25; antes «Tu energía. Bajo tu control.»), después del bloque «Placas y batería». Al elegir un indicador se enciende un punto CSS sobre el fondo gris, fuera de los teléfonos; no tapa ni cambia las pantallas. En la página el fondo gris se funde con la sección mediante una máscara CSS y lleva una luz ambiental CSS; el archivo no cambia. Las pantallas muestran cifras y funciones del fabricante (respaldo en horas, planta virtual, tarifas por horario, valor solar, carga de un vehículo) que el sitio no repite ni promete: son ilustrativas y puede que no todas apliquen en Puerto Rico. La aplicación es de Tesla, no de Power Solar ni de R.E.I.G.E.L. **Permiso de uso comercial pendiente de confirmar antes de publicar.**
 - Reutilización en `/empresa`, sección «Ingeniería y rendimiento» (2026-11-25), sin archivos nuevos ni cambios en los existentes: `techo-placas-negras-perfil-bajo.webp` (apertura), `placas-union-faldon-macro.webp` y su versión `-800` (capítulo «Estética refinada», con un acercamiento por CSS de hasta 1,08 dentro de un marco de 1100 px como máximo) y `borde-placa-perfil-bajo-tejas.webp` (capítulo «Perfil bajo», recorrido vertical por CSS; desde la reorganización del 2026-11-25 ese capítulo y «Instalación eficiente» están en `/proceso`, banda «Montaje e instalación», y ya no en `/empresa`). Los marcos recortan por CSS; ninguna se muestra por encima de su tamaño real. Valen las mismas condiciones de cada imagen: **permiso de uso comercial pendiente de confirmar antes de publicar.** El capítulo «Instalación eficiente» no lleva foto: el proyecto no tiene ninguna imagen real del equipo instalando.
+
+## Certificaciones de los equipos (`/soluciones/certificaciones`)
+
+Documentos del fabricante aportados por el titular el 2026-11-26, transcritos tal como
+los publica Tesla en `energylibrary.tesla.com`. Cada fila de la página enlaza su
+documento original; no se reproduce su contenido, solo la referencia, las normas y la
+fecha de emisión que el propio documento declara.
+
+Se publican únicamente los equipos que instala Team Caguas: Tesla Solar Panel, Tesla
+Solar Inverter, MCI-1, MCI-2, Powerwall 3, Powerwall 3 Expansion, Gateway 3 y Backup
+Switch. Las cartas de conformidad `US23U76C.006` y `US23U76C.007` cubren además
+Powerwall 2, Powerwall+, Backup Gateway 2 y Tesla Remote Meter: esos equipos no se
+nombran en la página, porque publicar la certificación de algo que no se instala induce
+a error.
+
+**Enlace corregido:** Tesla publica el documento UL 3741 (`104873297LAX-002`) con una
+dirección de `energylibrary-stg.tesla.com`, un host de pruebas que no resuelve
+(comprobado el 2026-11-26). El mismo documento sí responde en el host público, y es esa
+la dirección que se usa. Hay una prueba que impide que entre un enlace de `-stg`. Los
+once documentos restantes se comprobaron uno a uno ese mismo día: todos responden 200.
+
+**Pendiente de decidir:** Solar Roof (`105525088LAX-001`, ANSI/UL 3741), Powershare y su
+Gateway, Universal Wall Connector, Gen 3 Wall Connector y Universal Mobile Connector.
+Son productos de otra línea —techo solar, vehículo a casa y carga de vehículos— y no
+constan como parte de lo que instala Team Caguas. Los documentos del Wall Connector y
+del Mobile Connector de la Gen 3 son declaraciones de conformidad europeas (CE, MID),
+que no son lo que aplica en Puerto Rico.
+
+Las descripciones de «qué cubre» y «qué no significa» de cada norma se redactaron el
+2026-11-26 contrastando el alcance de UL 9540, UL 1741 SA/SB, UL 3141 / UL 1741 PCS,
+IEC 61215 e IEC 61730 con fuentes públicas (UL, Intertek, Fraunhofer ISE, ANSI y
+NREL/EPRI). Las normas CSA se transcriben porque están en el documento, y la página dice
+expresamente que son requisitos canadienses.
