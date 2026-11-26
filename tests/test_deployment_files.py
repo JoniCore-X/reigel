@@ -381,7 +381,7 @@ def test_runbook_covers_the_steps_only_the_owner_can_take_and_uses_placeholders(
     guide = read("docs/DESPLIEGUE.md")
     for required in ("scripts/bootstrap.py", "scripts/team_recovery.py", "--purpose enroll", "deploy/backup.sh",
                      "deploy/restore.sh", "scripts/deploy_check.py", "/health", "REIGEL_TEAM_ALLOWED_EMAILS",
-                     "COMPOSE_PROFILES=ia", "ollama pull", "SOURCES.md", "410 W", "repositorio es público",
+                     "COMPOSE_PROFILES=ia", "ollama pull", "SOURCES.md", "420 W", "repositorio es público",
                      "sin revisión humana", "Antes de publicar"):
         assert required in guide, required
     for host in re.findall(r"https?://([\w.-]+)", guide):

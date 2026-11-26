@@ -493,9 +493,8 @@ El despliegue técnico no resuelve nada de esto. Cada punto es una decisión tuy
       verificar; su uso comercial no está confirmado. El detalle, archivo por
       archivo, está en `frontend/assets/power-solar/SOURCES.md`. Confirma el
       permiso o retíralas antes de publicar.
-- [ ] **Placa de 410 W sin confirmar.** El sitio publica 410 W porque así lo
-      indicaste; la ficha de Tesla consultada solo lista 415 W y 420 W. Confirma
-      el modelo exacto.
+- [x] **Potencia de la placa confirmada.** El titular confirmó el 25 de
+      noviembre de 2026 que la placa es de 420 W; el sitio publica 420 W.
 - [ ] **Formulario real en `/contacto`.** La página incrusta un formulario real
       de Google Forms: lo que escriba un visitante llega a esa cuenta de Google,
       fuera de R.E.I.G.E.L. Confirma que es el formulario correcto, quién lo lee

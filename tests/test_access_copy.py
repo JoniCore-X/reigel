@@ -101,7 +101,7 @@ def test_public_pages_and_scripts_are_served_without_those_texts(world):
     anonymous = TestClient(world, base_url="http://localhost")
     entrance, access = anonymous.get("/app"), anonymous.get("/app/acceso")
     assert 'src="/static/js/app.js?v=10"' in entrance.text and "/static/css/operations.css?v=6" in entrance.text
-    assert 'src="/static/js/team-access.js?v=7"' in access.text and "/static/css/team-auth.css?v=1" in access.text
+    assert 'src="/static/js/team-access.js?v=7"' in access.text and "/static/css/team-auth.css?v=2" in access.text
     assert "Si no tienes un código, pídelo a tu administrador." in access.text
     assert "Si no tienes un código, pídelo a tu administrador." in entrance.text
     # The flow and its fields stay as they were.

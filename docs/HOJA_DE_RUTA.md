@@ -81,5 +81,5 @@ vean hay que reiniciar el servidor activo, y eso lo decide el titular.
 - Migración real: detener servicio, `scripts/backup.py`, guardar SHA256,
   arrancar el código nuevo. Hacia el servidor: `deploy/restore.sh` (ruta B de
   `docs/DESPLIEGUE.md`). Sin ensayar con la base comercial.
-- Antes de publicar: lista de `docs/DESPLIEGUE.md` (permisos de imágenes, placa
-  de 410 W, formulario de `/contacto`, IA sin revisión humana, privacidad).
+- Antes de publicar: lista de `docs/DESPLIEGUE.md` (permisos de imágenes,
+  formulario de `/contacto`, IA sin revisión humana, privacidad).

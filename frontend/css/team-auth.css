@@ -91,6 +91,7 @@ body.team-access {
 .auth-step + .auth-step::before { width: clamp(10px, 4vw, 34px); height: 1px; flex: none; background: #ffffff4d; content: ""; }
 .auth-step.is-done + .auth-step::before { background: var(--auth-on-navy-ok); }
 .auth-step-mark {
+  position: relative;
   display: grid;
   width: 24px;
   height: 24px;
@@ -109,7 +110,8 @@ body.team-access {
 .auth-step[aria-current="step"] { color: var(--auth-on-navy); }
 .auth-step[aria-current="step"] .auth-step-mark { border-color: var(--auth-accent); background: var(--auth-accent); color: var(--auth-navy); }
 .auth-step.is-done .auth-step-mark { border-color: var(--auth-on-navy-ok); color: var(--auth-on-navy-ok); font-size: 0; }
-.auth-step.is-done .auth-step-mark::after { width: 9px; height: 5px; border-bottom: 2px solid; border-left: 2px solid; transform: translateY(-1px) rotate(-45deg); content: ""; }
+/* Absolute: the hidden digit is still a grid item and would push the tick into a second row. */
+.auth-step.is-done .auth-step-mark::after { position: absolute; top: 50%; left: 50%; width: 9px; height: 5px; border-bottom: 2px solid; border-left: 2px solid; transform: translate(-50%, -65%) rotate(-45deg); content: ""; }
 .auth-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .auth-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }

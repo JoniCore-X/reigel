@@ -251,7 +251,7 @@
       layers: [image, figure],
       measure: centerOffset(hero),
       apply(actor) {
-        // La foto queda detrás y gira; «410 W» avanza sin girar; el texto no se mueve.
+        // La foto queda detrás y gira; «420 W» avanza sin girar; el texto no se mueve.
         const large = wide.matches;
         const rx = large ? 1.5 + actor.p * 2.5 - actor.y : 1.5 + actor.p * 3 - actor.y * 0.5;
         const ry = large ? -2.5 + actor.x * 1.8 : -2.5 + actor.x;
