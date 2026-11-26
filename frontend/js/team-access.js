@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  const state = {csrf: '', profile: null, withGrant: false};
+  const state = {csrf: '', profile: null, withGrant: false, copy: {}};
 
   async function api(path, {method = 'GET', body} = {}) {
     const headers = {};
@@ -46,6 +46,17 @@
     }
   }
 
+  // Texts about access management come from the server for the signed-in role; this file carries none.
+  function copyText(group, key, fallback = '') {
+    const value = state.copy?.[group]?.[key];
+    return typeof value === 'string' && value ? value : fallback;
+  }
+
+  function note(id, text) {
+    $(id).textContent = text;
+    $(id).hidden = !text;
+  }
+
   function options(select, users) {
     select.replaceChildren(...users.map(user => {
       const option = document.createElement('option');
@@ -81,19 +92,25 @@
     state.csrf = state.profile.csrf;
     const {user} = state.profile;
     $('member-name').textContent = `${user.name} · ${user.team_role}`;
-    // A team session only exists after Google Authenticator; there is no way to turn it off here.
+    state.copy = await api('/api/team-access/copy').then(data => data.copy || {}).catch(() => ({}));
+    note('totp-note', copyText('member', 'totp_note'));
     $('totp-state').textContent = 'Activo: al entrar se te pide tu contraseña y un código de 6 dígitos.';
 
     const isAdmin = user.team_role === 'administrador';
     $('admin-section').hidden = !isAdmin;
     if (isAdmin) {
       const {users} = await api('/api/team');
-      // Mirrors the server rules (the server decides): never the owner; administrators only for the owner.
+      // Only decides which people to list; the server authorizes every action again.
       const others = users.filter(item => item.id !== user.id && item.active && !item.is_owner && (item.role !== 'admin' || user.is_owner));
       options($('grant-user'), others);
       options($('role-user'), others.filter(item => item.role !== 'admin'));
+      note('grant-scope', copyText('admin', 'grant_scope'));
+      for (const option of $('grant-purpose').options) {
+        option.textContent = copyText('admin', `grant_purpose_${option.value}`, option.textContent);
+      }
     }
     $('policy-section').hidden = !user.is_owner;
+    note('policy-note', copyText('owner', 'policy_note'));
     $('member-view').hidden = false;
     $('guest-view').hidden = true;
     syncSteps();
@@ -131,7 +148,7 @@
       return;
     }
     await renderMember();
-    notify('Nuevo teléfono registrado en Google Authenticator. Se cerraron tus otras sesiones.', true);
+    notify(copyText('member', 'phone_changed', 'Nuevo teléfono registrado en Google Authenticator.'), true);
     $('team-message').focus();
   });
   submit('manage-totp-form', async (data, form) => {
@@ -146,7 +163,7 @@
     $('grant-code').textContent = result.code;
     $('grant-code').hidden = false;
     const expires = new Date(result.expires_at).toLocaleString('es-PR', {dateStyle: 'medium', timeStyle: 'short'});
-    notify(`Entrega este código en persona; no lo envíes por correo ni por chat. Es de un solo uso, vence el ${expires} y no se volverá a mostrar.`, true);
+    notify(copyText('admin', 'grant_delivery', 'Código emitido. Vence el {expires}.').replace('{expires}', expires), true);
   });
   submit('role-form', async data => {
     await api(`/api/team-identity/users/${encodeURIComponent(data.user_id)}/role`, {method: 'PUT', body: {role: data.role}});

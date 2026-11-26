@@ -272,6 +272,13 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         owner_limits(request, user, "team_access_read", 120, 60)
         return store().team_access(user)
 
+    @app.get("/api/team-access/copy")
+    async def team_access_copy(request: Request, user=Depends(team_actor)):
+        """Interface texts for the caller's role; /static carries none of them."""
+        from .access_copy import copy_for
+        limit(request, "team_access_copy", 120, 60)
+        return {"copy": copy_for(user)}
+
     @app.post("/api/team-access/emails")
     async def team_access_add(request: Request, user=Depends(team_write)):
         owner_limits(request, user, "team_access_write", 30, 3600)

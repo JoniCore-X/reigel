@@ -341,7 +341,7 @@
 }
 @media(prefers-reduced-motion:reduce) { .workspace-body * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 
-/* Fase 1 (propietario): suscripción privada y bajas del equipo. */
+/* Equipo: acciones por persona, uso y planes. */
 .team-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .usage-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .usage-summary small{display:block;color:var(--muted);font-size:11px;letter-spacing:.04em}
@@ -355,12 +355,12 @@
 @media(max-width:600px){.usage-summary{grid-template-columns:1fr}}
 .appointment-code{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:6px;background:#e3efff;color:#1b55c4;font-family:Consolas,monospace;font-size:13px;font-weight:700;letter-spacing:.08em}
 
-/* Google Authenticator obligatorio: registro en el primer acceso y lista de correos autorizados (solo propietario). */
+/* Registro del autenticador y lista del panel de accesos. */
 .enroll-qr{display:block;width:200px;height:200px;margin:14px auto;border-radius:10px;background:#fff;padding:6px;box-sizing:content-box}
 .enroll-manual{margin:0 0 12px;font-size:13px}
 .enroll-manual summary{cursor:pointer;color:var(--blue,#1b55c4);font-weight:600}
 .enroll-secret{font-family:Consolas,monospace;font-size:15px;letter-spacing:.12em;word-break:break-all;user-select:all}
-/* Código de invitación o recuperación: se muestra una vez y se entrega en persona. */
+/* Código emitido para una persona del equipo. */
 .grant-code{font-size:20px;text-align:center;margin:12px 0;padding:10px;border:1px dashed var(--line,#dde3ec);border-radius:10px}
 .grant-steps{margin:10px 0 14px;padding-left:20px;display:grid;gap:6px;font-size:14px}
 .allow-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}

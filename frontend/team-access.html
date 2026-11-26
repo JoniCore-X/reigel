@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/css/identity.css?v=3">
   <link rel="stylesheet" href="/static/css/team-auth.css?v=1">
   <script src="/static/js/theme.js?v=1"></script>
-  <script src="/static/js/team-access.js?v=6" defer></script>
+  <script src="/static/js/team-access.js?v=7" defer></script>
 </head>
 <body class="team-access">
   <div class="auth-shell">
@@ -36,13 +36,13 @@
       <section id="guest-view" class="id-view" hidden>
         <form id="grant-setup-form">
           <h2 class="id-subtitle">Tengo un código de invitación o de recuperación</h2>
-          <p class="id-note">El código se entrega en persona y se usa una sola vez. Nadie te lo pedirá por correo ni por chat.</p>
+          <p class="id-note">Tu código es personal. Nadie te lo pedirá por correo ni por chat.</p>
           <label for="grant-email">Correo del equipo<input id="grant-email" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
           <label for="grant-password">Contraseña<input id="grant-password" name="password" type="password" autocomplete="current-password" required></label>
           <label for="grant-setup-code">Código de un solo uso<input id="grant-setup-code" name="grant_code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXX-XXXX-XXXX-XXXX" required></label>
           <button class="id-button" type="submit">Configurar Google Authenticator</button>
         </form>
-        <p class="id-note id-center">¿Necesitas acceso? Habla con tu administrador.</p>
+        <p class="id-note id-center">Si no tienes un código, pídelo a tu administrador.</p>
         <p class="id-center"><a class="id-link" href="/app">← Volver al acceso del equipo</a></p>
       </section>
 
@@ -71,7 +71,7 @@
         <div class="id-section">
           <h2>Google Authenticator</h2>
           <p id="totp-state" class="id-note"></p>
-          <p class="id-note">Es obligatorio para todo el equipo y no se puede desactivar. Al cambiar de teléfono se cierran tus otras sesiones. Si pierdes el teléfono, pide a un administrador un código de recuperación.</p>
+          <p id="totp-note" class="id-note" hidden></p>
           <form id="manage-totp-form">
             <label for="manage-code">Código actual<input id="manage-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required></label>
             <div class="id-actions">
@@ -83,8 +83,8 @@
           <h2>Administración de accesos</h2>
           <form id="grant-form">
             <label for="grant-user">Persona<select name="user_id" id="grant-user" required></select></label>
-            <label for="grant-purpose">Tipo<select id="grant-purpose" name="purpose"><option value="enroll">Invitación (primer registro)</option><option value="recovery">Recuperación (reemplaza su autenticador)</option></select></label>
-            <p class="id-note">Un administrador emite códigos solo para asesores; solo el propietario los emite para administradores. Los códigos del propietario se obtienen en el servidor.</p>
+            <label for="grant-purpose">Tipo<select id="grant-purpose" name="purpose"><option value="enroll">Invitación</option><option value="recovery">Recuperación</option></select></label>
+            <p id="grant-scope" class="id-note" hidden></p>
             <label for="grant-reason">Motivo<input id="grant-reason" name="reason" type="text" maxlength="200" autocomplete="off" required></label>
             <button class="id-button" type="submit">Emitir código de un solo uso</button>
           </form>
@@ -97,7 +97,8 @@
         </div>
         <div id="policy-section" class="id-section" hidden>
           <h2>Accesos del equipo</h2>
-          <p class="id-note">Gestiona quién forma parte del equipo en <a class="id-link" href="/app">Equipo y ajustes</a>.</p>
+          <p id="policy-note" class="id-note" hidden></p>
+          <p class="id-note"><a class="id-link" href="/app">Abrir Equipo y ajustes</a></p>
         </div>
         <p class="id-center"><a class="id-link" href="/app">← Volver al espacio</a></p>
       </section>
