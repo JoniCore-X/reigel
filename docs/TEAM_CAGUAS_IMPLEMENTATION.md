@@ -2962,3 +2962,41 @@ ni de una conversación sin ficha.
   otra forma de decirlo no deja nada: no falla, simplemente no extrae.
 - **Sin verificar:** la cola en tema claro, anchos de móvil, lectores de pantalla.
 - **Versiones:** `operations.js?v=13`, `app.js?v=14`, `operations.css?v=14`.
+
+## Fase F bis · Rechazar la llamada no es darse de baja (26 de noviembre de 2026)
+
+La fase F dejó señalada una contradicción y el titular pidió separarla. En `/chat`,
+«no me llamen» apagaba toda la asistencia comercial; en un canal no hacía nada salvo
+dejar una creencia. Ahora las dos cosas son una sola y distinguen lo que se rechaza:
+
+- `conversation.py`: patrón propio (`_CALL_OPT_OUT`), intención `call_opt_out` y helper
+  `refuses_calls`. Si el mensaje rechaza llamadas **y** mensajes («no me llamen ni me
+  escriban»), manda la baja completa.
+- `webchat.py`: el chat sigue vivo y contesta «no te llamaremos por teléfono… si
+  prefieres detener también los mensajes puedes escribir /stop».
+- `agent/calls.py`: `record_refusal` deja la constancia `do_not_call` **sin actor** —no
+  la registró nadie del equipo, la pidió la persona—, no la apila si la última ya es una
+  negativa, y no cambia la regla de que la constancia más reciente manda: una
+  autorización escrita posterior vuelve a permitir la llamada.
+- `channels.py`: lo mismo para los canales.
+
+### Verificación (local)
+
+- 1021 pruebas de Python y 34 de Node en verde.
+- **Navegador, vista previa sintética 8877:** tras reservar por el chat público,
+  «No me llamen por favor» responde que no se llamará y **la conversación sigue**
+  (el mensaje siguiente recibe su respuesta normal). En la ficha, la hoja de llamada
+  muestra **«No llames · Pidió no recibir llamadas»**, el formulario de cierre
+  desaparece y la constancia aparece con `captured_by` vacío.
+
+### Hallazgos
+
+- **Dos huecos anteriores en las bajas, con el mismo origen:** un `\b` detrás del verbo.
+  «Dejen de escribirme» y «dejen de contactarme» no registraban la baja en el chat, y en
+  los canales tampoco lo hacía «no me contacten». Es la forma más natural de decirlo en
+  español, y era precisamente la que no se recogía. Corregido en los dos sitios, con
+  pruebas.
+- **La hoja de llamada pide el municipio aunque la memoria diga «Está en Caguas».**
+  `_known_and_missing` lee la ficha del CRM, y lo que el visitante contesta en el chat no
+  se escribe en ella. No se tocó: pasar el perfil del chat a la ficha es una decisión
+  aparte, no un arreglo de texto.

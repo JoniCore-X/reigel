@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reigel import channels
-from reigel.agent import extract, memory
+from reigel.agent import calls, extract, memory
 from reigel.api import create_app
 from team_auth import allow
 
@@ -241,17 +241,24 @@ def test_stopping_the_assistance_is_not_something_to_remember(workspace):
     assert claims_of(store, prospect["id"], admin) == {}
 
 
-def test_in_the_chat_refusing_calls_is_already_a_full_opt_out(workspace):
-    """`/chat` trata «no me llamen» como baja comercial (`conversation._OPT_OUT`), que
-    es más fuerte que una creencia: ahí no se extrae nada."""
+def test_in_the_chat_refusing_calls_stops_the_phone_and_not_the_chat(workspace):
+    """Rechazar la llamada no es darse de baja: la asistencia sigue, queda la creencia
+    y queda la constancia que después bloquea la llamada."""
     app, store, admin, advisor, prospect = workspace
-    assert visit(app, store, prospect["id"], "No me llamen", "extract-chat-004").status_code == 200
-    assert claims_of(store, prospect["id"], admin) == {}
+    answer = visit(app, store, prospect["id"], "No me llamen", "extract-chat-004")
+    assert answer.status_code == 200
+    reply = answer.json()["messages"][-1]["text"]
+    assert "no te llamaremos" in reply.lower() and "/stop" in reply
+    assert claims_of(store, prospect["id"], admin)["contacto"] == "Pidió que no la llamen por teléfono."
+    permission = calls.permission(store, prospect["id"], admin)
+    assert permission["allowed"] is False and permission["basis"] == "do_not_call"
+    # Nadie del equipo la registró: la pidió la persona.
+    assert permission["history"][0]["captured_by"] is None
 
 
 def test_in_a_channel_refusing_calls_leaves_the_belief_the_call_plan_needs(workspace):
-    """En un canal, «no me llamen» no es baja de mensajes (`channels._opt_out` solo
-    cubre escribir y contactar): sigue hablando por ahí y lo que rechaza es la llamada."""
+    """En un canal pasa lo mismo que en el chat: sigue hablando por ahí y lo que
+    rechaza es la llamada."""
     app, store, admin, advisor, prospect = workspace
     conversation = {"id": "conv-canal", "lead_id": prospect["id"]}
     channels._learn_from(store, conversation, "No me llamen, mejor escríbanme por aquí")
@@ -259,6 +266,24 @@ def test_in_a_channel_refusing_calls_leaves_the_belief_the_call_plan_needs(works
     # Y llega al plan de llamada, que solo muestra lo usable.
     assert any(item["subject"] == "contacto"
                for item in memory.speaking_context(store, prospect["id"]))
+    assert calls.permission(store, prospect["id"], admin)["allowed"] is False
+
+
+def test_a_refusal_is_not_stacked_twice(workspace):
+    app, store, admin, advisor, prospect = workspace
+    conversation = {"id": "conv-canal", "lead_id": prospect["id"]}
+    for _ in range(3):
+        channels._learn_from(store, conversation, "No me llamen")
+    assert len(calls.permission(store, prospect["id"], admin)["history"]) == 1
+
+
+def test_a_written_consent_after_a_refusal_still_wins(workspace):
+    """La constancia más reciente manda: una negativa automática no congela la ficha."""
+    app, store, admin, advisor, prospect = workspace
+    channels._learn_from(store, {"id": "conv-canal", "lead_id": prospect["id"]}, "No me llamen")
+    calls.record_consent(store, prospect["id"],
+                         {"kind": "written", "evidence": "Firmó la autorización en la cita."}, admin)
+    assert calls.permission(store, prospect["id"], admin)["allowed"] is True
 
 
 def test_a_channel_given_up_is_not_mined(workspace):
@@ -329,3 +354,19 @@ def test_the_context_helper_needs_a_lead_and_something_to_say(workspace):
     assert extract.context(conversation, {}, "hola, buenas tardes") is None
     found = extract.context(conversation, {}, "no me llamen")
     assert found["lead_id"] == prospect["id"] and found["items"][0]["subject"] == "contacto"
+
+
+# --- La baja en un canal -------------------------------------------------------
+
+@pytest.mark.parametrize("message,stops_everything", [
+    ("Dejen de escribirme", True),
+    ("Dejen de contactarme", True),
+    ("No me contacten", True),
+    ("No me escriban", True),
+    # Rechazar el teléfono no apaga el canal, igual que en el chat.
+    ("No me llamen", False),
+])
+def test_a_channel_opt_out_covers_how_people_actually_say_it(message, stops_everything):
+    """Era un hueco anterior: con el pronombre pegado al verbo, o con «no me
+    contacten», la baja del canal no se registraba."""
+    assert channels._opt_out(message) is stops_everything

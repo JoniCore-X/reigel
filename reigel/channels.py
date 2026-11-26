@@ -27,7 +27,7 @@ import httpx
 from fastapi import BackgroundTasks, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
-from . import assistant, safety
+from . import assistant, conversation as conversation_module, safety
 
 MAX_BODY = 256 * 1024
 MAX_TEXT = 4000
@@ -177,7 +177,9 @@ def _normalize_text(text: str) -> str:
 def _opt_out(text: str) -> bool:
     clean = re.sub(r"[.!¡¿?]", "", _normalize_text(text)).strip()
     return clean in {"stop", "/stop", "baja", "cancelar mensajes", "no me escriban", "no me escribas", "no mas mensajes", "no quiero mas mensajes", "unsubscribe", "parar", "salir"} or bool(
-        re.search(r"\b(darme de baja|darme la baja|dejen? de (?:escribir|contactar)|no me (?:contact|escrib)|no (?:quiero|deseo) (?:recibir )?(?:mas )?mensajes|elimin[ae] (?:mis )?datos)\b", clean))
+        # El pronombre pegado al verbo y la terminación de la conjugación: sin
+        # recogerlos, «dejen de escribirme» y «no me contacten» no daban de baja.
+        re.search(r"\b(darme de baja|darme la baja|dejen? de (?:escribir|contactar)(?:me|nos|les)?|no me (?:contact|escrib)\w*|no (?:quiero|deseo) (?:recibir )?(?:mas )?mensajes|elimin[ae] (?:mis )?datos)\b", clean))
 
 
 def _human_requested(text: str) -> bool:
@@ -319,6 +321,11 @@ def _learn_from(store, conversation, incoming_text):
         if found:
             extract.apply(store, found["lead_id"], found["items"],
                           conversation_id=found["conversation_id"])
+        if conversation_module.refuses_calls(incoming_text):
+            # La negativa no se queda solo como creencia: es lo que bloquea la llamada.
+            from .agent import calls
+            calls.record_refusal(store, conversation["lead_id"],
+                                 "La persona pidió por escrito en un canal que no la llamen.")
     except Exception:
         logging.getLogger(__name__).warning("No se pudieron extraer creencias de un canal.")
 

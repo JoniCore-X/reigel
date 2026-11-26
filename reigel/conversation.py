@@ -68,11 +68,30 @@ _UNSUPPORTED_COMMERCIAL = re.compile(
 )
 
 _OPT_OUT = re.compile(
-    r"\b(?:darme de baja|darme la baja|dejen? de (?:escribir|contactar)|"
-    r"no me (?:contact\w*|escrib\w*|llam\w*)|"
+    # El pronombre pegado al verbo («escribirme», «contactarnos») es la forma más
+    # natural de decirlo, y sin recogerlo la baja no se registraba.
+    r"\b(?:darme de baja|darme la baja|dejen? de (?:escribir|contactar)(?:me|nos|les)?|"
+    r"no me (?:contact\w*|escrib\w*)|"
     r"no (?:quiero|deseo) (?:recibir )?(?:mas )?mensajes|"
+    # «no me llamen ni me escriban» rechaza las dos cosas: la baja completa manda.
+    r"ni (?:me )?(?:escrib\w*|contact\w*|mensaje\w*)|"
     r"no mas mensajes)\b"
 )
+# Rechazar llamadas no es darse de baja de todo. Quien escribe «no me llamen» en el
+# chat sigue escribiendo por el chat: lo que rechaza es el teléfono. Tratarlo como
+# baja total apagaba una conversación viva; tratarlo como nada habría dejado una
+# llamada permitida contra lo que acaba de pedir.
+_CALL_OPT_OUT = re.compile(
+    r"\bno me (?:llam\w*)\b|\bno (?:quiero|deseo) (?:que me )?llam\w*"
+    r"|\bsin llamadas\b|\bnada de llamadas\b|\bno (?:me )?llamen\b"
+)
+
+
+def refuses_calls(message) -> bool:
+    """¿Esta persona está rechazando que la llamen? Un patrón, no una lectura del
+    modelo: de aquí sale una constancia que después bloquea una llamada."""
+    value = normalize(str(message or "")).strip()
+    return bool(_CALL_OPT_OUT.search(value) and not _OPT_OUT.search(value))
 
 _PRIVACY_DELETION = re.compile(
     r"\b(?:elimin\w*|borr\w*|suprim\w*)\b.{0,45}\bmis (?:datos|registros|informacion)\b|"
@@ -121,6 +140,9 @@ def classify_message(
             return _decision("privacy_request", 0.98, "register_privacy_request", entities={"request_kind": kind})
     if value in {"/stop", "stop", "baja", "detener", "parar", "salir", "unsubscribe", "cancelar mensajes"} or _OPT_OUT.search(value):
         return _decision("opt_out", 1.0, "stop_assistance")
+    if _CALL_OPT_OUT.search(value):
+        # Rechaza el teléfono, no el chat: la asistencia sigue y queda constancia.
+        return _decision("call_opt_out", 0.98, "register_call_refusal")
     
     # --- CAMBIO APLICADO AQUÍ ---
     if re.search(

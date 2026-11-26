@@ -220,7 +220,7 @@ class WebChat:
     NO_MEMORY_INTENTS = {"opt_out", "privacy_request"}
 
     def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None, needs=None,
-                beliefs=None):
+                beliefs=None, refusals=None):
         """``gaps``, when given, receives ``(reason, text)`` for answers the learning queue
         should see (no verified knowledge, generic fallback). The caller records them
         after this transaction commits; the text is the already-masked message.
@@ -233,7 +233,11 @@ class WebChat:
         ``beliefs`` receives the raw material for the agent's memory: the conversation,
         its lead, what the visitor has answered and the message itself. The caller runs
         the extraction after the commit, and nothing is collected from a visitor who
-        opted out or asked about their data."""
+        opted out or asked about their data.
+
+        ``refusals`` receives a refusal to be called, which is not a commercial opt-out:
+        the visitor keeps the chat and the caller records the refusal in the consent
+        ledger, where the most recent entry always wins."""
         incoming = text(message_text, "mensaje", limit=2000, required=True)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -285,6 +289,16 @@ class WebChat:
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
                 reply = "He detenido la asistencia comercial automática en este chat. No enviaré más respuestas de venta. Si necesitas ayuda, puedes solicitar atención humana."
                 actions = ["human"]
+            elif decision.intent == "call_opt_out":
+                # Rechaza el teléfono, no el chat: la asistencia sigue y la negativa
+                # queda como constancia, que es lo que después bloquea una llamada.
+                if refusals is not None and conversation["lead_id"]:
+                    refusals.append({"lead_id": conversation["lead_id"],
+                                     "evidence": "La persona pidió por escrito en el chat web que no la llamen."})
+                reply = ("Queda anotado: no te llamaremos por teléfono. Seguimos por este chat,"
+                         " y si prefieres detener también los mensajes puedes escribir /stop. ")
+                reply += self._next_question(profile)
+                actions = ["book", "human"]
             elif session["opted_out"]:
                 # Opting out is persistent; a sales phrase cannot silently undo it.
                 reply = ""

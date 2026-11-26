@@ -128,6 +128,35 @@ def record_consent(store, lead_id, data, actor, *, now=None):
     return permission(store, lead_id, actor)
 
 
+LAST_REFUSAL = ("SELECT id FROM agent_call_consent WHERE lead_id=? AND kind='do_not_call'"
+                " ORDER BY captured_at DESC LIMIT 1")
+
+
+def record_refusal(store, lead_id, evidence, *, now=None):
+    """La persona misma rechazó la llamada por escrito en una conversación.
+
+    No hay actor: no lo registra nadie del equipo, lo pidió ella. Va sin permisos
+    porque en un sentido solo restringe —nunca habilita una llamada— y la última
+    constancia manda, así que una negativa automática no puede abrir una puerta.
+    Si la más reciente ya es una negativa, no se apila otra igual.
+    """
+    core = _core()
+    now = now or datetime.now(UTC)
+    evidence = core.text(evidence, "evidencia", limit=400, required=True)
+    with store.connect() as db:
+        if not db.execute("SELECT 1 FROM leads WHERE id=?", (lead_id,)).fetchone():
+            return None
+        latest = db.execute(CONSENT_HISTORY, (lead_id,)).fetchone()
+        if latest and latest["kind"] == "do_not_call":
+            return None
+        consent_id = core.uid()
+        db.execute("INSERT INTO agent_call_consent(id,lead_id,kind,evidence,captured_at,captured_by,created_at)"
+                   " VALUES(?,?,'do_not_call',?,?,NULL,?)",
+                   (consent_id, lead_id, evidence, now.isoformat(), core.stamp()))
+        store.audit(db, None, "agent.call.refusal", consent_id)
+    return consent_id
+
+
 def _known_and_missing(lead):
     """Los valores viajan como están guardados y con su tipo: darles formato de
     pantalla es trabajo del frontend, que conoce la zona horaria y la moneda."""

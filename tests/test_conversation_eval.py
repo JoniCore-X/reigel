@@ -345,3 +345,35 @@ def test_sensitive_data_and_injection_safety(
     assert decision.intent == expected_intent
     assert decision.action == expected_action
     assert 0 <= decision.confidence <= 1
+
+@pytest.mark.parametrize(
+    "message,expected_intent",
+    [
+        # Rechazar el teléfono no es darse de baja de todo: quien lo escribe
+        # sigue escribiendo por el chat.
+        ("No me llamen", "call_opt_out"),
+        ("No me llames por favor", "call_opt_out"),
+        ("No quiero que me llamen", "call_opt_out"),
+        ("Nada de llamadas, prefiero por aquí", "call_opt_out"),
+        # Rechazar el mensaje sí lo es, y manda sobre lo anterior.
+        ("No me escriban más", "opt_out"),
+        ("No me llamen ni me escriban", "opt_out"),
+        ("Dejen de contactarme", "opt_out"),
+    ],
+)
+def test_refusing_calls_is_not_the_same_as_a_commercial_opt_out(message, expected_intent):
+    decision = classify_message(message)
+
+    assert decision.intent == expected_intent
+    assert decision.action == ("register_call_refusal" if expected_intent == "call_opt_out"
+                               else "stop_assistance")
+
+
+@pytest.mark.parametrize("message", [
+    "Dejen de escribirme",
+    "Dejen de contactarme",
+    "Deje de escribirnos",
+])
+def test_an_opt_out_with_the_pronoun_attached_to_the_verb_is_still_an_opt_out(message):
+    """Era un hueco anterior: «dejen de escribirme» no registraba la baja."""
+    assert classify_message(message).intent == "opt_out"

@@ -264,6 +264,15 @@ def create_app(db_path=None, *, load_env=None):
         except Exception:
             logging.getLogger(__name__).warning("No se pudieron extraer creencias de la conversación.")
 
+    def record_call_refusal(refusal):
+        """Una negativa a recibir llamadas solo restringe: la constancia más reciente
+        manda, así que registrarla nunca abre una puerta."""
+        try:
+            from .agent import calls
+            calls.record_refusal(app.state.store, refusal["lead_id"], refusal["evidence"])
+        except Exception:
+            logging.getLogger(__name__).warning("No se pudo registrar la negativa a recibir llamadas.")
+
     def record_need(context):
         """El informe nunca bloquea ni rompe una respuesta al visitante."""
         try:
@@ -500,11 +509,11 @@ def create_app(db_path=None, *, load_env=None):
             ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"],
                                            remembered=remembered_for(brief.get("lead_id")),
                                            **reviewed(brief["incoming"], "chat"))
-        gaps, pending, learned = [], [], []
+        gaps, pending, learned, refused = [], [], [], []
         result = app.state.webchat.message(
             token, data.get("text"), data.get("request_id"),
             ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None,
-            gaps=gaps, needs=pending, beliefs=learned,
+            gaps=gaps, needs=pending, beliefs=learned, refusals=refused,
         )
         if brief and ai_reply is None:
             # The model was asked and its draft was missing or withdrawn: the fallback was used.
@@ -518,6 +527,9 @@ def create_app(db_path=None, *, load_env=None):
         # Lo que la conversación deja como memoria, para que el seguimiento no empiece de cero.
         for context in learned[:1]:
             extract_beliefs(context)
+        # Rechazar la llamada no es darse de baja: queda la constancia, sigue el chat.
+        for refusal in refused[:1]:
+            record_call_refusal(refusal)
         return result
 
     @app.post("/api/public/chat/book")
