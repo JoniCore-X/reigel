@@ -91,12 +91,17 @@ async function renderDashboard(requestId) {return renderOperationsDashboard(requ
 function dateTile(value) {const date=new Date(value);return `<div class="date-tile"><strong>${esc(new Intl.DateTimeFormat('es-PR',{timeZone:timezone(),day:'numeric'}).format(date))}</strong><span>${esc(new Intl.DateTimeFormat('es-PR',{timeZone:timezone(),month:'short'}).format(date))}</span></div>`;}
 
 async function renderLeads(requestId) {return renderOperationsLeads(requestId);}
-function openDialog(title,html) {if(!dialog.open)lastDialogTrigger=document.activeElement;dialog.classList.remove('wide-dialog');$('#dialog-title').textContent=title;$('#dialog-content').innerHTML=html;if(!dialog.open)dialog.showModal();}
+function openDialog(title,html) {if(!dialog.open)lastDialogTrigger=document.activeElement;dialog.classList.remove('wide-dialog');$('#dialog-title').textContent=title;$('#dialog-content').innerHTML=html;if(!dialog.open)dialog.showModal();
+  // A dialog with a form opens on its first field, not on the close button (Enter there would close it).
+  $('input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled])',$('#dialog-content'))?.focus();}
 function closeDialog() {dialog.close();if(lastDialogTrigger?.isConnected)lastDialogTrigger.focus();}
-function formError(form,error) {const element=$('.form-error',form);if(element)element.textContent=error.message || String(error);}
+// Fields that name the error in aria-describedby (the access forms) are flagged while it is shown; a throttled or failed request is not a field error.
+function errorFields(form) {const id=$('.form-error',form)?.id;return id?$$(`[aria-describedby~="${id}"]`,form):[];}
+function clearInvalid(form) {$$('[aria-invalid]',form).forEach(field=>field.removeAttribute('aria-invalid'));}
+function formError(form,error) {const element=$('.form-error',form);if(element)element.textContent=error.message || String(error);if(error.status>=400&&error.status<500&&error.status!==429)errorFields(form).forEach(field=>field.setAttribute('aria-invalid','true'));}
 async function submitForm(event,work) {
   event.preventDefault();const form=event.currentTarget;const button=$('[type=submit]',form);if(button?.disabled)return;
-  const error=$('.form-error',form);if(error)error.textContent='';if(button)button.disabled=true;form.setAttribute('aria-busy','true');
+  const error=$('.form-error',form);if(error)error.textContent='';clearInvalid(form);if(button)button.disabled=true;form.setAttribute('aria-busy','true');
   try {await work(form,new FormData(form));}catch(error){formError(form,error);}finally{form.removeAttribute('aria-busy');if(button?.isConnected)button.disabled=false;}
 }
 function leadFields() {return operationsLeadFields();}
@@ -266,7 +271,7 @@ function issueCode(id) {
   const user=state.users.find(item=>item.id===id);if(!user)return;const recovery=state.enrolled.has(user.id);const text=(key,fallback='')=>copyText('admin',key,fallback);
   openDialog(recovery?'Código de recuperación':'Código de invitación',`<form id="grant-code-form"><p><strong>${esc(user.name)}</strong> ${esc(text(recovery?'issue_recovery_intro':'issue_enroll_intro'))}</p><label>Motivo<input name="reason" required maxlength="200" autocomplete="off" placeholder="${recovery?'Teléfono perdido':'Primer acceso'}"></label>${text('issue_once')?`<p class="hint orange">${esc(text('issue_once'))}</p>`:''}<p class="form-error" role="alert"></p><div class="form-actions"><button class="button" type="button" data-action="close-dialog">Cancelar</button><button class="button primary" type="submit">Emitir código</button></div></form>`);
   $('#grant-code-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await ownerWrite(`/api/team-identity/users/${encodeURIComponent(id)}/grant`,{purpose:recovery?'recovery':'enroll',reason:data.get('reason')});
-    $('#dialog-content').innerHTML=`<div class="grant-result"><p>${esc(text('issue_result','Código para'))} <strong>${esc(user.name)}</strong>:</p><p class="enroll-secret grant-code">${esc(result.code)}</p><p class="muted">Vence: ${esc(dateTime(result.expires_at,{year:'numeric'}))}</p><ol class="grant-steps">${copyList('admin',recovery?'issue_steps_recovery':'issue_steps_enroll').map(step=>`<li>${esc(step)}</li>`).join('')}</ol><div class="form-actions"><button class="button primary" type="button" data-action="close-dialog">Listo, ya lo anoté</button></div></div>`;}));
+    $('#dialog-content').innerHTML=`<div class="grant-result" tabindex="-1"><p>${esc(text('issue_result','Código para'))} <strong>${esc(user.name)}</strong>:</p><p class="enroll-secret grant-code">${esc(result.code)}</p><p class="muted">Vence: ${esc(dateTime(result.expires_at,{year:'numeric'}))}</p><ol class="grant-steps">${copyList('admin',recovery?'issue_steps_recovery':'issue_steps_enroll').map(step=>`<li>${esc(step)}</li>`).join('')}</ol><div class="form-actions"><button class="button primary" type="button" data-action="close-dialog">Listo, ya lo anoté</button></div></div>`;$('.grant-result').focus();}));
 }
 function roleLabel(user) {return user?.is_owner?'Propietario':user?.role==='admin'?'Administrador':'Asesor';}
 function canOffboard(user) {const me=state.user;return me?.role==='admin'&&user.active!==false&&user.id!==me.id&&!user.is_owner&&(user.role!=='admin'||me.is_owner);}
@@ -301,6 +306,9 @@ function syncAuthSteps() {
   $('#auth-step-detail').textContent=current===2?detail:'';
 }
 function focusLoginStart() {$('#login-form [name=email]').focus();}
+// «Saltar al contenido» points at #main, which is hidden on the entrance: there it leads to the form on screen.
+$('.skip-link').addEventListener('click',event=>{if($('#login-screen').hidden)return;event.preventDefault();const form=$$('#login-screen form').find(item=>!item.hidden);$('input:not([type=hidden])',form||$('#login-screen'))?.focus();});
+$$('#login-screen form').forEach(form=>{form.addEventListener('input',()=>clearInvalid(form));form.addEventListener('reset',()=>clearInvalid(form));});
 // The server's answer to the password step decides which form is shown next.
 $('#login-form').addEventListener('submit',event=>submitForm(event,async(form,data)=>{const result=await post('/api/auth/login',{email:data.get('email'),password:data.get('password')});if(result.enrollment_required){form.reset();showInviteStep(true);return;}form.reset();if(result.mfa_required){showTotpStep(true);return;}await enter(result.user);}));
 function showTotpStep(visible){$('#login-form').hidden=visible;$('#totp-form').hidden=!visible;$('.form-error',$('#totp-form')).textContent='';syncAuthSteps();if(visible)$('#totp-form [name=code]').focus();else $('#totp-form').reset();}

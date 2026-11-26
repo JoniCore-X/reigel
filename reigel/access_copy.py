@@ -39,7 +39,8 @@ ADMIN = {
     ],
     "issue_steps_recovery": [
         "Entrégalo en persona. No lo envíes por correo, chat ni capturas de pantalla.",
-        "La persona entra en /app con su correo y contraseña y, en /app/acceso, escribe este código para registrar el teléfono nuevo.",
+        "La persona abre /app/acceso directamente (sin pasar por /app), escribe allí su correo, su contraseña y este código, y registra el teléfono nuevo.",
+        "Al terminar entra en /app con su contraseña y el código de la app nueva.",
         "Si se pierde o vence, emite otro: el anterior deja de servir.",
     ],
     "offboard_notice": ("La cuenta pierde el acceso en este momento: se cierran sus sesiones y no podrá volver a entrar. Sus "

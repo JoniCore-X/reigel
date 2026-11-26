@@ -34,13 +34,29 @@
     $('auth-step-detail').textContent = current === 2 ? 'Autenticador' : '';
   }
 
-  async function run(button, work) {
+  // The fields of an access form are flagged while its error is on screen (the server does not say which one failed).
+  function flag(form, invalid) {
+    form?.querySelectorAll('input').forEach(field => {
+      if (invalid) {
+        field.setAttribute('aria-invalid', 'true');
+        field.setAttribute('aria-describedby', 'team-message');
+      } else {
+        field.removeAttribute('aria-invalid');
+        field.removeAttribute('aria-describedby');
+      }
+    });
+  }
+
+  async function run(button, work, form) {
     notify('');
+    flag(form, false);
     if (button) button.disabled = true;
     try {
       await work();
     } catch (error) {
       notify(error.message);
+      // A throttled or failed request is not a field error.
+      if (error.status >= 400 && error.status < 500 && error.status !== 429) flag(form, true);
     } finally {
       if (button) button.disabled = false;
     }
@@ -116,13 +132,15 @@
     syncSteps();
   }
 
-  function submit(id, work) {
+  function submit(id, work, access = false) {
     $(id).addEventListener('submit', event => {
       event.preventDefault();
       const form = event.currentTarget;
       const button = event.submitter || form.querySelector('[type=submit]');
-      run(button, () => work(Object.fromEntries(new FormData(form)), form, button));
+      run(button, () => work(Object.fromEntries(new FormData(form)), form, button), access ? form : null);
     });
+    // One message covers the whole form, so correcting any field clears them all.
+    if (access) $(id).addEventListener('input', event => flag(event.currentTarget, false));
   }
 
   $('copy-secret').addEventListener('click', event => run(event.currentTarget, async () => {
@@ -134,7 +152,7 @@
     const {setup} = await api('/api/team-identity/totp/setup', {method: 'POST', body: data});
     form.reset();
     showSetup(setup);
-  });
+  }, true);
   submit('confirm-form', async (data, form) => {
     await api('/api/team-identity/totp/confirm', {method: 'POST', body: {code: data.code, with_grant: state.withGrant}});
     form.reset();
@@ -150,13 +168,13 @@
     await renderMember();
     notify(copyText('member', 'phone_changed', 'Nuevo teléfono registrado en Google Authenticator.'), true);
     $('team-message').focus();
-  });
+  }, true);
   submit('manage-totp-form', async (data, form) => {
     state.withGrant = false;
     const {setup} = await api('/api/team-identity/totp/setup', {method: 'POST', body: {current_code: data.code}});
     form.reset();
     showSetup(setup);
-  });
+  }, true);
   submit('grant-form', async (data, form) => {
     const result = await api(`/api/team-identity/users/${encodeURIComponent(data.user_id)}/grant`, {method: 'POST', body: {purpose: data.purpose, reason: data.reason}});
     form.elements.reason.value = '';

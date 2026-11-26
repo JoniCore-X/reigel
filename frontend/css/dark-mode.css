@@ -41,6 +41,8 @@
 }
 :root[data-theme="dark"] .workspace-body :is(input, textarea)::placeholder { color: #8292ab; }
 :root[data-theme="dark"] .workspace-body :is(a, .text-link, .table-button):not(.button) { color: var(--dark-link); }
+/* The skip link keeps its white box in both themes: dark text on it. :not(.button) only matches the weight of the rule above. */
+:root[data-theme="dark"] .workspace-body .skip-link:not(.button) { color: #0b3d91; }
 :root[data-theme="dark"] .workspace-body .button:not(.primary):not(.danger):not(.orange) {
   background: var(--dark-raised);
   color: var(--ink);
