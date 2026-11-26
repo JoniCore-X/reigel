@@ -592,8 +592,31 @@ certificaciones, antes de preparar el primer despliegue real:
 
 Se hizo con un contenedor suelto y un volumen temporal, no con `docker compose
 up`, para no mezclar el `.env` de desarrollo de la computadora; el contenedor, el
-volumen y la imagen se borraron al terminar. Caddy y el certificado no entraron
-en esta comprobación: eso ya se había probado por la mañana con `DOMAIN=localhost`.
+volumen y la imagen se borraron al terminar.
+
+Y después la pila completa con Caddy, desde una copia limpia del proyecto fuera
+del repositorio y con su propio `.env` (`DOMAIN=localhost`), para que ningún
+valor del `.env` de desarrollo entrara en los contenedores:
+
+- `docker compose config --quiet` valida; `app` queda «healthy» y Caddy arranca
+  después, porque espera a que lo esté.
+- Caddy emite su certificado interno para `localhost` («issuer: local»).
+- `http://localhost/` redirige con **308** a `https://localhost/`.
+- Por HTTPS responden 200 las diecisiete rutas públicas, incluidas `/`, `/ia`,
+  `/chat`, `/app`, `/soluciones/certificaciones` y `/sitemap.xml`;
+  `/api/leads`, `/api/agent` y `/api/needs` responden 401 sin sesión.
+- El puerto 8765 de la aplicación **no es alcanzable desde el host**: solo Caddy
+  llega a ella.
+- Cabeceras que ve el visitante: `Strict-Transport-Security` a un año con
+  `includeSubDomains`, política de contenido sin `unsafe-inline` en los scripts,
+  `X-Frame-Options: DENY`, `nosniff` y `Referrer-Policy`. Las pone la aplicación,
+  no Caddy, y no aparecen duplicadas.
+- Consumo en reposo: 69 MB la aplicación y 15 MB Caddy.
+
+El navegador de esta computadora **no confía** en la CA interna de Caddy y
+rechaza `https://localhost`. Es lo esperado y no se saltó: con un dominio real,
+Let's Encrypt emite un certificado que sí se confía. Para mirar el sitio en local
+hay que aceptar el aviso a mano en el navegador.
 
 **No probado** (requiere un servidor o más descargas):
 
