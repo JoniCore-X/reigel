@@ -8,6 +8,7 @@ from reigel.core import DomainError, Store
 from reigel.learning import (
     LearningQueue, migrate_learning, novelty, priority, public_answer_problem, question_key, redact, topic_of,
 )
+from team_auth import allow, login as team_login
 
 PASSWORD = "synthetic-password-learning"
 GOOD_ANSWER = (
@@ -20,6 +21,7 @@ GOOD_ANSWER = (
 def queue(tmp_path):
     store = Store(tmp_path / "learning.sqlite3")
     admin = store.create_user({"name": "QA Admin", "email": "learn-admin@example.test", "password": PASSWORD, "role": "admin"}, bootstrap=True)
+    allow(store, admin, "learn-advisor@example.test")
     advisor = store.create_user({"name": "QA Asesora", "email": "learn-advisor@example.test", "password": PASSWORD, "role": "advisor"}, admin)
     return LearningQueue(store), store, admin, advisor
 

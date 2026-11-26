@@ -172,6 +172,8 @@ CREATE TABLE IF NOT EXISTS audit_events (
 
 
 from .operations import OperationsMixin, migrate_operations
+from . import team_access
+from .team_access import TeamAccessMixin
 
 
 def default_db_path(db_path=None) -> str:
@@ -231,7 +233,7 @@ def migrate_owner(db):
             db.execute("UPDATE users SET is_owner=1 WHERE id=?", (first["id"],))
 
 
-class Store(OperationsMixin):
+class Store(OperationsMixin, TeamAccessMixin):
     def __init__(self, db_path=None):
         self.path = default_db_path(db_path)
         Path(self.path).resolve().parent.mkdir(parents=True, exist_ok=True)
@@ -243,6 +245,7 @@ class Store(OperationsMixin):
             migrate_appointment_reference(db)
             from .identity import migrate_identity
             migrate_identity(db)
+            team_access.migrate_team_access(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",
@@ -319,9 +322,15 @@ class Store(OperationsMixin):
                 db.execute("BEGIN IMMEDIATE")
                 if bootstrap and db.execute("SELECT 1 FROM users LIMIT 1").fetchone():
                     raise DomainError("Ya hay usuarios. Inicia sesión para administrar el equipo.", 409)
+                if not bootstrap and not team_access.is_allowed(db, email):
+                    raise DomainError("Ese correo no está autorizado para el equipo. El propietario debe añadirlo a la lista de acceso "
+                                      "(con la regla «Power Solar» activa, debe contener «powersolar»).", 403)
                 db.execute("INSERT INTO users(id,name,email,password_hash,role,timezone,created_at,is_owner) VALUES(?,?,?,?,?,?,?,?)",
                            (user_id, name, email, encoded, role, self.settings()["timezone"], stamp(), int(bootstrap)))
                 self.audit(db, actor, "user.create", user_id)
+                if bootstrap:
+                    # The first account is the owner; its email is always allowed (lockout protection).
+                    team_access.ensure_owner_allowed(db)
                 return user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
         except sqlite3.IntegrityError:
             raise DomainError("Ya existe una cuenta con ese correo.", 409) from None
@@ -392,27 +401,43 @@ class Store(OperationsMixin):
             return user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
 
     def login(self, email, password):
+        """Check the password; the result is only the next step, never a session.
+
+        Every team account must then pass Google Authenticator: "totp" when it is
+        enrolled, "enroll" (QR setup) on its first login. Unknown, inactive and
+        non-allowed emails cost the same password verification and get the same
+        error, so the response cannot reveal which emails exist or are listed.
+        """
         email = email_address(email, required=True)
         with self.connect() as db:
             row = db.execute("SELECT * FROM users WHERE email=? COLLATE NOCASE AND active=1", (email,)).fetchone()
-            encoded = row["password_hash"] if row else missing_password_hash()
+            allowed = bool(row) and team_access.is_allowed(db, row["email"], owner=bool(row["is_owner"]))
+            encoded = row["password_hash"] if allowed else missing_password_hash()
             matched = password_matches(password, encoded)
-            if not row or not matched:
-                raise DomainError("Correo o contraseña incorrectos.", 401)
-            from .identity import password_login_gate
-            gate = password_login_gate(db, row["id"])
-            if gate and gate != "totp":
-                raise DomainError(gate, 403)
-            if row["password_hash"].startswith("scrypt$"):
-                db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(password), row["id"]))
-            if gate == "totp":
-                # The password alone opens no session; the second factor must follow.
-                return None, {"mfa_user_id": row["id"]}
-            token = secrets.token_urlsafe(36)
-            db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
-            db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), row["id"], (now() + timedelta(hours=12)).isoformat()))
-            self.audit(db, user_dict(row), "auth.login", row["id"])
-            return token, user_dict(row)
+            if allowed and matched:
+                if row["password_hash"].startswith("scrypt$"):
+                    db.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash(password), row["id"]))
+                enrolled = db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (row["id"],)).fetchone()
+                self.audit(db, user_dict(row), "auth.password_ok", row["id"])
+                return None, {"mfa": "totp" if enrolled else "enroll", "user_id": row["id"]}
+            # Same single write on every failure path, committed before the error.
+            self.audit(db, None, "auth.login_failed")
+        raise DomainError("Correo o contraseña incorrectos.", 401)
+
+    def issue_session(self, db, user_id) -> str:
+        """Only the second-factor steps in identity.py call this."""
+        token = secrets.token_urlsafe(36)
+        db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
+        db.execute("INSERT INTO sessions VALUES(?,?,?)", (hashlib.sha256(token.encode()).hexdigest(), user_id, (now() + timedelta(hours=12)).isoformat()))
+        self.audit(db, {"id": user_id}, "auth.login", user_id)
+        return token
+
+    @staticmethod
+    def team_access_ok(db, row) -> bool:
+        """An account keeps access only while it is allowed and has Google Authenticator."""
+        if not db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (row["id"],)).fetchone():
+            return False
+        return team_access.is_allowed(db, row["email"], owner=bool(row["is_owner"]))
 
     def session_user(self, token):
         if not token or len(token) > 200:
@@ -420,7 +445,8 @@ class Store(OperationsMixin):
         with self.connect() as db:
             row = db.execute("SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1",
                              (hashlib.sha256(token.encode()).hexdigest(), stamp())).fetchone()
-            if not row:
+            # Sessions opened before TOTP became mandatory, or of an email taken off the list, grant nothing.
+            if not row or not self.team_access_ok(db, row):
                 raise DomainError("La sesión terminó. Vuelve a iniciar sesión.", 401)
             return user_dict(row)
 

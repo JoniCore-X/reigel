@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from reigel import assistant, channels
 from reigel.core import Store
+from team_auth import allow, login as team_login
 
 REAL_ASYNC_CLIENT = httpx.AsyncClient
 
@@ -317,6 +318,7 @@ def test_inbound_assigns_least_loaded_available_user_and_preserves_owner(server,
     app, client = server
     store = app.state.store
     owner = store.create_user({"name": "Asesor A", "email": "a@example.test", "password": "TestPassword-WithEntropy1", "role": "admin"}, bootstrap=True)
+    allow(store, owner, "b@example.test")
     other = store.create_user({"name": "Asesor B", "email": "b@example.test", "password": "TestPassword-WithEntropy2", "role": "advisor"}, actor=owner)
     with store.connect() as db:
         db.execute("UPDATE users SET public_booking=1")

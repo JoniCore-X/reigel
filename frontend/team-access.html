@@ -7,7 +7,7 @@
   <title>Team Access · R.E.I.G.E.L.</title>
   <link rel="icon" type="image/svg+xml" href="/static/assets/power-solar/favicon.svg">
   <link rel="stylesheet" href="/static/css/identity.css?v=3">
-  <script src="/static/js/team-access.js?v=3" defer></script>
+  <script src="/static/js/team-access.js?v=4" defer></script>
 </head>
 <body class="team-access">
   <main class="id-card">
@@ -54,12 +54,11 @@
       <div class="id-section">
         <h2>Google Authenticator</h2>
         <p id="totp-state" class="id-note"></p>
-        <button id="enable-totp" class="id-button" type="button" hidden>Activar Google Authenticator</button>
-        <form id="manage-totp-form" hidden>
+        <p class="id-note">Es obligatorio para todo el equipo y no se puede desactivar. Si pierdes el teléfono, pide a un administrador un código de recuperación.</p>
+        <form id="manage-totp-form">
           <label>Código actual<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required></label>
           <div class="id-actions">
-            <button class="id-button quiet compact" type="submit" value="replace">Cambiar de teléfono</button>
-            <button id="disable-totp" class="id-button quiet compact" type="submit" value="disable">Desactivar</button>
+            <button class="id-button quiet compact" type="submit">Cambiar de teléfono</button>
           </div>
         </form>
       </div>
@@ -79,9 +78,8 @@
         </form>
       </div>
       <div id="policy-section" class="id-section" hidden>
-        <h2>Política del equipo</h2>
-        <p id="policy-state" class="id-note"></p>
-        <button id="policy-toggle" class="id-button" type="button"></button>
+        <h2>Correos autorizados</h2>
+        <p class="id-note">Como propietario, gestionas la lista de correos autorizados y la regla «Power Solar» en <a class="id-link" href="/app">Equipo y ajustes</a>.</p>
       </div>
       <p class="id-center"><a class="id-link" href="/app">Volver al espacio</a></p>
     </section>

@@ -13,6 +13,7 @@ from .identity import Identity, csrf_for
 CUSTOMER_COOKIE = "reigel_customer"
 OAUTH_COOKIE = "reigel_oauth"
 MFA_COOKIE = "reigel_team_mfa"
+ENROLL_COOKIE = "reigel_team_enroll"
 TOTP_SETUP_COOKIE = "reigel_totp_setup"
 TOTP_PATH = "/api/team-identity/totp"
 
@@ -53,8 +54,18 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         response.delete_cookie(name, path=TOTP_PATH, httponly=True, secure=production, samesite="strict")
         return response
 
-    def team_mfa_response(user_id):
-        return with_totp_cookie(JSONResponse({"mfa_required": True}), MFA_COOKIE, identity().begin_mfa(user_id), 300)
+    def team_mfa_response(step):
+        """A correct password only ever yields a second step; never the team session cookie."""
+        if step["mfa"] == "enroll":
+            ticket = identity().begin_enrollment(step["user_id"])
+            response = JSONResponse({"mfa_required": True, "enrollment_required": True})
+            return with_totp_cookie(clear_totp_cookie(response, MFA_COOKIE), ENROLL_COOKIE, ticket, 600)
+        response = clear_totp_cookie(JSONResponse({"mfa_required": True}), ENROLL_COOKIE)
+        return with_totp_cookie(response, MFA_COOKIE, identity().begin_mfa(step["user_id"]), 300)
+
+    def with_team_session(response, token):
+        response.set_cookie(team_cookie, token, max_age=43200, httponly=True, secure=production, samesite="strict", path="/")
+        return response
 
     app.state.team_mfa_response = team_mfa_response
 
@@ -185,9 +196,22 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         limit(request, "team_totp_login", 20, 900)
         data = await payload(request)
         token, user = identity().totp_login(request.cookies.get(MFA_COOKIE), data.get("code"))
-        response = clear_totp_cookie(JSONResponse({"user": user}), MFA_COOKIE)
-        response.set_cookie(team_cookie, token, max_age=43200, httponly=True, secure=production, samesite="strict", path="/")
-        return response
+        return with_team_session(clear_totp_cookie(JSONResponse({"user": user}), MFA_COOKIE), token)
+
+    @app.post("/api/team-identity/totp/enroll")
+    async def team_totp_enroll(request: Request):
+        """First login of an account without Google Authenticator: returns the QR."""
+        limit(request, "team_totp_enroll", 12, 900)
+        ticket, setup = identity().enrollment_setup(request.cookies.get(ENROLL_COOKIE))
+        return with_totp_cookie(JSONResponse({"setup": setup}), TOTP_SETUP_COOKIE, ticket, 600)
+
+    @app.post("/api/team-identity/totp/enroll/confirm")
+    async def team_totp_enroll_confirm(request: Request):
+        limit(request, "team_totp_enroll_confirm", 12, 900)
+        data = await payload(request)
+        token, user = identity().enrollment_confirm(request.cookies.get(ENROLL_COOKIE), request.cookies.get(TOTP_SETUP_COOKIE), data.get("code"))
+        response = clear_totp_cookie(clear_totp_cookie(JSONResponse({"user": user}), ENROLL_COOKIE), TOTP_SETUP_COOKIE)
+        return with_team_session(response, token)
 
     @app.post("/api/team-identity/totp/setup")
     async def team_totp_setup(request: Request):
@@ -205,12 +229,8 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         result = identity().totp_confirm(request.cookies.get(TOTP_SETUP_COOKIE), data.get("code"), session_user=user)
         return clear_totp_cookie(JSONResponse(result), TOTP_SETUP_COOKIE)
 
-    @app.post("/api/team-identity/totp/disable")
-    async def team_totp_disable(request: Request, user=Depends(team_write)):
-        limit(request, "team_totp_disable", 6, 900)
-        data = await payload(request)
-        identity().totp_disable(data.get("code"), user)
-        return {"ok": True}
+    # There is deliberately no route to turn Google Authenticator off. A lost
+    # device is replaced only through an admin-issued recovery grant.
 
     @app.post("/api/team-identity/users/{user_id}/grant")
     async def team_issue_grant(user_id: str, request: Request, user=Depends(team_write)):
@@ -223,7 +243,33 @@ def register_identity(app, *, production, team_cookie, team_actor, payload):
         data = await payload(request)
         return identity().set_team_role(user_id, data.get("role"), user)
 
-    @app.put("/api/team-identity/policy")
-    async def team_policy(request: Request, user=Depends(team_write)):
+    # Owner-only allowlist and "Power Solar" naming rule. Emails travel in the JSON
+    # body, never in the URL. Every write needs the session CSRF value.
+    store = lambda: app.state.store
+
+    def owner_limits(request, user, key, maximum, seconds):
+        limit(request, key, maximum, seconds)
+        app.state.limiter.check(request, f"{key}:account", maximum, seconds, client=user["id"])
+
+    @app.get("/api/team-access")
+    async def team_access_overview(request: Request, user=Depends(team_actor)):
+        owner_limits(request, user, "team_access_read", 120, 60)
+        return store().team_access(user)
+
+    @app.post("/api/team-access/emails")
+    async def team_access_add(request: Request, user=Depends(team_write)):
+        owner_limits(request, user, "team_access_write", 30, 3600)
         data = await payload(request)
-        return identity().set_totp_policy(data.get("totp_required"), user)
+        return store().allow_team_email(data.get("email"), user)
+
+    @app.post("/api/team-access/emails/remove")
+    async def team_access_remove(request: Request, user=Depends(team_write)):
+        owner_limits(request, user, "team_access_write", 30, 3600)
+        data = await payload(request)
+        return store().remove_team_email(data.get("email"), user)
+
+    @app.put("/api/team-access/name-rule")
+    async def team_access_rule(request: Request, user=Depends(team_write)):
+        owner_limits(request, user, "team_access_write", 30, 3600)
+        data = await payload(request)
+        return store().set_team_name_rule(data.get("enabled"), user)

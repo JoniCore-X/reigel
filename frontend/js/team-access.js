@@ -60,12 +60,10 @@
   async function renderMember() {
     state.profile = await api('/api/team-identity/me');
     state.csrf = state.profile.csrf;
-    const {user, totp_enabled: enabled, totp_required: required} = state.profile;
+    const {user} = state.profile;
     $('member-name').textContent = `${user.name} · ${user.team_role}`;
-    $('totp-state').textContent = enabled ? 'Activo: al entrar se te pedirá un código de 6 dígitos.' : 'Inactivo: tu cuenta entra solo con contraseña.';
-    $('enable-totp').hidden = enabled;
-    $('manage-totp-form').hidden = !enabled;
-    $('disable-totp').hidden = required;
+    // A team session only exists after Google Authenticator; there is no way to turn it off here.
+    $('totp-state').textContent = 'Activo: al entrar se te pide tu contraseña y un código de 6 dígitos.';
 
     const isAdmin = user.team_role === 'administrador';
     $('admin-section').hidden = !isAdmin;
@@ -76,8 +74,6 @@
       options($('role-user'), others.filter(item => item.role !== 'admin'));
     }
     $('policy-section').hidden = !user.is_owner;
-    $('policy-state').textContent = required ? 'Todo el equipo debe usar Google Authenticator.' : 'Transición gradual: quien aún no lo active puede entrar con contraseña.';
-    $('policy-toggle').textContent = required ? 'Volver a transición gradual' : 'Exigir Google Authenticator a todo el equipo';
     $('member-view').hidden = false;
     $('guest-view').hidden = true;
   }
@@ -91,10 +87,6 @@
     });
   }
 
-  $('enable-totp').addEventListener('click', event => run(event.currentTarget, async () => {
-    state.withGrant = false;
-    showSetup((await api('/api/team-identity/totp/setup', {method: 'POST', body: {}})).setup);
-  }));
   $('copy-secret').addEventListener('click', event => run(event.currentTarget, async () => {
     await navigator.clipboard.writeText($('setup-secret').dataset.secret);
     notify('Clave copiada.', true);
@@ -116,16 +108,9 @@
       return;
     }
     await renderMember();
-    notify('Google Authenticator activado.', true);
+    notify('Nuevo teléfono registrado en Google Authenticator.', true);
   });
-  submit('manage-totp-form', async (data, form, button) => {
-    if (button.value === 'disable') {
-      await api('/api/team-identity/totp/disable', {method: 'POST', body: {code: data.code}});
-      form.reset();
-      await renderMember();
-      notify('Google Authenticator desactivado.', true);
-      return;
-    }
+  submit('manage-totp-form', async (data, form) => {
     state.withGrant = false;
     const {setup} = await api('/api/team-identity/totp/setup', {method: 'POST', body: {current_code: data.code}});
     form.reset();
@@ -142,11 +127,6 @@
     await api(`/api/team-identity/users/${encodeURIComponent(data.user_id)}/role`, {method: 'PUT', body: {role: data.role}});
     notify('Rol actualizado.', true);
   });
-  $('policy-toggle').addEventListener('click', event => run(event.currentTarget, async () => {
-    await api('/api/team-identity/policy', {method: 'PUT', body: {totp_required: !state.profile.totp_required}});
-    await renderMember();
-  }));
-
   (async () => {
     try {
       await renderMember();

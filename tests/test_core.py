@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from reigel.api import create_app
 from reigel.core import DomainError, Store, calendar_file, stamp, uid
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -17,13 +18,14 @@ def system(tmp_path, monkeypatch):
     app = create_app(tmp_path / "test.sqlite3")
     store = app.state.store
     admin = store.create_user({"name": "Administradora", "email": "admin@example.test", "password": "correct-horse-test-42", "role": "admin"}, bootstrap=True)
+    allow(store, admin, "advisor@example.test")
     advisor = store.create_user({"name": "Asesora", "email": "advisor@example.test", "password": "correct-horse-test-43", "role": "advisor"}, admin)
     store.update_user(advisor["id"], {"public_booking": True, "work_days": list(range(7))}, admin)
     return app, store, admin, advisor
 
 
 def auth(client, email="admin@example.test", password="correct-horse-test-42"):
-    response = client.post("/api/auth/login", json={"email": email, "password": password})
+    response = team_login(client, email, password)
     assert response.status_code == 200, response.text
     return response
 

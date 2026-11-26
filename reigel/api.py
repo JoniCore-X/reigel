@@ -26,6 +26,7 @@ from .ia_workspace import AIWorkspace, VISITOR_DAYS
 COOKIE = "powersolar_session"
 CHAT_COOKIE = "reigel_webchat"
 IA_COOKIE = "reigel_ia"
+PUBLIC_SETTINGS = frozenset({"name", "timezone", "market", "privacy_contact", "site_url"})
 # Raw document uploads in /ia: the only route whose body is streamed by the
 # endpoint itself, so each owner's size limit applies before the file is read.
 IA_ATTACHMENT_PATH = re.compile(r"/api/ia/conversations/[^/]+/attachments")
@@ -267,13 +268,10 @@ def create_app(db_path=None, *, load_env=None):
         account = account.strip().casefold() if isinstance(account, str) else ""
         failure_key = "login:" + hashlib.sha256(account.encode()).hexdigest()
         app.state.limiter.check(request, failure_key, 8, 900)
-        token, user = app.state.store.login(data.get("email"), data.get("password"))
+        _, step = app.state.store.login(data.get("email"), data.get("password"))
         app.state.limiter.clear(request, failure_key)
-        if token is None:
-            return app.state.team_mfa_response(user["mfa_user_id"])
-        response = JSONResponse({"user": user})
-        response.set_cookie(COOKIE, token, max_age=43200, httponly=True, secure=production, samesite="strict", path="/")
-        return response
+        # Google Authenticator is mandatory: the password never sets the session cookie here.
+        return app.state.team_mfa_response(step)
 
     @app.get("/api/auth/me")
     async def me(user=Depends(actor)):
@@ -397,7 +395,9 @@ def create_app(db_path=None, *, load_env=None):
     @app.get("/api/public/config")
     async def public_config():
         users = app.state.store.list_users()
-        return {"business": app.state.store.settings(), "advisors": [{"id": u["id"], "name": u["name"]} for u in users if u["active"] and u["public_booking"]]}
+        # Only public business fields; internal settings such as team access policy stay private.
+        business = {key: value for key, value in app.state.store.settings().items() if key in PUBLIC_SETTINGS}
+        return {"business": business, "advisors": [{"id": u["id"], "name": u["name"]} for u in users if u["active"] and u["public_booking"]]}
 
     @app.get("/api/public/slots")
     async def public_slots(advisor_id: str, date: str, request: Request):

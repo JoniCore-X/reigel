@@ -28,12 +28,14 @@ MFA_MINUTES = 5
 TOTP_SETUP_MINUTES = 10
 TOTP_ATTEMPTS = 5
 TOTP_LOCK_MINUTES = 15
+ENROLL_MINUTES = 10
 OAUTH_MINUTES = 10
 USERNAME = re.compile(r"^[a-z][a-z0-9_.]{2,29}$")
 PHONE = re.compile(r"^\+[1-9]\d{7,14}$")
 RESERVED = {"admin", "administrador", "root", "soporte", "support", "reigel", "powersolar", "team", "teamcaguas"}
 TEAM_ROLES = {"administrador", "supervisor", "consultor"}
-POLICY_KEY = "team_totp_required"
+# Google Authenticator is mandatory for every team account, with no switch to turn it off.
+# The former "team_totp_required" setting row is left untouched in old databases and ignored.
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS customers (
@@ -99,6 +101,9 @@ CREATE TABLE IF NOT EXISTS team_totp_setups (
 CREATE TABLE IF NOT EXISTS team_mfa_challenges (
  token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS team_enroll_challenges (
+ token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS team_access_grants (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), purpose TEXT NOT NULL CHECK(purpose IN ('enroll','recovery')),
  token_hash TEXT NOT NULL UNIQUE, issued_by TEXT, reason TEXT NOT NULL, expires_at TEXT NOT NULL, consumed_at TEXT, created_at TEXT NOT NULL
@@ -129,6 +134,7 @@ def migrate_identity(db) -> None:
     if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='team_identities'").fetchone():
         db.execute("INSERT OR IGNORE INTO team_roles SELECT user_id,team_role,updated_at FROM team_identities")
     db.execute("INSERT OR IGNORE INTO schema_migrations VALUES('reigel_identity_totp_v2',?)", (stamp(),))
+    db.execute("INSERT OR IGNORE INTO schema_migrations VALUES('reigel_identity_totp_mandatory_v3',?)", (stamp(),))
 
 
 def token_hash(token) -> str:
@@ -163,16 +169,6 @@ def identifier_kind(value: str) -> str:
     if "@" in value:
         return "email"
     return "phone" if re.fullmatch(r"[+\d\s().-]{8,24}", value) else "username"
-
-
-def password_login_gate(db, user_id: str) -> str:
-    """Decide what a correct Team password still needs: "", "totp" or a refusal."""
-    if db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
-        return "totp"
-    row = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
-    if row and row["value"] == "1":
-        return "El equipo requiere Google Authenticator. Solicita a un administrador un código de registro."
-    return ""
 
 
 class NoDelivery:
@@ -547,9 +543,8 @@ class Identity:
         with self.store.connect() as db:
             role = self._effective_role(db, user["id"])
             enabled = db.execute("SELECT confirmed_at FROM team_totp WHERE user_id=?", (user["id"],)).fetchone()
-            policy = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
             return {"user": {"id": user["id"], "name": user["name"], "email": user["email"], "team_role": role, "is_owner": bool(user.get("is_owner"))},
-                    "totp_enabled": bool(enabled), "totp_confirmed_at": enabled["confirmed_at"] if enabled else None, "totp_required": bool(policy and policy["value"] == "1")}
+                    "totp_enabled": bool(enabled), "totp_confirmed_at": enabled["confirmed_at"] if enabled else None, "totp_required": True}
 
     def _check_stored_code(self, db, user_id, code):
         """Verify and record the attempt; the caller raises after this transaction commits."""
@@ -589,23 +584,91 @@ class Identity:
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             challenge = db.execute("SELECT * FROM team_mfa_challenges WHERE token_hash=? AND expires_at>?", (token_hash(ticket), stamp())).fetchone()
-            active = challenge and db.execute("SELECT 1 FROM users WHERE id=? AND active=1", (challenge["user_id"],)).fetchone()
-            if not active:
+            if not challenge or not self._account_allowed(db, challenge["user_id"]):
                 reason = "expired"
             else:
                 step, reason = self._check_stored_code(db, challenge["user_id"], code)
                 if step is not None:
-                    session = secrets.token_urlsafe(36)
                     db.execute("DELETE FROM team_mfa_challenges WHERE token_hash=?", (token_hash(ticket),))
-                    db.execute("DELETE FROM sessions WHERE expires_at<?", (stamp(),))
-                    db.execute("INSERT INTO sessions VALUES(?,?,?)", (token_hash(session), challenge["user_id"], later(hours=12)))
-                    self.store.audit(db, {"id": challenge["user_id"]}, "auth.login", challenge["user_id"])
+                    session = self.store.issue_session(db, challenge["user_id"])
                     self.audit(db, "team", challenge["user_id"], "team.totp_login", challenge["user_id"])
                     user = user_dict(db.execute("SELECT * FROM users WHERE id=?", (challenge["user_id"],)).fetchone())
         if reason == "expired":
             raise DomainError("Vuelve a iniciar sesión.", 401)
         if not session:
             self._raise_code_error(reason)
+        return session, user
+
+    @staticmethod
+    def _account_allowed(db, user_id) -> bool:
+        """Active and still on the owner's allowlist (re-checked at every sign-in step)."""
+        from . import team_access
+        row = db.execute("SELECT email,is_owner FROM users WHERE id=? AND active=1", (user_id,)).fetchone()
+        return bool(row) and team_access.is_allowed(db, row["email"], owner=bool(row["is_owner"]))
+
+    # First-login enrollment: a correct password for an account without Google
+    # Authenticator yields only this short-lived ticket, which can do nothing but
+    # register a new authenticator. The session is issued after the first code.
+    def begin_enrollment(self, user_id) -> str:
+        ticket = secrets.token_urlsafe(32)
+        with self.store.connect() as db:
+            db.execute("DELETE FROM team_enroll_challenges WHERE expires_at<? OR user_id=?", (stamp(), user_id))
+            db.execute("INSERT INTO team_enroll_challenges VALUES(?,?,?)", (token_hash(ticket), user_id, later(minutes=ENROLL_MINUTES)))
+            self.audit(db, "team", user_id, "team.enrollment_required", user_id)
+        return ticket
+
+    def _enroll_challenge(self, db, ticket):
+        if not ticket or len(ticket) > 200:
+            return None
+        challenge = db.execute("SELECT * FROM team_enroll_challenges WHERE token_hash=? AND expires_at>?", (token_hash(ticket), stamp())).fetchone()
+        if not challenge or not self._account_allowed(db, challenge["user_id"]):
+            return None
+        return challenge
+
+    def enrollment_setup(self, ticket) -> tuple[str, dict]:
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            challenge = self._enroll_challenge(db, ticket)
+            if not challenge:
+                raise DomainError("Vuelve a iniciar sesión.", 401)
+            user_id = challenge["user_id"]
+            if db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
+                raise DomainError("Esta cuenta ya tiene Google Authenticator. Vuelve a iniciar sesión.", 409)
+            account = db.execute("SELECT email FROM users WHERE id=?", (user_id,)).fetchone()
+            secret, setup_ticket = totp.new_secret(), secrets.token_urlsafe(32)
+            nonce, cipher = self._seal(secret, user_id)
+            db.execute("DELETE FROM team_totp_setups WHERE user_id=? OR expires_at<?", (user_id, stamp()))
+            db.execute("INSERT INTO team_totp_setups VALUES(?,?,?,?,?,?)",
+                       (token_hash(setup_ticket), user_id, None, nonce, cipher, later(minutes=TOTP_SETUP_MINUTES)))
+        uri = totp.otpauth_uri(secret, account["email"])
+        return setup_ticket, {"secret": totp.display_secret(secret), "otpauth_uri": uri, "qr": totp.qr_data_uri(uri), "digits": totp.DIGITS, "period": totp.PERIOD}
+
+    def enrollment_confirm(self, ticket, setup_ticket, code):
+        from .core import user_dict
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            challenge = self._enroll_challenge(db, ticket)
+            if not challenge:
+                raise DomainError("Vuelve a iniciar sesión.", 401)
+            user_id = challenge["user_id"]
+            setup = db.execute("SELECT * FROM team_totp_setups WHERE token_hash=? AND expires_at>? AND user_id=? AND grant_id IS NULL",
+                               (token_hash(setup_ticket or ""), stamp(), user_id)).fetchone()
+            if not setup:
+                raise DomainError("La configuración venció. Empieza de nuevo.", 401)
+            if db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (user_id,)).fetchone():
+                # A password alone never replaces an existing authenticator; that takes a recovery grant.
+                raise DomainError("Esta cuenta ya tiene Google Authenticator. Vuelve a iniciar sesión.", 409)
+            step = totp.matching_step(self._open(setup["secret_nonce"], setup["secret_cipher"], user_id), code)
+            if step is None:
+                raise DomainError("El código no es correcto. Revisa la hora de tu teléfono.", 401)
+            db.execute("INSERT INTO team_totp(user_id,secret_nonce,secret_cipher,last_step,confirmed_at) VALUES(?,?,?,?,?)",
+                       (user_id, setup["secret_nonce"], setup["secret_cipher"], step, stamp()))
+            db.execute("DELETE FROM team_totp_setups WHERE user_id=?", (user_id,))
+            db.execute("DELETE FROM team_enroll_challenges WHERE user_id=?", (user_id,))
+            self.audit(db, "team", user_id, "team.totp_enabled", user_id)
+            self.store.audit(db, {"id": user_id}, "team.totp_enrolled_at_login", user_id)
+            session = self.store.issue_session(db, user_id)
+            user = user_dict(db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
         return session, user
 
     def _valid_grant(self, db, email, code):
@@ -615,9 +678,10 @@ class Identity:
             email = email_address(email, required=True)
         except DomainError:
             return None
-        return db.execute("""SELECT g.* FROM team_access_grants g JOIN users u ON u.id=g.user_id
-                             WHERE g.token_hash=? AND g.consumed_at IS NULL AND g.expires_at>? AND u.email=? COLLATE NOCASE AND u.active=1""",
-                          (token_hash(code), stamp(), email)).fetchone()
+        grant = db.execute("""SELECT g.* FROM team_access_grants g JOIN users u ON u.id=g.user_id
+                              WHERE g.token_hash=? AND g.consumed_at IS NULL AND g.expires_at>? AND u.email=? COLLATE NOCASE AND u.active=1""",
+                           (token_hash(code), stamp(), email)).fetchone()
+        return grant if grant and self._account_allowed(db, grant["user_id"]) else None
 
     def totp_setup(self, user=None, email=None, grant_code=None, current_code=None) -> tuple[str, dict]:
         reason = ""
@@ -679,19 +743,6 @@ class Identity:
             self.audit(db, "team", setup["user_id"], "team.totp_enabled", setup["user_id"])
         return {"totp_enabled": True}
 
-    def totp_disable(self, code, actor) -> None:
-        with self.store.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            policy = db.execute("SELECT value FROM settings WHERE key=?", (POLICY_KEY,)).fetchone()
-            if policy and policy["value"] == "1":
-                raise DomainError("El equipo requiere Google Authenticator.", 409)
-            step, reason = self._check_stored_code(db, actor["id"], code)
-            if step is not None:
-                db.execute("DELETE FROM team_totp WHERE user_id=?", (actor["id"],))
-                self.audit(db, "team", actor["id"], "team.totp_disabled", actor["id"])
-        if step is None:
-            self._raise_code_error(reason)
-
     def issue_grant(self, user_id, purpose, reason, actor) -> dict:
         self.store.require_admin(actor)
         if purpose not in {"enroll", "recovery"}:
@@ -741,14 +792,3 @@ class Identity:
             db.execute("UPDATE team_roles SET team_role=?,updated_at=? WHERE user_id=?", (role, stamp(), user_id))
             self.audit(db, "team", actor["id"], f"team.role_set.{role}", user_id)
         return {"id": user_id, "team_role": role}
-
-    def set_totp_policy(self, required: bool, actor) -> dict:
-        self.store.require_owner(actor)
-        if not isinstance(required, bool):
-            raise DomainError("Valor no válido.", 422)
-        with self.store.connect() as db:
-            if required and not db.execute("SELECT 1 FROM team_totp WHERE user_id=?", (actor["id"],)).fetchone():
-                raise DomainError("Activa primero tu Google Authenticator para no quedarte fuera.", 409)
-            db.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (POLICY_KEY, "1" if required else "0"))
-            self.audit(db, "team", actor["id"], f"team.totp_policy.{int(required)}")
-        return {"totp_required": required}

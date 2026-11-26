@@ -11,6 +11,7 @@ from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, TextStringObject
 
 from reigel import ai_chat, api, documents
+from team_auth import allow, login as team_login
 
 CID = "0123456789abcdef0123456789abcdef"
 
@@ -70,7 +71,7 @@ def team(app):
         bootstrap=True,
     )
     client = TestClient(app)
-    assert client.post("/api/auth/login", json={"email": "docs@example.test", "password": "correct-horse-test-42"}).status_code == 200
+    assert team_login(client, "docs@example.test", "correct-horse-test-42").status_code == 200
     return client
 
 

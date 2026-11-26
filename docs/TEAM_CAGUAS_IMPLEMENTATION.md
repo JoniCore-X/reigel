@@ -97,7 +97,8 @@ generación de texto no verifica datos comerciales.
 
 La demo utiliza una SQLite temporal nueva, cuentas y registros ficticios, bloquea
 webhooks y actualizaciones de fuentes, y nunca carga `.env`. El script imprime la
-contraseña solo para el entorno sintético:
+contraseña y, desde el 25 de noviembre de 2026, la clave sintética de Google
+Authenticator de las cuentas de demostración, solo para el entorno sintético:
 
 ```powershell
 .\scripts\start.ps1 -Preview
@@ -2119,7 +2120,7 @@ solo se explica en texto. Sin commit ni publicación.
 - El segundo factor del Team es TOTP compatible con Google Authenticator. El secreto se cifra con `REIGEL_TOTP_KEY` o con `<base>.totp.key`, junto a la base y fuera del repositorio. `scripts/backup.py` no copia esa clave: sin ella, cada cuenta debe reconfigurarse con un código de recuperación (`scripts/team_recovery.py`).
 - Comprobado con pruebas locales, vectores RFC 6238 y un escaneo del QR con Google Authenticator en un teléfono real sobre la demo sintética (2026-11-22). Sin probar: OAuth con proveedores reales.
 - Bloqueado hasta configurar: credenciales OAuth y un canal autorizado de correo/SMS. Sin canal, correo y teléfono no se pueden verificar ni recuperar; el acceso por usuario sí funciona.
-- Transición del Team: la contraseña sola sigue activa hasta que la persona activa Google Authenticator; el propietario puede exigirlo a todos desde `/app/acceso`.
+- Transición del Team (sustituida el 25 de noviembre de 2026, ver «Acceso del equipo endurecido»): ya no existe la entrada solo con contraseña ni la política `team_totp_required`; Google Authenticator es obligatorio para todas las cuentas.
 
 ## Fase 1 de aprendizaje, tramo A: cola con aprobación humana y banco de preguntas, 25 de noviembre de 2026
 
@@ -2244,3 +2245,48 @@ persona colocar las placas» y «la cantidad de placas solares que se instalen»
 
 Sin verificar: la vista en el navegador de la vista previa 8878, porque no se reinició el
 proceso (el reinicio fue denegado) y sigue con el backend anterior. Sin commit ni publicación.
+
+## Acceso del equipo endurecido: Google Authenticator obligatorio y correos autorizados, 25 de noviembre de 2026
+
+Pedido del titular: el acceso a `/app` debe exigir Google Authenticator y limitarse a cuentas de Power Solar.
+
+### Qué cambió
+
+- **Google Authenticator (TOTP) obligatorio para todas las cuentas** (propietario, administradores y asesores), sin excepciones ni interruptor.
+  - `Store.login` (`reigel/core.py`) solo comprueba la contraseña y devuelve el paso siguiente; nunca crea sesión. Con TOTP registrado responde `{"mfa_required": true}`; sin TOTP, `{"mfa_required": true, "enrollment_required": true}` y una cookie `reigel_team_enroll` (HttpOnly, SameSite=Strict, ruta `/api/team-identity/totp`, 10 minutos).
+  - Primer acceso: `POST /api/team-identity/totp/enroll` devuelve el QR y `POST /api/team-identity/totp/enroll/confirm` valida el primer código, registra el autenticador y solo entonces crea la sesión. Ese ticket nunca reemplaza un autenticador ya registrado (409); eso solo lo hace un código de recuperación.
+  - Se eliminaron `POST /api/team-identity/totp/disable`, `PUT /api/team-identity/policy`, `Identity.totp_disable`, `Identity.set_totp_policy` y `password_login_gate`. La fila antigua `team_totp_required` queda intacta e ignorada.
+  - `Store.session_user` rechaza cualquier sesión de una cuenta sin TOTP o cuyo correo ya no esté autorizado; las sesiones creadas antes de este cambio dejan de dar acceso hasta que la persona registre Google Authenticator.
+  - Teléfono perdido: solo el flujo existente de código de recuperación (`/app/acceso` o `scripts/team_recovery.py` en el servidor).
+- **Lista de correos autorizados, controlada solo por el propietario** (`reigel/team_access.py`, tabla `team_allowed_emails`).
+  - Solo un correo de la lista puede crearse como usuario del equipo, iniciar sesión, completar un código o conservar sesión. Correos normalizados (sin espacios, en minúsculas).
+  - Siembra opcional desde `REIGEL_TEAM_ALLOWED_EMAILS` (separados por comas) en cada arranque: solo añade correos que nunca estuvieron en la lista; no quita ninguno y no vuelve a añadir uno que el propietario quitó. Las entradas no válidas se ignoran sin escribir su valor en el registro.
+  - Quitar un correo cierra al instante sus sesiones, pasos de acceso pendientes y códigos de registro o recuperación sin usar. No se borra ningún registro (la fila queda marcada con `removed_at`).
+  - Protección contra bloqueo: la cuenta del propietario no se puede quitar (409), su correo se vuelve a autorizar en cada arranque y la regla «Power Solar» nunca la bloquea.
+  - Errores de acceso genéricos: correo desconocido, cuenta inactiva, correo fuera de la lista o contraseña incorrecta reciben el mismo 401 «Correo o contraseña incorrectos.», con una verificación Argon2id completa (hash ficticio cuando no aplica) y una sola escritura de auditoría `auth.login_failed` en todos los fallos.
+  - Rutas del propietario (sesión, rol de propietario en servidor y cabecera CSRF en escrituras; correo en el cuerpo JSON, nunca en la URL): `GET /api/team-access` (120/min), `POST /api/team-access/emails`, `POST /api/team-access/emails/remove` y `PUT /api/team-access/name-rule` (30/hora por dirección y por cuenta).
+  - Interfaz: panel «Correos autorizados» solo para el propietario en `/app` → «Equipo y ajustes». Todo el texto se escapa.
+- **Regla «Power Solar»**: con la regla activa (predeterminado), un correo autorizado debe contener `powersolar` (sin distinguir mayúsculas) en el nombre o en el dominio. Solo el propietario la activa o desactiva; al activarla se cierran las sesiones de las cuentas que no la cumplen. **Es un filtro organizativo, no un control de seguridad**: cualquiera puede crear un correo con esa palabra. Los controles reales son la lista y Google Authenticator. Así se explica en el código, aquí y en la interfaz.
+- Auditoría en `audit_events`: `team_access.email_seeded`, `team_access.email_added`, `team_access.email_removed`, `team_access.owner_auto_allowed`, `team_access.name_rule.0/1`, `auth.sessions_revoked`, `auth.password_ok`, `auth.login_failed`, `auth.login`, `team.totp_enrolled_at_login`.
+- `/api/public/config` publica ahora solo `name`, `timezone`, `market`, `privacy_contact` y `site_url`; antes exponía todos los ajustes internos.
+- Migraciones aditivas e idempotentes: `reigel_team_access_v1` (tabla `team_allowed_emails`, ajuste `team_email_name_rule=1`) y `reigel_identity_totp_mandatory_v3` (tabla `team_enroll_challenges`). No se ejecutaron sobre la base comercial.
+
+### Antes del próximo arranque real de `main.py` (para no quedarse fuera)
+
+1. Hacer una copia de la base comercial con `scripts/backup.py` y conservar la clave TOTP (`REIGEL_TOTP_KEY` o el archivo `<base>.totp.key` junto a la base). Sin esa clave, cada persona tendría que usar un código de recuperación.
+2. Decidir la lista inicial:
+   - escribir en `.env` `REIGEL_TEAM_ALLOWED_EMAILS=ana.powersolar@example.com,luis.powersolar@example.com` con el correo de cada integrante real; o
+   - no definirla y confiar en la autorización automática del propietario: solo el propietario podrá entrar y después añadirá a los demás desde `/app` → «Equipo y ajustes» → «Correos autorizados».
+3. Comprobar que el correo de cada integrante real contiene `powersolar` en el nombre o en el dominio. Si alguno no lo cumple, el propietario debe entrar primero y desactivar la regla «Power Solar» en ese mismo panel; hasta entonces esa persona recibirá el error genérico. La cuenta del propietario nunca queda bloqueada por esta regla.
+4. Avisar al equipo: al arrancar, todas las sesiones abiertas dejan de servir. En su próximo acceso cada persona, incluido el propietario, escribe su contraseña, escanea el QR con Google Authenticator y confirma un código de 6 dígitos (hora del teléfono en automático). Desde entonces entra siempre con contraseña y código.
+5. Como la primera persona que entra con una contraseña registra el autenticador, las contraseñas iniciales se entregan por un canal privado y cada persona debe entrar pronto. Si alguien pierde el teléfono, un administrador emite un código de recuperación en `/app/acceso`; si es el propietario, se usa `scripts/team_recovery.py` en el servidor.
+
+### Demostración sintética
+
+`scripts/preview_team_caguas.py` crea cuentas `example.com` que contienen `powersolar`: propietario `admin.powersolar@example.com` y asesor `asesor.powersolar@example.com`, preinscritos solo en la demo con una clave TOTP aleatoria de cada ejecución que se imprime junto a las contraseñas sintéticas, y `nuevo.powersolar@example.com` sin TOTP para mostrar el registro obligatorio. `--codigo CLAVE` imprime el código actual de una clave sintética. La preinscripción comprueba `synthetic_preview` y no existe fuera de la demo.
+
+### Verificación
+- `.\.venv\Scripts\python.exe -m pytest -q`: 830 passed (incluye `tests/test_team_access.py`, nuevos casos en `tests/test_identity.py` y el filtro público `tests/test_public_gate.py`, que sigue negando todas las rutas del equipo, también las nuevas).
+- `node --check` sobre los 20 archivos de `frontend/js`: sin errores. `node --test` de `frontend_operations`, `frontend_ia`, `frontend_chat` y `frontend_learning`: 34 de 34.
+- Navegador sobre la vista previa sintética 8878 (reiniciada con este backend): el primer acceso de `nuevo.powersolar@example.com` muestra el QR obligatorio, rechaza un código incorrecto y entra con el correcto; el acceso siguiente pide solo el código, rechaza uno incorrecto y entra con el correcto, sin sesión antes del código. Como propietario: el panel lista los correos, rechaza uno sin `powersolar` con la regla activa, normaliza y añade otro, desactiva y reactiva la regla, quita un correo (su inicio de sesión pasa al error genérico) y no permite quitar al propietario (409).
+- Sin verificar: el arranque real de `main.py` con la base comercial (no se migró ni se abrió), un escaneo con un teléfono real en esta iteración, la copia pública en 8880 (sigue con el proceso anterior y no se reinició) y el envío de correos (no existe). Sin commit ni publicación.

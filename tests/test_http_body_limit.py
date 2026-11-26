@@ -72,10 +72,13 @@ def test_valid_chunked_json_is_replayed_intact(isolated_app, body_size):
                 "/api/auth/login", content=body(),
                 headers={"Content-Type": "application/json"},
             )
+            # The replayed body reached the password check: a correct password
+            # yields only the mandatory Google Authenticator enrollment step.
             assert response.status_code == 200
-            assert response.json()["user"]["email"] == "body-limit@example.test"
+            assert response.json() == {"mfa_required": True, "enrollment_required": True}
             cookie = response.headers["set-cookie"].lower()
-            assert "httponly" in cookie and "samesite=strict" in cookie
-            assert (await client.get("/api/auth/me")).status_code == 200
+            assert "reigel_team_enroll=" in cookie and "httponly" in cookie and "samesite=strict" in cookie
+            assert "powersolar_session=" not in cookie
+            assert (await client.get("/api/auth/me")).status_code == 401
 
     asyncio.run(exercise())

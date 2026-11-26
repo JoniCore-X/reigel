@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from reigel.api import create_app
 from reigel.core import DomainError
 from reigel.energy import calculate
+from team_auth import allow, login as team_login
 
 
 def test_energy_known_array_consumption_production_and_coverage():
@@ -68,7 +69,7 @@ def test_energy_authenticated_endpoint_and_invalid_request(tmp_path, monkeypatch
                                  "password": "energy-qa-long-password", "role": "admin"}, bootstrap=True)
     with TestClient(app) as client:
         assert client.post("/api/energy/calculate", json={"system_kw": 4}).status_code == 401
-        assert client.post("/api/auth/login", json={"email": "energy@example.test", "password": "energy-qa-long-password"}).status_code == 200
+        assert team_login(client, "energy@example.test", "energy-qa-long-password").status_code == 200
         response = client.post("/api/energy/calculate", json={"system_kw": 4, "annual_kwh": 6000,
                                                             "specific_yield_kwh_per_kw_year": 1500})
         assert response.status_code == 200, response.text

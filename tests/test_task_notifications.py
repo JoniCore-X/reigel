@@ -6,6 +6,7 @@ import pytest
 
 from reigel import core
 from reigel.core import DomainError, Store
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -18,6 +19,7 @@ def task_notice(tmp_path, monkeypatch):
         {"name": "QA Admin", "email": "notice-admin@example.test", "password": password, "role": "admin"},
         bootstrap=True,
     )
+    allow(store, admin, "notice-advisor@example.test", "notice-outsider@example.test")
     advisor = store.create_user(
         {"name": "QA Advisor", "email": "notice-advisor@example.test", "password": password, "role": "advisor"},
         admin,

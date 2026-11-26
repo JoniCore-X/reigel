@@ -5,6 +5,7 @@ from reigel.api import create_app
 from reigel.conversation import classify_message
 from reigel.core import DomainError
 from reigel.privacy import get_request, initialize, list_requests, review_request
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -15,6 +16,7 @@ def privacy_system(tmp_path, monkeypatch):
     store = app.state.store
     admin = store.create_user({"name": "Admin QA", "email": "privacy@example.test",
                                "password": "privacy-qa-long-password", "role": "admin"}, bootstrap=True)
+    allow(store, admin, "own@example.test", "other@example.test")
     advisor = store.create_user({"name": "Asesor QA", "email": "own@example.test",
                                  "password": "advisor-qa-long-password", "role": "advisor"}, admin)
     other = store.create_user({"name": "Otro QA", "email": "other@example.test",
@@ -133,11 +135,11 @@ def test_privacy_http_authorization_and_server_review(privacy_system):
     request_id = app.state.webchat.message(token, "Elimina mis datos", "privacy-http-001")["privacy_requests"][0]["id"]
     with TestClient(app) as client:
         assert client.get("/api/privacy/requests").status_code == 401
-        client.post("/api/auth/login", json={"email": "other@example.test", "password": "other-qa-long-password"})
+        team_login(client, "other@example.test", "other-qa-long-password")
         assert client.get("/api/privacy/requests").json() == {"requests": [], "can_review": False}
         assert client.patch(f"/api/privacy/requests/{request_id}", json={"status": "reviewing", "review_note": "Prueba"}).status_code == 403
         client.post("/api/auth/logout")
-        client.post("/api/auth/login", json={"email": "privacy@example.test", "password": "privacy-qa-long-password"})
+        team_login(client, "privacy@example.test", "privacy-qa-long-password")
         assert client.get("/api/privacy/requests").json()["can_review"] is True
         response = client.patch(f"/api/privacy/requests/{request_id}", json={"status": "reviewing", "review_note": "Pendiente de verificación de identidad."})
         assert response.status_code == 200, response.text

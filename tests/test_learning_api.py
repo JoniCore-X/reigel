@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reigel import ai_chat, api, learning_eval
+from team_auth import allow, login as team_login
 
 PASSWORD = "synthetic-password-learning-api"
 GOOD_ANSWER = (
@@ -22,12 +23,13 @@ def system(tmp_path, monkeypatch):
     app = api.create_app(tmp_path / "learning-api.db")
     store = app.state.store
     admin = store.create_user({"name": "QA Admin", "email": "la-admin@example.test", "password": PASSWORD, "role": "admin"}, bootstrap=True)
+    allow(store, admin, "la-advisor@example.test")
     advisor = store.create_user({"name": "QA Asesor", "email": "la-advisor@example.test", "password": PASSWORD, "role": "advisor"}, admin)
     return app, admin, advisor
 
 
 def login(client, person):
-    response = client.post("/api/auth/login", json={"email": person["email"], "password": PASSWORD})
+    response = team_login(client, person["email"], PASSWORD)
     assert response.status_code == 200, response.text
 
 

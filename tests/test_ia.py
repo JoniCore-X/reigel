@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from reigel import ai_chat, api
 from reigel.ia_workspace import MAX_MESSAGES
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -171,7 +172,7 @@ def test_authenticated_owner_keeps_history_across_sessions(app, configured, monk
         bootstrap=True,
     )
     first = TestClient(app)
-    assert first.post("/api/auth/login", json={"email": "ia@example.test", "password": "correct-horse-test-42"}).status_code == 200
+    assert team_login(first, "ia@example.test", "correct-horse-test-42").status_code == 200
     boot = first.get("/api/ia/bootstrap").json()
     assert boot["owner"] == "user" and boot["user"]["name"] == "Asesora IA"
     assert boot["conversations"] == []
@@ -600,7 +601,7 @@ def test_contact_data_is_hidden_for_authenticated_owners_too(app, configured, mo
         bootstrap=True,
     )
     client = TestClient(app)
-    client.post("/api/auth/login", json={"email": "privada@example.test", "password": "correct-horse-test-42"})
+    team_login(client, "privada@example.test", "correct-horse-test-42")
     conversation = client.post("/api/ia/conversations", json={}).json()["conversation"]
     mock_stream(monkeypatch, ["Recibido."])
     send(client, conversation["id"], CONTACT_TEXT)
@@ -764,7 +765,7 @@ def test_authenticated_owner_gets_no_visitor_cookie(app, configured):
         bootstrap=True,
     )
     client = TestClient(app)
-    client.post("/api/auth/login", json={"email": "cuenta@example.test", "password": "correct-horse-test-42"})
+    team_login(client, "cuenta@example.test", "correct-horse-test-42")
     response = client.get("/api/ia/bootstrap")
     assert response.json()["owner"] == "user"
     assert "reigel_ia" not in response.headers.get("set-cookie", "")

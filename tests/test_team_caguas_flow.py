@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 import httpx
 
 from reigel import api
+from team_auth import login as team_login
 
 
 def test_team_caguas_commercial_workflow_and_advisor_isolation(tmp_path, monkeypatch):
@@ -17,7 +18,7 @@ def test_team_caguas_commercial_workflow_and_advisor_isolation(tmp_path, monkeyp
     app = api.create_app(tmp_path / "team-caguas.sqlite3")
     store = app.state.store
     password = "Synthetic-Caguas-Workflow-2026!"
-    admin = store.create_user({"name": "Administración ficticia", "email": "admin@workflow.test",
+    admin = store.create_user({"name": "Administración ficticia", "email": "admin.powersolar@example.com",
                                "password": password, "role": "admin"}, bootstrap=True)
 
     def checked(client, method, path, expected=200, **kwargs):
@@ -26,12 +27,18 @@ def test_team_caguas_commercial_workflow_and_advisor_isolation(tmp_path, monkeyp
         return response.json() if response.headers.get("content-type", "").startswith("application/json") else response
 
     with TestClient(app) as manager, TestClient(app) as owner, TestClient(app) as outsider:
-        checked(manager, "POST", "/api/auth/login", json={"email": admin["email"], "password": password})
+        assert team_login(manager, admin["email"], password).status_code == 200
+        # Only the owner opens the team to new emails; the "powersolar" naming rule stays on.
+        manager.headers["x-reigel-csrf"] = checked(manager, "GET", "/api/team-identity/me")["csrf"]
+        for email in ("ana.powersolar@example.com", "luis.powersolar@example.com"):
+            checked(manager, "POST", "/api/team-access/emails", json={"email": email})
+        checked(manager, "POST", "/api/team", expected=403,
+                json={"name": "Fuera de la lista", "email": "nadie.powersolar@example.com", "password": password})
         assert checked(manager, "GET", "/api/dashboard")["metrics"]["leads"] == 0
         advisor = checked(manager, "POST", "/api/team", expected=201,
-                          json={"name": "Asesor asignado ficticio", "email": "owner@workflow.test", "password": password})["user"]
+                          json={"name": "Asesor asignado ficticio", "email": "ana.powersolar@example.com", "password": password})["user"]
         other = checked(manager, "POST", "/api/team", expected=201,
-                        json={"name": "Otro asesor ficticio", "email": "other@workflow.test", "password": password})["user"]
+                        json={"name": "Otro asesor ficticio", "email": "luis.powersolar@example.com", "password": password})["user"]
         assert {user["id"] for user in checked(manager, "GET", "/api/team")["users"]} == {admin["id"], advisor["id"], other["id"]}
         checked(manager, "PATCH", f"/api/team/{advisor['id']}",
                 json={"public_booking": True, "work_days": list(range(7)), "timezone": "America/Puerto_Rico"})
@@ -98,7 +105,7 @@ def test_team_caguas_commercial_workflow_and_advisor_isolation(tmp_path, monkeyp
         assert dashboard["metrics"]["sales"] == 0
         assert any(item.get("task_id") == task["id"] for item in dashboard["priorities"])
 
-        checked(owner, "POST", "/api/auth/login", json={"email": advisor["email"], "password": password})
+        assert team_login(owner, advisor["email"], password).status_code == 200
         assert checked(owner, "GET", f"/api/leads/{lead_id}")["lead"]["id"] == lead_id
         notifications = checked(owner, "GET", "/api/notifications")
         notification_id = next(item["id"] for item in notifications["notifications"] if item["entity_id"] == task["id"])
@@ -107,7 +114,7 @@ def test_team_caguas_commercial_workflow_and_advisor_isolation(tmp_path, monkeyp
         assert checked(owner, "PATCH", f"/api/notifications/{notification_id}", json={"read": True})["notification"]["read"] is True
         assert checked(owner, "GET", "/api/notifications")["unread"] == notifications["unread"] - 1
 
-        checked(outsider, "POST", "/api/auth/login", json={"email": other["email"], "password": password})
+        assert team_login(outsider, other["email"], password).status_code == 200
         assert checked(outsider, "GET", "/api/leads")["leads"] == []
         assert checked(outsider, "GET", "/api/tasks")["tasks"] == []
         assert checked(outsider, "GET", "/api/appointments")["appointments"] == []
@@ -197,9 +204,14 @@ def test_preview_builder_ignores_commercial_path_dotenv_and_external_services(tm
     assert api.load_environment is forbidden_load
     with TestClient(app) as client:
         assert client.get("/health").status_code == 200
-        login = client.post("/api/auth/login", json={"email": preview_team_caguas.PREVIEW_EMAIL,
-                                                      "password": preview_team_caguas.PREVIEW_PASSWORD})
-        assert login.status_code == 200
+        # The password alone opens nothing; the synthetic owner is pre-enrolled with a printed demo secret.
+        step = client.post("/api/auth/login", json={"email": preview_team_caguas.PREVIEW_EMAIL,
+                                                     "password": preview_team_caguas.PREVIEW_PASSWORD})
+        assert step.status_code == 200 and step.json() == {"mfa_required": True}
+        assert client.get("/api/dashboard").status_code == 401
+        code = preview_team_caguas.current_code(preview_team_caguas.PREVIEW_TOTP_SECRET)
+        assert client.post("/api/team-identity/totp/login", json={"code": code}).status_code == 200
+        assert "powersolar" in preview_team_caguas.PREVIEW_EMAIL and preview_team_caguas.PREVIEW_EMAIL.endswith("@example.com")
         dashboard = client.get("/api/dashboard").json()
         assert dashboard["metrics"]["leads"] >= 1
         assert "DEMO" in client.get("/api/settings").json()["business"]["market"]

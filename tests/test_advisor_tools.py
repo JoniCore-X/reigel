@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from reigel.advisor_tools import evaluate_practice, prepare_brief
 from reigel.api import create_app
 from reigel.core import DomainError
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -13,6 +14,7 @@ def tools_system(tmp_path, monkeypatch):
     app = create_app(tmp_path / "advisor-tools.sqlite3")
     store = app.state.store
     admin = store.create_user({"name": "Admin de prueba", "email": "admin@tools.test", "password": "synthetic-tools-admin", "role": "admin"}, bootstrap=True)
+    allow(store, admin, "owner@tools.test", "other@tools.test")
     owner = store.create_user({"name": "Asesor de prueba", "email": "owner@tools.test", "password": "synthetic-tools-owner"}, admin)
     other = store.create_user({"name": "Otro asesor", "email": "other@tools.test", "password": "synthetic-tools-other"}, admin)
     lead = store.create_lead({"name": "Persona sintética", "email": "persona@example.test", "municipality": "Caguas", "advisor_id": owner["id"]}, admin)
@@ -64,12 +66,12 @@ def test_advisor_tools_routes_require_authentication_and_preserve_data(tools_sys
         assert client.get("/api/assistant/scenarios").status_code == 401
         assert client.post("/api/assistant/train", json={"scenario_id": "cost", "response": "Revisemos las condiciones."}).status_code == 401
         assert client.get(f"/api/leads/{lead['id']}/brief").status_code == 401
-        assert client.post("/api/auth/login", json={"email": owner["email"], "password": "synthetic-tools-owner"}).status_code == 200
+        assert team_login(client, owner["email"], "synthetic-tools-owner").status_code == 200
         assert len(client.get("/api/assistant/scenarios").json()["scenarios"]) == 7
         assert client.post("/api/assistant/train", json={"scenario_id": "cost", "response": "Entiendo tu presupuesto. Si quieres, podemos revisar las condiciones."}).status_code == 200
         assert client.get(f"/api/leads/{lead['id']}/brief").status_code == 200
         assert client.post("/api/assistant/train", json=[], headers={"Origin": "https://foreign.invalid"}).status_code == 403
         client.post("/api/auth/logout")
-        client.post("/api/auth/login", json={"email": other["email"], "password": "synthetic-tools-other"})
+        team_login(client, other["email"], "synthetic-tools-other")
         assert client.get(f"/api/leads/{lead['id']}/brief").status_code == 404
     assert store.get_lead(lead["id"], owner) == lead

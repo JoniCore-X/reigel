@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from reigel.api import create_app
 from reigel.core import SCHEMA, migrate_owner, stamp, uid
+from team_auth import allow, login as team_login
 
 OWNER = ("owner@example.test", "correct-horse-test-42")
 ADMIN = ("lider@example.test", "correct-horse-test-44")
@@ -21,6 +22,7 @@ def team(tmp_path, monkeypatch):
     app = create_app(tmp_path / "owner.sqlite3")
     store = app.state.store
     owner = store.create_user({"name": "Propietario", "email": OWNER[0], "password": OWNER[1], "role": "admin"}, bootstrap=True)
+    allow(store, owner, ADMIN[0], ADVISOR[0], OTHER[0], "l2@example.test", "nuevo@example.test", "lider2@example.test")
     admin = store.create_user({"name": "Líder", "email": ADMIN[0], "password": ADMIN[1], "role": "admin"}, owner)
     advisor = store.create_user({"name": "Asesora", "email": ADVISOR[0], "password": ADVISOR[1]}, owner)
     other = store.create_user({"name": "Otra asesora", "email": OTHER[0], "password": OTHER[1]}, owner)
@@ -30,7 +32,7 @@ def team(tmp_path, monkeypatch):
 
 
 def login(client, credentials):
-    response = client.post("/api/auth/login", json={"email": credentials[0], "password": credentials[1]})
+    response = team_login(client, credentials[0], credentials[1])
     assert response.status_code == 200, response.text
     return client
 

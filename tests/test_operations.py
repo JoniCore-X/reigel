@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from reigel import core
 from reigel.api import create_app
 from reigel.core import DomainError, SCHEMA, Store
+from team_auth import allow, login as team_login
 
 
 @pytest.fixture
@@ -19,6 +20,7 @@ def ops(tmp_path, monkeypatch):
     app = create_app(tmp_path / "operations.db")
     store = app.state.store
     admin = store.create_user({"name": "QA Admin", "email": "ops-admin@example.test", "password": "synthetic-password-ops", "role": "admin"}, bootstrap=True)
+    allow(store, admin, "ops-a@example.test", "ops-b@example.test")
     a = store.create_user({"name": "QA Asesora A", "email": "ops-a@example.test", "password": "synthetic-password-ops", "role": "advisor"}, admin)
     b = store.create_user({"name": "QA Asesor B", "email": "ops-b@example.test", "password": "synthetic-password-ops", "role": "advisor"}, admin)
     for person in (a, b):
@@ -31,7 +33,7 @@ def lead(store, actor, **overrides):
 
 
 def login(client, person):
-    assert client.post("/api/auth/login", json={"email": person["email"], "password": "synthetic-password-ops"}).status_code == 200
+    assert team_login(client, person["email"], "synthetic-password-ops").status_code == 200
 
 
 def test_workflow_lead_edit_activity_task_schedule_dashboard_and_permissions(ops):
