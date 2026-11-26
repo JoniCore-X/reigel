@@ -116,3 +116,63 @@
     if (document.visibilityState !== 'visible') showAll();
   });
 })();
+
+// Capítulos de ingeniería en /empresa ([data-sc-eng]): cada [data-sc-scrub]
+// recibe --p (0 a 1) según su paso por la ventana. "enter" se completa al
+// entrar; "pass" recorre todo el cruce. Solo se lee la posición (escucha
+// pasiva), es reversible y con movimiento reducido no se escribe nada: quedan
+// los valores estáticos de la hoja de estilos.
+(() => {
+  const section = document.querySelector('[data-sc-eng]');
+  if (!section) return;
+  const targets = [...section.querySelectorAll('[data-sc-scrub]')];
+  if (!targets.length) return;
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+  let frame = 0;
+  let live = false;
+
+  function render() {
+    frame = 0;
+    if (!live) return;
+    const view = window.innerHeight || 1;
+    const area = section.getBoundingClientRect();
+    if (area.bottom < -view || area.top > view * 2) return;
+    targets.forEach(target => {
+      const box = target.getBoundingClientRect();
+      const progress = target.dataset.scScrub === 'enter'
+        ? clamp((view * 0.92 - box.top) / (view * 0.6), 0, 1)
+        : clamp((view - box.top) / (view + box.height), 0, 1);
+      target.style.setProperty('--p', progress.toFixed(4));
+      if (!target.matches('.sc-eng-steps')) return;
+      const steps = [...target.children];
+      steps.forEach((step, index) => step.classList.toggle('is-on', progress >= (index + 0.3) / steps.length));
+    });
+  }
+
+  // Una pestaña oculta no entrega cuadros: ahí se calcula en el acto.
+  function schedule() {
+    if (document.visibilityState !== 'visible') {
+      render();
+      return;
+    }
+    if (!frame) frame = window.requestAnimationFrame(render);
+  }
+
+  function setLive(on) {
+    live = on;
+    targets.forEach(target => {
+      if (target.matches('.sc-eng-steps')) target.classList.toggle('sc-eng-live', on);
+      if (on) return;
+      target.style.removeProperty('--p');
+      [...target.children].forEach(child => child.classList.remove('is-on'));
+    });
+    if (on) schedule();
+  }
+
+  setLive(!reduced.matches);
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
+  reduced.addEventListener?.('change', () => setLive(!reduced.matches));
+})();

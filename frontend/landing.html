@@ -35,13 +35,13 @@
   <script src="/static/js/tesla-experience.js?v=1" defer></script>
   <script src="/static/js/launcher-yield.js?v=2" defer></script>
   <script src="/static/js/depth-3d.js?v=6" defer></script>
-  <script src="/static/js/system-showcase.js?v=4" defer></script>
+  <script src="/static/js/system-showcase.js?v=5" defer></script>
   <link rel="stylesheet" href="/static/css/energy-scene.css?v=7">
   <link rel="stylesheet" href="/static/css/energy-view.css?v=6">
   <link rel="stylesheet" href="/static/css/tesla-experience.css?v=6">
   <link rel="stylesheet" href="/static/css/public-shell.css?v=8">
   <link rel="stylesheet" href="/static/css/depth-3d.css?v=6">
-  <link rel="stylesheet" href="/static/css/system-showcase.css?v=4">
+  <link rel="stylesheet" href="/static/css/system-showcase.css?v=7">
   <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
 </head>
 <body class="public-body corporate-body">
@@ -101,6 +101,41 @@
       </div>
       <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico-1384.webp" width="1384" height="1030" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
     </section>
+    <section class="sc-why" aria-labelledby="sc-why-title">
+      <div class="corp-container">
+        <div class="sc-why-head" data-sc-reveal>
+          <div class="sc-r" style="--i:0">
+            <p class="corp-eyebrow">EL FUTURO DE TU ENERGÍA</p>
+            <h2 id="sc-why-title">Menos dependencia.<br>Más control.</h2>
+          </div>
+          <p class="sc-why-lead sc-r" style="--i:1">Genera tu propia energía, reduce tu dependencia de LUMA y protege tu hogar durante las interrupciones eléctricas. Descubre una solución energética diseñada alrededor de tus necesidades.</p>
+        </div>
+        <ul class="sc-why-grid" data-sc-reveal>
+          <li class="sc-r" style="--i:0"><a class="sc-why-card" href="/proceso">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M8 4.5h16a1.5 1.5 0 0 1 1.5 1.5v21l-3.2-2-3.1 2-3.2-2-3.2 2-3.1-2-3.2 2V6A1.5 1.5 0 0 1 8 4.5z"/><path class="sc-why-a" d="M11 11.5l4 4 2.5-2.5 3.5 4.5M21 14v3.5h-3.5"/></svg></span>
+            <h3>Ahorro mensual</h3>
+            <p>Reduce tu dependencia de las tarifas eléctricas. Lo que puedes ahorrar depende de tu consumo y se calcula en tu evaluación; las opciones de pago se revisan con el equipo.</p>
+            <span class="sc-why-more">Ver el proceso de evaluación <span aria-hidden="true">→</span></span>
+          </a></li>
+          <li class="sc-r" style="--i:1"><a class="sc-why-card" href="/soluciones#respaldo">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M5 14.5 16 5.5l11 9V25a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path class="sc-why-a" d="M17 12.5 13.5 18h5L15 23.5"/></svg></span>
+            <h3>Respaldo energético</h3>
+            <p>Mantén tus equipos esenciales funcionando durante apagones, según la capacidad de tu sistema.</p>
+            <span class="sc-why-more">Ver opciones de respaldo <span aria-hidden="true">→</span></span>
+          </a></li>
+          <li class="sc-r" style="--i:2"><a class="sc-why-card" href="/soluciones#energia-solar">
+            <span class="sc-why-icon"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M9 18h14l3.5 9h-21zM16 18v9M7.2 22.5h17.6"/><g class="sc-why-a"><circle cx="16" cy="8.5" r="3"/><path d="M16 2.5V4M9.5 8.5H11M21 8.5h1.5M11.4 3.9l1.1 1.1M20.6 3.9l-1.1 1.1"/></g></svg></span>
+            <h3>Energía renovable</h3>
+            <p>Aprovecha la energía del sol para alimentar tu hogar y reducir tu dependencia de la red eléctrica.</p>
+            <span class="sc-why-more">Ver energía solar residencial <span aria-hidden="true">→</span></span>
+          </a></li>
+        </ul>
+        <div class="sc-why-cta" data-sc-reveal>
+          <div class="sc-r" style="--i:0"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Descubre tu potencial de ahorro <span aria-hidden="true">↗</span></a></div>
+          <p class="sc-r" style="--i:1">Sin compromiso. El resultado depende de tu consumo y de tu propiedad.</p>
+        </div>
+      </div>
+    </section>
     <section class="corp-energy-view corp-container" aria-labelledby="energy-view-title">
       <div class="corp-energy-copy">
         <p class="corp-eyebrow">TU ENERGÍA, A LA VISTA</p>
@@ -153,7 +188,7 @@
           <figcaption>Acercamiento de la misma imagen de referencia.</figcaption>
         </figure>
       </div>
-      <div class="tx-zones-band">
+      <div class="tx-zones-band" id="power-zones">
         <div class="tx-wrap tx-z" data-tx-reveal>
           <div class="tx-z-copy">
             <p class="tx-kicker tx-r" style="--i:0">Power Zones</p>
