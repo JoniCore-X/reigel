@@ -35,13 +35,13 @@
   <script src="/static/js/tesla-experience.js?v=1" defer></script>
   <script src="/static/js/launcher-yield.js?v=2" defer></script>
   <script src="/static/js/depth-3d.js?v=6" defer></script>
-  <script src="/static/js/system-showcase.js?v=6" defer></script>
+  <script src="/static/js/system-showcase.js?v=7" defer></script>
   <link rel="stylesheet" href="/static/css/energy-scene.css?v=8">
   <link rel="stylesheet" href="/static/css/energy-view.css?v=6">
   <link rel="stylesheet" href="/static/css/tesla-experience.css?v=6">
   <link rel="stylesheet" href="/static/css/public-shell.css?v=8">
   <link rel="stylesheet" href="/static/css/depth-3d.css?v=6">
-  <link rel="stylesheet" href="/static/css/system-showcase.css?v=9">
+  <link rel="stylesheet" href="/static/css/system-showcase.css?v=10">
   <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
 </head>
 <body class="public-body corporate-body">
@@ -298,15 +298,195 @@
         <a class="corp-directory-item ui-corner-card" href="/preguntas" id="preguntas"><span class="corp-index" aria-hidden="true">06</span><span><strong>Preguntas frecuentes</strong><small>Respaldo, evaluación y próximos pasos.</small></span><span class="ui-corner-arrow" aria-hidden="true">↗</span></a>
       </div>
     </section>
-    <section class="sc-storm" aria-labelledby="sc-storm-title" data-sc-reveal>
-      <div class="sc-storm-band">
-        <figure class="sc-storm-media">
-          <img src="/static/assets/power-solar/casa-iluminada-tormenta-noche.webp" srcset="/static/assets/power-solar/casa-iluminada-tormenta-noche-1000.webp 1000w, /static/assets/power-solar/casa-iluminada-tormenta-noche.webp 2000w" sizes="(max-width: 600px) 216vw, min(100vw, 1920px)" width="2000" height="1000" loading="lazy" decoding="async" alt="De noche, durante una tormenta eléctrica, una casa moderna mantiene las luces encendidas y se refleja en el agua, mientras las casas vecinas están a oscuras">
-          <figcaption>Imagen de referencia.</figcaption>
-        </figure>
-        <div class="sc-storm-copy sc-r" style="--i:0">
-          <h2 id="sc-storm-title">Cuando se va la luz.</h2>
-          <p>Con batería, tu casa puede mantener encendido lo que decidas respaldar. Lo que cubre depende del diseño y de los equipos conectados.</p>
+    <section class="sc-storm" aria-labelledby="sc-storm-title" data-sc-reveal data-sc-outage>
+      <div class="sc-out-track">
+        <div class="sc-storm-band sc-out-stage">
+          <div class="sc-out-media">
+            <figure class="sc-storm-media">
+              <img src="/static/assets/power-solar/casa-iluminada-tormenta-noche.webp" srcset="/static/assets/power-solar/casa-iluminada-tormenta-noche-1000.webp 1000w, /static/assets/power-solar/casa-iluminada-tormenta-noche.webp 2000w" sizes="(max-width: 600px) 216vw, min(100vw, 1920px)" width="2000" height="1000" loading="lazy" decoding="async" alt="De noche, durante una tormenta eléctrica, una casa moderna mantiene las luces encendidas y se refleja en el agua, mientras las casas vecinas están a oscuras">
+              <figcaption>Imagen de referencia.</figcaption>
+            </figure>
+            <div class="sc-out-scene">
+            <svg class="sc-out-art" viewBox="0 0 1600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <defs>
+            <linearGradient id="sc-out-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#040b1f"/><stop offset=".62" stop-color="#0c2048"/><stop offset="1" stop-color="#17305c"/></linearGradient>
+            <radialGradient id="sc-out-warm"><stop offset="0" stop-color="#ffc670" stop-opacity=".42"/><stop offset="1" stop-color="#ffc670" stop-opacity="0"/></radialGradient>
+            <radialGradient id="sc-out-lamp"><stop offset="0" stop-color="#ffe0ad" stop-opacity=".5"/><stop offset=".45" stop-color="#ffd9a0" stop-opacity=".14"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+            <radialGradient id="sc-out-cell"><stop offset="0" stop-color="#8fd0ff" stop-opacity=".5"/><stop offset="1" stop-color="#8fd0ff" stop-opacity="0"/></radialGradient>
+            </defs>
+            <rect width="1600" height="800" fill="url(#sc-out-sky)"/>
+            <g fill="#dfe8f5"><circle cx="1292" cy="104" r="15" opacity=".82"/><circle cx="1292" cy="104" r="40" opacity=".05"/><circle cx="90" cy="70" r="1.6" opacity=".7"/><circle cx="212" cy="132" r="1.2" opacity=".5"/><circle cx="388" cy="58" r="1.5" opacity=".6"/><circle cx="540" cy="150" r="1.1" opacity=".5"/><circle cx="676" cy="84" r="1.6" opacity=".7"/><circle cx="820" cy="40" r="1.2" opacity=".5"/><circle cx="930" cy="128" r="1.4" opacity=".6"/><circle cx="1110" cy="62" r="1.2" opacity=".5"/><circle cx="1450" cy="56" r="1.5" opacity=".6"/><circle cx="1540" cy="170" r="1.2" opacity=".5"/></g>
+            <path d="M0 470Q150 380 330 430T640 400T930 440T1240 386T1600 440V620H0z" fill="#0a1a3a"/>
+            <g fill="none" stroke-width="2"><path d="M-20 204Q108 232 236 190Q620 262 1004 190Q1310 250 1620 204M-20 222Q108 248 270 190M202 190Q620 278 970 190M1038 190Q1310 266 1620 222" stroke="#24375d"/><path class="sc-out-g" d="M-20 204Q108 232 236 190Q620 262 1004 190Q1310 250 1620 204" stroke="#6fb0ff" stroke-width="1.6"/></g>
+            <path d="M122 600Q125.2 450 110 300h8Q137.2 450 135 600z" fill="#06122a"/>
+            <path d="M114 300Q69 259 24 320Q69 283 114 307z" fill="#06122a"/>
+            <path d="M114 300Q74 231 34 277Q74 258 114 307z" fill="#06122a"/>
+            <path d="M114 300Q98 229 81 255Q98 252 114 307z" fill="#06122a"/>
+            <path d="M114 300Q129 230 143 255Q129 253 114 307z" fill="#06122a"/>
+            <path d="M114 300Q153 230 191 274Q153 257 114 307z" fill="#06122a"/>
+            <path d="M114 300Q161 256 207 317Q161 281 114 307z" fill="#06122a"/>
+            <path d="M114 300Q148 286 181 349Q148 304 114 307z" fill="#06122a"/>
+            <path d="M114 300Q82 287 51 346Q82 304 114 307z" fill="#06122a"/>
+            <path d="M476 600Q485.2 431 494 262h8Q497.2 431 489 600z" fill="#06122a"/>
+            <path d="M498 262Q449 217 399 283Q449 243 498 269z" fill="#06122a"/>
+            <path d="M498 262Q454 186 410 237Q454 216 498 269z" fill="#06122a"/>
+            <path d="M498 262Q480 184 462 213Q480 209 498 269z" fill="#06122a"/>
+            <path d="M498 262Q514 185 530 213Q514 210 498 269z" fill="#06122a"/>
+            <path d="M498 262Q541 185 583 233Q541 215 498 269z" fill="#06122a"/>
+            <path d="M498 262Q549 213 600 281Q549 241 498 269z" fill="#06122a"/>
+            <path d="M498 262Q535 246 572 316Q535 266 498 269z" fill="#06122a"/>
+            <path d="M498 262Q463 247 428 313Q463 266 498 269z" fill="#06122a"/>
+            <path d="M956 600Q959.6 443 946 286h8Q971.6 443 969 600z" fill="#06122a"/>
+            <path d="M950 286Q905 245 860 306Q905 269 950 293z" fill="#06122a"/>
+            <path d="M950 286Q910 217 870 263Q910 244 950 293z" fill="#06122a"/>
+            <path d="M950 286Q934 215 917 241Q934 238 950 293z" fill="#06122a"/>
+            <path d="M950 286Q965 216 979 241Q965 239 950 293z" fill="#06122a"/>
+            <path d="M950 286Q989 216 1027 260Q989 243 950 293z" fill="#06122a"/>
+            <path d="M950 286Q997 242 1043 303Q997 267 950 293z" fill="#06122a"/>
+            <path d="M950 286Q984 272 1017 335Q984 290 950 293z" fill="#06122a"/>
+            <path d="M950 286Q918 273 887 332Q918 290 950 293z" fill="#06122a"/>
+            <path d="M1366 600Q1375.6 425 1386 250h8Q1387.6 425 1379 600z" fill="#06122a"/>
+            <path d="M1390 250Q1340 204 1289 272Q1340 231 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1345 173 1301 224Q1345 203 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1372 171 1353 200Q1372 196 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1406 172 1423 200Q1406 197 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1433 171 1477 221Q1433 202 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1442 200 1494 269Q1442 228 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1428 234 1465 305Q1428 255 1390 257z" fill="#06122a"/>
+            <path d="M1390 250Q1354 235 1319 301Q1354 254 1390 257z" fill="#06122a"/>
+            <path d="M1542 600Q1546.4 459 1536 318h8Q1558.4 459 1555 600z" fill="#06122a"/>
+            <path d="M1540 318Q1500 281 1459 336Q1500 303 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1504 256 1468 297Q1504 280 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1525 254 1510 278Q1525 275 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1553 255 1566 278Q1553 275 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1575 255 1610 295Q1575 279 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1582 278 1624 333Q1582 301 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1570 305 1601 362Q1570 322 1540 325z" fill="#06122a"/>
+            <path d="M1540 318Q1511 306 1483 359Q1511 321 1540 325z" fill="#06122a"/>
+            <rect x="232" y="168" width="8" height="432" fill="#0a1731"/>
+            <rect x="202" y="186" width="68" height="5" fill="#0a1731"/>
+            <rect x="224" y="214" width="24" height="34" rx="3" fill="#0f1f40"/>
+            <rect x="1000" y="168" width="8" height="432" fill="#0a1731"/>
+            <rect x="970" y="186" width="68" height="5" fill="#0a1731"/>
+            <rect x="992" y="214" width="24" height="34" rx="3" fill="#0f1f40"/>
+            <rect x="-40" y="430" width="250" height="170" fill="#22355c"/>
+            <rect x="-50" y="420" width="270" height="12" fill="#3d5586"/>
+            <rect x="-40" y="432" width="250" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="31" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="34" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="121" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="124" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="270" y="410" width="290" height="190" fill="#2a3f69"/>
+            <rect x="260" y="400" width="310" height="12" fill="#3d5586"/>
+            <rect x="270" y="412" width="290" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="289" y="467" width="66" height="54" fill="#3d5586"/>
+            <rect x="292" y="470" width="60" height="48" fill="#0b1730"/>
+            <rect x="364" y="512" width="34" height="88" fill="#101c38"/>
+            <rect x="405" y="467" width="64" height="54" fill="#3d5586"/>
+            <rect x="408" y="470" width="58" height="48" fill="#0b1730"/>
+            <rect x="482" y="484" width="70" height="116" fill="#0f1b37"/><rect x="514" y="484" width="5" height="116" fill="#2a3f69"/>
+            <rect x="650" y="290" width="150" height="310" fill="#253a66"/>
+            <rect x="640" y="280" width="170" height="12" fill="#3d5586"/>
+            <rect x="650" y="292" width="150" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="650" y="390" width="300" height="210" fill="#2c4372"/>
+            <rect x="640" y="380" width="320" height="12" fill="#3d5586"/>
+            <rect x="650" y="392" width="300" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="685" y="319" width="66" height="50" fill="#3d5586"/>
+            <rect x="688" y="322" width="60" height="44" fill="#0b1730"/>
+            <rect x="703" y="487" width="78" height="58" fill="#3d5586"/>
+            <rect x="706" y="490" width="72" height="52" fill="#0b1730"/>
+            <rect x="800" y="512" width="36" height="88" fill="#101c38"/>
+            <rect x="855" y="487" width="72" height="58" fill="#3d5586"/>
+            <rect x="858" y="490" width="66" height="52" fill="#0b1730"/>
+            <path d="M816 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <path d="M858 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <path d="M900 380l8-24h30l-8 24z" fill="#10305f" stroke="#4a6ea8" stroke-width="1"/>
+            <rect x="668" y="504" width="22" height="56" rx="3" fill="#c9d6ea"/><rect x="668" y="560" width="22" height="3" fill="#0b1730" opacity=".5"/>
+            <rect x="1040" y="310" width="160" height="290" fill="#22365f"/>
+            <rect x="1030" y="300" width="180" height="12" fill="#3d5586"/>
+            <rect x="1040" y="312" width="160" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1040" y="420" width="270" height="180" fill="#27406a"/>
+            <rect x="1030" y="410" width="290" height="12" fill="#3d5586"/>
+            <rect x="1040" y="422" width="270" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1077" y="337" width="62" height="50" fill="#3d5586"/>
+            <rect x="1080" y="340" width="56" height="44" fill="#0b1730"/>
+            <rect x="1065" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1068" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1150" y="512" width="34" height="88" fill="#101c38"/>
+            <rect x="1227" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1230" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1400" y="430" width="260" height="170" fill="#20335a"/>
+            <rect x="1390" y="420" width="280" height="12" fill="#3d5586"/>
+            <rect x="1400" y="432" width="260" height="7" fill="#0b1730" opacity=".35"/>
+            <rect x="1427" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1430" y="480" width="56" height="46" fill="#0b1730"/>
+            <rect x="1517" y="477" width="62" height="52" fill="#3d5586"/>
+            <rect x="1520" y="480" width="56" height="46" fill="#0b1730"/>
+            <path d="M57 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="98" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <path d="M585 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="626" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <path d="M1335 608V352q0-26 26-26h22v6h-22q-20 0-20 20v256z" fill="#0c1a36"/>
+            <rect x="1376" y="322" width="30" height="9" rx="4" fill="#1b2c50"/>
+            <rect y="600" width="1600" height="24" fill="#1a2c52"/><rect y="622" width="1600" height="4" fill="#0b1730"/><rect y="626" width="1600" height="174" fill="#0a152d"/>
+            <path d="M40 714h90M250 714h90M460 714h90M670 714h90M880 714h90M1090 714h90M1300 714h90M1510 714h90" stroke="#2a3d66" stroke-width="5"/>
+            <circle cx="1004" cy="176" r="7" fill="#1b2c50" stroke="#3d5586" stroke-width="2"/>
+            <rect class="sc-out-shade" width="1600" height="800" fill="#020814"/>
+            <g class="sc-out-n"><ellipse cx="62" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="34" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="62" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="152" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="124" y="480" width="56" height="46" fill="#ffdca6"/><ellipse cx="152" cy="612" rx="50.4" ry="7" fill="#ffdca6" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="322" cy="494" rx="90" ry="76.8" fill="url(#sc-out-warm)"/><rect x="292" y="470" width="60" height="48" fill="#ffd08a"/><ellipse cx="322" cy="612" rx="54" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="437" cy="494" rx="87" ry="76.8" fill="url(#sc-out-warm)"/><rect x="408" y="470" width="58" height="48" fill="#b9d0ff"/><ellipse cx="437" cy="612" rx="52.2" ry="7" fill="#b9d0ff" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="718" cy="344" rx="90" ry="70.4" fill="url(#sc-out-warm)"/><rect x="688" y="322" width="60" height="44" fill="#ffd08a"/><ellipse cx="718" cy="612" rx="54" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-k"><ellipse cx="742" cy="516" rx="108" ry="83.2" fill="url(#sc-out-warm)"/><rect x="706" y="490" width="72" height="52" fill="#ffc670"/><ellipse cx="742" cy="612" rx="64.8" ry="7" fill="#ffc670" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="891" cy="516" rx="99" ry="83.2" fill="url(#sc-out-warm)"/><rect x="858" y="490" width="66" height="52" fill="#ffd08a"/><ellipse cx="891" cy="612" rx="59.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-k"><ellipse cx="818" cy="500" rx="46" ry="40" fill="url(#sc-out-warm)"/><circle cx="818" cy="500" r="4" fill="#ffe2b0"/></g>
+            <g class="sc-out-n"><ellipse cx="1108" cy="362" rx="84" ry="70.4" fill="url(#sc-out-warm)"/><rect x="1080" y="340" width="56" height="44" fill="#ffdca6"/><ellipse cx="1108" cy="612" rx="50.4" ry="7" fill="#ffdca6" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1096" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1068" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1096" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1258" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1230" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1258" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1458" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1430" y="480" width="56" height="46" fill="#b9d0ff"/><ellipse cx="1458" cy="612" rx="50.4" ry="7" fill="#b9d0ff" opacity=".16"/></g>
+            <g class="sc-out-n"><ellipse cx="1548" cy="503" rx="84" ry="73.6" fill="url(#sc-out-warm)"/><rect x="1520" y="480" width="56" height="46" fill="#ffd08a"/><ellipse cx="1548" cy="612" rx="50.4" ry="7" fill="#ffd08a" opacity=".16"/></g>
+            <g class="sc-out-g"><ellipse cx="113" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="113" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="100" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><ellipse cx="641" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="641" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="628" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><ellipse cx="1391" cy="340" rx="190" ry="170" fill="url(#sc-out-lamp)"/><ellipse cx="1391" cy="622" rx="150" ry="20" fill="#ffd9a0" opacity=".2"/><rect x="1378" y="328" width="26" height="6" rx="3" fill="#fff0cf"/></g>
+            <g class="sc-out-g"><circle cx="1004" cy="176" r="26" fill="url(#sc-out-cell)"/><circle cx="1004" cy="176" r="5" fill="#9fcbff"/></g>
+            <path d="M52.6667 480v46M71.3333 480v46M34 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M142.667 480v46M161.333 480v46M124 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M312 470v48M332 470v48M292 494h60" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M427.333 470v48M446.667 470v48M408 494h58" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M708 322v44M728 322v44M688 344h60" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M730 490v52M754 490v52M706 516h72" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M880 490v52M902 490v52M858 516h66" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1098.67 340v44M1117.33 340v44M1080 362h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1086.67 480v46M1105.33 480v46M1068 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1248.67 480v46M1267.33 480v46M1230 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1448.67 480v46M1467.33 480v46M1430 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <path d="M1538.67 480v46M1557.33 480v46M1520 503h56" stroke="#0b1730" stroke-width="2" fill="none"/>
+            <g class="sc-out-b"><ellipse cx="679" cy="532" rx="70" ry="74" fill="url(#sc-out-cell)"/><rect x="676" y="512" width="6" height="40" rx="3" fill="#a9dcff"/><path d="M679 504V258" stroke="#9cc3fb" stroke-width="1.5" opacity=".7" fill="none"/><rect x="630" y="214" width="98" height="44" rx="22" fill="#071d43" stroke="#9cc3fb" stroke-width="1.5"/><rect x="650" y="225" width="44" height="22" rx="4" fill="none" stroke="#e6efff" stroke-width="2"/><rect x="696" y="231" width="5" height="10" rx="1.5" fill="#e6efff"/><rect x="655" y="230" width="9" height="12" rx="1" fill="#a9dcff"/><rect x="667" y="230" width="9" height="12" rx="1" fill="#a9dcff"/><rect x="679" y="230" width="9" height="12" rx="1" fill="#a9dcff"/></g>
+            </svg>
+              <p class="sc-out-label">Representación ilustrativa.</p>
+            </div>
+            <a class="sc-out-skip" href="#sc-out-final">Saltar la secuencia <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="sc-out-foot">
+            <ol class="sc-out-caps">
+              <li><span aria-hidden="true">01</span>Una noche cualquiera, con el suministro de la red.</li>
+              <li><span aria-hidden="true">02</span>La red falla: se apagan la calle y el tendido.</li>
+              <li><span aria-hidden="true">03</span>Las casas sin respaldo quedan a oscuras.</li>
+              <li><span aria-hidden="true">04</span>Una casa con almacenamiento mantiene encendidos los circuitos respaldados.</li>
+            </ol>
+            <div class="sc-storm-copy">
+              <p class="corp-eyebrow">INDEPENDENCIA Y RESILIENCIA ENERGÉTICA</p>
+              <h2 id="sc-storm-title">Cuando la red falla, lo esencial sigue encendido.</h2>
+            </div>
+          </div>
+        </div>
+        <span class="sc-out-end" id="sc-out-final" tabindex="-1"></span>
+      </div>
+      <div class="sc-out-body">
+        <p class="sc-out-lead sc-r" style="--i:0">Almacena la energía que produces durante el día y utilízala cuando más la necesites. Protege tus actividades cotidianas con un sistema de respaldo diseñado para las necesidades de tu hogar.</p>
+        <div class="sc-r" style="--i:1">
+          <p class="sc-out-terms">El respaldo puede cubrir circuitos seleccionados o toda la vivienda, según el diseño y los equipos instalados. Su duración depende de la carga disponible y de lo que tengas conectado.</p>
+          <p><a class="sc-out-link" href="/contacto#evaluacion">¿Cuánto respaldo necesitas? Se calcula en tu evaluación <span aria-hidden="true">→</span></a></p>
         </div>
       </div>
     </section>
