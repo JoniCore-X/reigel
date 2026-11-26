@@ -384,7 +384,10 @@ def test_runbook_covers_the_steps_only_the_owner_can_take_and_uses_placeholders(
                      "COMPOSE_PROFILES=ia", "ollama pull", "SOURCES.md", "420 W", "repositorio es público",
                      "sin revisión humana", "Antes de publicar"):
         assert required in guide, required
+    # `localhost` entra en la lista porque es la prueba local documentada, no un
+    # servidor de nadie: no puede filtrar el dominio ni la dirección reales.
     for host in re.findall(r"https?://([\w.-]+)", guide):
-        assert host.endswith(("ejemplo.com", "127.0.0.1", "docs.docker.com", "github.com", "DOMAIN")), host
+        assert host.endswith(("ejemplo.com", "127.0.0.1", "localhost",
+                              "docs.docker.com", "github.com", "DOMAIN")), host
     for address in re.findall(r"[\w.+-]+@([\w-]+\.[\w.-]+)", guide):
         assert address.rstrip(".").endswith(("ejemplo.com", "example.com")), address
