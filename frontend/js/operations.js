@@ -321,6 +321,76 @@ async function leadBrief(id) {
     $('#dialog-content').innerHTML=`<p class="hint orange">Preparación interna basada en registros autorizados. Requiere revisión humana; no es una evaluación técnica certificada.</p><section class="result-section"><h3>Datos conocidos</h3><dl class="brief-known">${(data.known||[]).map(item=>`<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl></section>${informationList('Información sin verificar',data.unverified)}${informationList('Preguntas pendientes',data.questions)}${informationList('Temas para explicar',data.topics)}${informationList('Próximas acciones sugeridas',data.next_actions)}<div class="form-actions">${actionButton('lead-detail','Volver a la ficha',`data-id="${esc(id)}"`,'small')}</div>`;
   } catch(error) {if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
 }
+const needUrgency={high:['red','Urgente'],normal:['orange','Pendiente'],low:['blue','Cuando se pueda']};
+function needReportRow(report,reload) {
+  const actions=node('div',{class:'actions'});
+  const facts=node('div',{class:'need-facts'},(report.known||[]).map(
+    item=>node('span',{class:'need-fact',text:`${item.label}: ${item.value}`})));
+  const row=node('li',{class:`need-report urgency-${report.urgency}`},[
+    node('div',{},[
+      node('strong',{text:report.need}),
+      node('blockquote',{text:report.question}),
+      node('p',{text:`${report.reason_label}${report.repeats>1?` · lo preguntó ${report.repeats} veces`:''}${report.lead_name?` · ${report.lead_name}`:''}`}),
+      (report.known||[]).length?facts:null,
+      (report.missing||[]).length?node('small',{text:`Falta por preguntar: ${report.missing.join(', ')}`}):null,
+    ]),
+    node('div',{class:'need-tags'},[
+      node('span',{class:`badge ${needUrgency[report.urgency][0]}`,text:needUrgency[report.urgency][1]}),
+      report.status==='claimed'?node('span',{class:'badge',text:'En curso'}):null,
+      actions,
+    ]),
+  ]);
+  if(report.status!=='claimed') {
+    const claim=node('button',{class:'button small',attrs:{type:'button'},text:'Atender'});
+    claim.addEventListener('click',async()=>{
+      claim.disabled=true;
+      try {await post(`/api/needs/${encodeURIComponent(report.id)}/claim`,{});await reload();}
+      catch(problem) {claim.disabled=false;toast(problem.message);}});
+    actions.append(claim);
+  }
+  const close=node('button',{class:'button small primary',attrs:{type:'button'},text:'Cerrar'});
+  close.addEventListener('click',()=>{
+    const outcome=node('input',{attrs:{type:'text',maxlength:'400','aria-label':'Qué se hizo'}});
+    const confirm=node('button',{class:'button small primary',attrs:{type:'submit'},text:'Guardar'});
+    const form=node('form',{class:'need-close'},[node('label',{text:'Qué se hizo'},[outcome]),confirm]);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();confirm.disabled=true;
+      try {await post(`/api/needs/${encodeURIComponent(report.id)}/resolve`,{resolution:outcome.value});await reload();}
+      catch(problem) {confirm.disabled=false;toast(problem.message);}});
+    actions.replaceChildren(form);outcome.focus();
+  });
+  actions.append(close);
+  return row;
+}
+async function appendNeedQueue() {
+  const parent=$('#view-content');
+  const reload=async()=>{const old=$('#need-queue');if(old)old.remove();await appendNeedQueue();};
+  try {
+    const data=await api('/api/needs');
+    if(state.view!=='conversations'||!state.user)return;
+    const reports=data.reports||[];
+    const section=node('section',{class:'panel need-panel'},[
+      node('header',{class:'panel-head'},[
+        node('div',{},[node('p',{class:'section-kicker',text:'MOTOR AUTÓNOMO / COLA HUMANA'}),
+                       node('h2',{text:'Lo que están esperando'})]),
+        node('span',{class:`badge ${reports.length?'orange':'green'}`,
+          text:reports.length?`${reports.length} sin cerrar`:'Nadie esperando'}),
+      ]),
+      node('div',{class:'panel-body'},[
+        reports.length
+          ? node('ul',{class:'need-list'},reports.map(report=>needReportRow(report,reload)))
+          : node('p',{class:'field-help',
+              text:'Cuando el chat no pueda responder, aquí aparecerá qué necesita esa persona.'}),
+        node('p',{class:'hint',text:data.notice||''}),
+      ]),
+    ]);
+    section.id='need-queue';
+    parent.insertBefore(section,parent.children[1]||null);
+  } catch(problem) {
+    if(state.view==='conversations')parent.append(node('p',{class:'field-help',
+      text:`Cola de atención no disponible: ${problem.message}`}));
+  }
+}
 const memoryStates={active:['green','Vigente'],superseded:['orange','Sustituida'],
   expired:['orange','Vencida'],retracted:['red','Retirada']};
 function memoryOption(value,label,selected) {

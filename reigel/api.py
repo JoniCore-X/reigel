@@ -242,6 +242,19 @@ def create_app(db_path=None, *, load_env=None):
         except Exception:
             logging.getLogger(__name__).warning("No se pudo registrar un hueco de aprendizaje (%s, %s).", route, reason)
 
+    def record_need(context):
+        """El informe nunca bloquea ni rompe una respuesta al visitante."""
+        try:
+            from .agent import needs
+            report = needs.build(
+                context["reason"], context["question"], profile=context.get("profile"),
+                route=context.get("route", "chat"), asked_next_step=context.get("asked_next_step"),
+            )
+            needs.record(app.state.store, context["conversation_id"], report, lead_id=context.get("lead_id"))
+        except Exception:
+            logging.getLogger(__name__).warning("No se pudo registrar el informe de necesidad (%s).",
+                                                context.get("reason"))
+
     def reviewed(question, route):
         """Approved team answers for the prompt, or {} so callers keep their old signature."""
         try:
@@ -464,10 +477,11 @@ def create_app(db_path=None, *, load_env=None):
             app.state.limiter.check(request, "chat_ai", 20, 60)
             ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"],
                                            **reviewed(brief["incoming"], "chat"))
-        gaps = []
+        gaps, pending = [], []
         result = app.state.webchat.message(
             token, data.get("text"), data.get("request_id"),
-            ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None, gaps=gaps,
+            ai_reply=ai_reply, ai_fingerprint=brief["fingerprint"] if brief else None,
+            gaps=gaps, needs=pending,
         )
         if brief and ai_reply is None:
             # The model was asked and its draft was missing or withdrawn: the fallback was used.
@@ -475,6 +489,9 @@ def create_app(db_path=None, *, load_env=None):
         else:
             for reason, question in gaps[:1]:
                 record_gap("chat", reason, question)
+        # El equipo recibe qué necesita la persona, no solo que alguien quedó esperando.
+        for context in pending[:1]:
+            record_need(context)
         return result
 
     @app.post("/api/public/chat/book")

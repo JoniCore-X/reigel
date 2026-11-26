@@ -25,6 +25,11 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
   `policy.py` fija la autorización de cada acción. Arranca apagado, solo crea tareas y
   avisos internos, y rechaza toda acción marcada como saliente: no envía mensajes, no
   marca llamadas y no cambia la etapa de un registro.
+- `agent/needs.py`: informe de necesidad. Cuando el chat no puede responder (sin evidencia,
+  validador que bloquea, modelo caído o petición de atención humana), la cola humana recibe
+  qué necesita esa persona, qué contestó ya y qué falta por preguntar. Se arma con reglas,
+  nunca con el modelo, porque hace falta justo cuando el modelo falló. La pregunta se guarda
+  enmascarada. Se engancha en `webchat.message` (parámetro `needs`) y en `channels.py`.
 - `agent/memory.py`: memoria del agente sobre cada cliente. Solo se inserta: una revisión
   enlaza la anterior y nada se sobrescribe. Cada creencia lleva procedencia, confianza y
   vencimiento; una deducción del modelo no se usa al hablar hasta que una persona la

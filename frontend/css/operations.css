@@ -407,3 +407,22 @@
 .belief-tags .actions{display:flex;gap:7px;flex-wrap:wrap}
 .belief-retract{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap}
 .belief-retract input{min-width:170px}
+
+/* Cola de atención humana con el informe de necesidad. */
+.need-panel{margin-bottom:18px}
+.need-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.need-report{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line,#e2e8f0);border-left:3px solid var(--line,#e2e8f0);border-radius:6px;flex-wrap:wrap}
+.need-report.urgency-high{border-left-color:#b23a3a}
+.need-report.urgency-normal{border-left-color:#c67b1d}
+.need-report.urgency-low{border-left-color:#2b5b96}
+.need-report>div:first-child{flex:1;min-width:0}
+.need-report strong{overflow-wrap:anywhere}
+.need-report blockquote{margin:6px 0 0;padding-left:11px;border-left:2px solid var(--line,#e2e8f0);font-size:13px;overflow-wrap:anywhere}
+.need-report p{margin:6px 0 0;font-size:12px;color:var(--muted,#53627b)}
+.need-report small{display:block;margin-top:5px;font-size:11px;color:var(--muted,#53627b)}
+.need-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.need-fact{padding:2px 8px;border:1px solid var(--line,#e2e8f0);border-radius:999px;font-size:11px}
+.need-tags{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}
+.need-tags .actions{display:flex;gap:7px;flex-wrap:wrap}
+.need-close{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap}
+.need-close input{min-width:180px}

@@ -100,7 +100,7 @@ def test_static_files_do_not_describe_the_access_policy():
 def test_public_pages_and_scripts_are_served_without_those_texts(world):
     anonymous = TestClient(world, base_url="http://localhost")
     entrance, access = anonymous.get("/app"), anonymous.get("/app/acceso")
-    assert 'src="/static/js/app.js?v=12"' in entrance.text and "/static/css/operations.css?v=8" in entrance.text
+    assert 'src="/static/js/app.js?v=13"' in entrance.text and "/static/css/operations.css?v=9" in entrance.text
     assert 'src="/static/js/team-access.js?v=8"' in access.text and "/static/css/team-auth.css?v=2" in access.text
     assert "Si no tienes un código, pídelo a tu administrador." in access.text
     assert "Si no tienes un código, pídelo a tu administrador." in entrance.text

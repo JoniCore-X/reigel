@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 # Etiquetas de contexto y las palabras que las delatan en la conversación.
 TOPICS = {
-    "apagon": r"apag[oó]n|se va la luz|se fue la luz|hurac[aá]n|tormenta|emergencia|respaldo|generador",
+    "apagon": r"apag[oó]n|se (?:me |nos |te |le )?va la luz|se (?:me |nos |te |le )?fue la luz|hurac[aá]n|tormenta|emergencia|respaldo|generador",
     "bateria": r"bater[ií]a|guardar|almacen",
     # Palabras completas: «apagones» contiene «pago», «mantener» no es mantenimiento
     # y «compartir» no es comparar.

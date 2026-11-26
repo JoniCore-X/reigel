@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import Depends, Request
 
-from . import memory, policy, runtime
+from . import memory, needs, policy, runtime
 from ..core import DomainError
 
 CYCLES = ("SELECT id,trigger,started_at,finished_at,leads_seen,decided,executed,held,skipped,error"
@@ -82,6 +82,21 @@ def register_routes(app, actor, payload):
             rows = (db.execute(DECISIONS_ALL, (100,)) if user["role"] == "admin"
                     else db.execute(DECISIONS_MINE, (user["id"], 100)))
             return {"decisions": [dict(row) for row in rows]}
+
+    # Informes de necesidad. Un asesor ve los que no tienen dueño y los suyos.
+    @app.get("/api/needs")
+    async def open_needs(user=Depends(actor)):
+        return needs.listed(app.state.store, user)
+
+    @app.post("/api/needs/{report_id}/claim")
+    async def claim_need(report_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_need_claim", 120, 3600)
+        return {"report": needs.claim(app.state.store, report_id, user)}
+
+    @app.post("/api/needs/{report_id}/resolve")
+    async def resolve_need(report_id: str, request: Request, user=Depends(actor)):
+        app.state.limiter.check(request, "agent_need_resolve", 120, 3600)
+        return {"report": needs.resolve(app.state.store, report_id, await payload(request), user)}
 
     # Memoria del agente. El ámbito es el del propio registro: un asesor solo ve y
     # cambia la memoria de los suyos, porque `memory` pasa por `store._lead`.

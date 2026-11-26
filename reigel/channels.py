@@ -13,6 +13,7 @@ import hashlib
 import hmac
 import asyncio
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -272,6 +273,16 @@ def _store_event(store, event: dict) -> tuple[str, str] | None:
     return conversation_id, event_id
 
 
+def _record_need(store, conversation, reason, incoming_text):
+    """El informe de necesidad nunca bloquea ni rompe la atención de un mensaje."""
+    try:
+        from .agent import needs
+        report = needs.build(reason, incoming_text, route="channel")
+        needs.record(store, conversation["id"], report, lead_id=conversation["lead_id"])
+    except Exception:
+        logging.getLogger(__name__).warning("No se pudo registrar el informe de necesidad (%s).", reason)
+
+
 async def _respond(store, conversation_id: str, event_id: str, incoming_text: str):
     """An acknowledged inbound message stays visible even if AI/provider fail."""
     lock = _reply_locks.setdefault(conversation_id, asyncio.Lock())
@@ -302,9 +313,14 @@ async def _respond_locked(store, conversation_id: str, event_id: str, incoming_t
                        (uuid.uuid4().hex, conversation_id, reply, result["status"], result.get("provider_id"), _now()))
             if status != "replied":
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (conversation_id,))
-    except (ValueError, RuntimeError, httpx.HTTPError):
+    except (ValueError, RuntimeError, httpx.HTTPError) as failure:
         with store.connect() as db:
             db.execute("UPDATE conversations SET mode='human' WHERE id=?", (conversation_id,))
+        # Un ValueError aquí es el validador rechazando el borrador; lo demás, el modelo
+        # o el proveedor. En ambos casos el equipo recibe qué necesita la persona.
+        _record_need(store, conversation,
+                     "blocked_by_policy" if isinstance(failure, ValueError) else "model_unavailable",
+                     incoming_text)
     finally:
         with store.connect() as db:
             db.execute("UPDATE webhook_events SET status=? WHERE id=?", (status, event_id))

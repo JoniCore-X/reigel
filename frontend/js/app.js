@@ -81,6 +81,7 @@ async function navigate(view, focus = true) {
     const renderers={dashboard:renderDashboard,leads:renderLeads,tasks:renderTasks,notifications:renderNotifications,energy:renderEnergy,privacy:renderPrivacy,appointments:renderAppointments,conversations:renderConversations,automation:renderAutomation,learning:renderLearning,marketing:renderMarketing,settings:renderSettings,subscription:renderSubscription};
     await renderers[view](requestId);
     if(view==='automation'&&current(requestId)){await appendAgentPanel();if(current(requestId))await appendTrainer();}
+    if(view==='conversations'&&current(requestId))await appendNeedQueue();
   }catch(error){if(requestId===state.requestId&&state.user)fail(error);}
 }
 function current(requestId) {return requestId===state.requestId && !!state.user;}

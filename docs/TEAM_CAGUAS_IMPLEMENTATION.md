@@ -2601,3 +2601,82 @@ a un cliente, y solo deja pasar lo vigente, no sustituido, no retirado y usable.
   misma ficha (lo probado son dos); y el vencimiento real por paso del tiempo (se
   comprueba adelantando el instante en las pruebas, no esperando 180 días).
 - **Versiones:** `operations.js?v=5`, `operations.css?v=8`.
+
+## Motor comercial autónomo, fase C: informe de necesidad (26 de noviembre de 2026)
+
+Añadido del titular al elegir la autonomía del chat: lo que la IA no pueda responder
+«porque no se le permita» pasa a la cola humana **generando un informe para saber la
+necesidad de ese cliente**. Un aviso dice que alguien espera; el informe dice qué
+necesita esa persona, qué contestó ya, qué falta por preguntar y por qué el agente
+se detuvo.
+
+### Se arma con reglas, no con el modelo
+
+Deliberado: el informe hace falta justo cuando el modelo falló o cuando su respuesta
+fue rechazada, así que no puede depender de él. Cada línea sale de la pregunta de la
+persona, de lo que ella misma contestó y del motivo del escalado. La pregunta se
+guarda ya enmascarada con `learning.redact`: sin correos, teléfonos, direcciones ni
+números largos.
+
+- **Motivos:** sin evidencia verificada, el motor no supo clasificar, la respuesta no
+  pasó los validadores, el modelo local no respondió, la persona pidió atención humana.
+- **Urgencia:** alta si pidió una persona, si los validadores bloquearon la respuesta o
+  si ya había pedido el siguiente paso; baja si solo falló el modelo; normal el resto.
+- **Qué necesita:** del tema comercial que detecta `learning.topic_of`. Quien pide
+  hablar con alguien no se archiva como «duda sin clasificar»: el informe dice que
+  pidió una persona, y añade el tema solo si se detecta.
+- **Qué se sabe y qué falta:** municipio, qué busca resolver, importe de la factura y
+  qué quiere respaldar, tomados del perfil que el propio chat fue recogiendo.
+- **Repetir no apila:** otro escalado del mismo tema en la misma conversación cuenta la
+  repetición y sube la urgencia, en vez de crear un informe nuevo.
+
+### Dónde se engancha
+
+- **`/chat`:** `webchat.message` recibe `needs` igual que ya recibía `gaps`, y la ruta
+  pública construye y guarda el informe **después** de confirmar la transacción, para
+  no alargarla. Si el informe falla, el visitante recibe su respuesta igual.
+- **Canales (`channels.py`):** cuando el borrador no pasa los validadores (`ValueError`)
+  la conversación ya pasaba a atención humana; ahora además deja el informe con motivo
+  «la respuesta no pasó los validadores». Un fallo del proveedor o del modelo queda
+  como «el modelo local no respondió».
+- **Rutas:** `GET /api/needs`, `POST /api/needs/{id}/claim`, `POST /api/needs/{id}/resolve`.
+  Un asesor ve los informes sin dueño y los suyos; administración los ve todos. Cerrar
+  exige escribir qué se hizo.
+- **Panel «Lo que están esperando»** al principio de Conversaciones, con la urgencia
+  primero, la pregunta citada, lo que se sabe en etiquetas, lo que falta, «Atender» y
+  «Cerrar» con el resultado en línea. Construido con nodos del DOM.
+
+### Verificación (local)
+
+- `tests/test_agent_needs.py`: 17 casos. Enmascarado, urgencia por motivo, repetición
+  que no apila, temas distintos con informe propio, orden de la cola, aislamiento entre
+  asesores, atender y cerrar con auditoría, y dos recorridos completos por HTTP desde
+  el chat público.
+- **Navegador, vista previa sintética 8877 a 1280×950.** Un visitante escribió por
+  `/api/public/chat` tres mensajes reales; el equipo vio dos informes, el urgente
+  primero. El informe de «quiero hablar con una persona» llegó con **«Municipio: Caguas»**
+  ya sabido, porque el chat lo había preguntado entre un mensaje y otro, y con la lista
+  de lo que falta. «Atender» lo marcó «En curso» y «Cerrar» con resultado lo sacó de la
+  cola («1 sin cerrar»).
+
+### Hallazgo: «se me va la luz» no se reconocía
+
+El clasificador de temas buscaba `se va la luz` y `se fue la luz`, de modo que «se **me**
+va la luz», que es como se dice en Puerto Rico, caía en «general». El mismo patrón está
+en tres sitios y los tres fallaban igual: `suggestions.TOPICS` (temas), `safety._OUTAGE`
+(derivación por seguridad en preguntas de apagón) y `knowledge.py` (consulta de evidencia).
+Se amplió a `se (?:me |nos |te |le )?va la luz` en los tres. El cambio **solo añade**
+coincidencias, nunca quita, así que no puede alterar lo que ya funcionaba; aun así se
+ejecutaron antes los seis archivos de prueba relacionados (154 casos, en verde).
+
+### Límites
+
+- **Nada de esto escribe en la memoria del agente todavía.** El informe y las creencias
+  de la fase B son dos registros separados; enlazarlos es trabajo posterior.
+- **El informe no llega a `/ia`.** Esa ruta tiene su propio historial y no crea
+  conversaciones del buzón comercial; se dejó fuera a propósito.
+- **Sin verificar:** el panel en tema claro, en anchos de móvil, con lectores de
+  pantalla, en Safari ni en Firefox; el escalado por canales (`blocked_by_policy`) se
+  probó por sus funciones, no con un webhook real de Telegram o Meta; y la cola con
+  decenas de informes (lo probado son tres).
+- **Versiones:** `operations.js?v=6`, `app.js?v=13`, `operations.css?v=9`.

@@ -36,7 +36,7 @@ _DAMAGE = re.compile(
     r"\bsi se (?:me |nos )?(?:dana|danan|rompe|rompen)\b"
 )
 _NOT_WORKING = re.compile(rf"\b{_EQUIPMENT}\b[^.?!]{{0,40}}\bno (?:funciona|funcionan|prende|prenden|enciende|encienden)\b")
-_OUTAGE = re.compile(r"apagon|se va la luz|se fue la luz|sin luz|de noche")
+_OUTAGE = re.compile(r"apagon|se (?:me |nos |te |le )?va la luz|se (?:me |nos |te |le )?fue la luz|sin luz|de noche")
 _MAINTENANCE = re.compile(r"\bmantenimiento\b")
 
 _REPLIES = {

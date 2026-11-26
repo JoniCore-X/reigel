@@ -441,7 +441,7 @@ class KnowledgeBase:
             return "efficiency"
         if re.search(r"\b(?:hibrid\w*|sistema mixto)\b", clean):
             return "hybrid_system"
-        if re.search(r"\b(?:apagon|apagones|corte de luz|se va la luz|interrupcion electrica)\b", clean):
+        if re.search(r"\b(?:apagon|apagones|corte de luz|se (?:me |nos |te |le )?va la luz|interrupcion electrica)\b", clean):
             return "grid_outage"
         if re.search(r"\bmicroinversor(?:es)?\b", clean):
             return "microinverter"

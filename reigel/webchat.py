@@ -212,10 +212,15 @@ class WebChat:
         value = re.sub(r"(?<!\w)\+?(?:\d[ ()-]*){7,16}(?!\w)", "[número omitido; usa el formulario de cita]", value)
         return value
 
-    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None):
+    def message(self, token, message_text, request_id, ai_reply=None, ai_fingerprint=None, gaps=None, needs=None):
         """``gaps``, when given, receives ``(reason, text)`` for answers the learning queue
         should see (no verified knowledge, generic fallback). The caller records them
-        after this transaction commits; the text is the already-masked message."""
+        after this transaction commits; the text is the already-masked message.
+
+        ``needs`` receives the context for a need report when the conversation moves to a
+        person: the reason, the conversation, its lead and what the visitor has answered
+        so far. The caller builds and stores the report after the commit, for the same
+        reason as ``gaps``: this transaction stays short."""
         incoming = text(message_text, "mensaje", limit=2000, required=True)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -274,6 +279,8 @@ class WebChat:
             elif decision.intent == "human":
                 db.execute("UPDATE conversations SET mode='human' WHERE id=?", (session["conversation_id"],))
                 reply = "¡Listo! Tu solicitud de atención humana quedó registrada. Alguien del equipo te responderá por este mismo chat cuando esté disponible; no puedo prometer un tiempo de respuesta."
+                if needs is not None:
+                    needs.append(self._need_context("human_requested", conversation, profile, incoming))
             elif conversation["mode"] == "human":
                 # The advisor owns the floor; store inbound without an automated sales reply.
                 reply = ""
@@ -287,6 +294,8 @@ class WebChat:
                 )
                 if gaps is not None:
                     gaps.extend((reason, incoming) for reason in reasons)
+                if needs is not None and reasons:
+                    needs.append(self._need_context(reasons[0], conversation, profile, incoming))
             db.execute("UPDATE web_chat_sessions SET profile_json=?,sources_json=? WHERE token_hash=?", (json.dumps(profile, ensure_ascii=False), json.dumps(sources, ensure_ascii=False), session["token_hash"]))
             if reply:
                 self._append(db, session["conversation_id"], "outbound", reply)
@@ -294,6 +303,16 @@ class WebChat:
             result = self._view(db, session, reply, actions)
             self._save_request(db, session, request_id, "message", content_hash, result)
             return result
+
+    @staticmethod
+    def _need_context(reason, conversation, profile, incoming):
+        """Lo que hace falta para armar el informe, recogido dentro de la transacción."""
+        return {
+            "reason": reason, "route": "chat",
+            "conversation_id": conversation["id"], "lead_id": conversation["lead_id"],
+            "profile": dict(profile), "question": incoming,
+            "asked_next_step": bool(profile.get("asked_next_step")),
+        }
 
     @staticmethod
     def _qualify(profile, value, decision: IntentDecision | None = None):
