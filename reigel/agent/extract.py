@@ -128,7 +128,10 @@ PATTERNS = (
     ("objecion", r"\bme (?:quedo|dejaron) mal\b|\bmala experiencia\b|\bme (?:estafaron|enganaron)\b"
                  r"|\bno me (?:fio|confio)\b|\bya me fallaron\b",
      "Desconfía por una experiencia anterior.", "pattern", 0.6),
-    ("objecion", r"\bno vale la pena\b|\bno (?:se|estoy seguro) si (?:sirve|funciona|conviene)\b"
+    # «no creo que valga la pena» es más común que «no vale la pena», y el subjuntivo
+    # dejaba la objeción sin detectar.
+    ("objecion", r"\bno\b.{0,18}\b(?:vale|valga)\b.{0,6}\bla pena\b"
+                 r"|\bno (?:se|estoy seguro|creo) (?:que )?si? ?(?:sirve|funciona|conviene|convenga)\b"
                  r"|\bde verdad (?:ahorra|funciona)\b",
      "Duda de que el sistema le convenga.", "pattern", 0.5),
 )

@@ -427,15 +427,19 @@ class KnowledgeBase:
             return "net_metering_puerto_rico"
         if "luma" in clean and re.search(r"\b(?:factura|recibo|cargo|tarifa|kwh|medidor)\b", clean):
             return "luma_billing"
-        if re.search(r"\b(?:dimension\w*|tamano del sistema|cuantos paneles|cuanta produccion|"
+        # «tamaño de sistema» sin artículo y «cuántos años duran» en plural: así se
+        # pregunta de verdad, y así se quedaban los dos temas sin reconocer.
+        if re.search(r"\b(?:dimension\w*|tamano (?:de|del) sistema|cuantos paneles|cuanta produccion|"
                      r"cuantos kwh|produccion mensual|produccion anual)\b", clean):
             return "preliminary_sizing"
-        if re.search(r"\b(?:vida util|cuanto dura|duracion de|anos dura|degradacion)\b", clean):
+        if re.search(r"\b(?:vida util|cuanto dura\w*|duracion de|anos dura\w*|degradacion)\b", clean):
             return "component_lifespan"
         if re.search(r"\b(?:mantenimiento|limpieza de paneles|mantenimiento preventivo)\b", clean):
             return "maintenance"
         if re.search(r"\b(?:seguridad electrica|riesgo electrico|instalar.*(?:cable|inversor|panel)|"
-                     r"trabajar con electricidad)\b", clean):
+                     r"trabajar con electricidad)\b|"
+                     # «¿es peligroso tener placas?» es la forma llana de la misma duda.
+                     r"\bpeligro\w*\b.{0,30}\b(?:placa|panel|techo|electric\w*|sistema)\b", clean):
             return "electrical_safety"
         if re.search(r"\b(?:eficiencia|rendimiento del sistema|perdidas del sistema)\b", clean):
             return "efficiency"
@@ -449,7 +453,10 @@ class KnowledgeBase:
             return "inverter"
         if re.search(r"\b(?:kw\s*(?:y|vs\.?|versus)\s*kwh|kwh\s*(?:y|vs\.?|versus)\s*kw|"
                      r"diferencia.*\bkw\b|\bkw\b.*\bkwh\b|\bkwh\b.*\bkw\b|"
-                     r"(?:que es|significa)\s*(?:un\s*)?kwh)\b", clean):
+                     r"(?:que es|significa)\s*(?:un\s*)?kwh)\b|"
+                     # Escrito con letras, que es como lo dice quien no sabe la sigla.
+                     r"\bkilovatio\w*\b.{0,24}\bkilovatio\w*\b|"
+                     r"\bdiferencia\b.{0,24}\bkilovatio\w*\b", clean):
             return "power_energy"
         if re.search(r"\b(?:bateria|baterias|almacenamiento)\b", clean) and re.search(
             r"\b(?:panel|placa|produccion|generacion|diferencia|compar\w*)\b", clean
@@ -458,7 +465,9 @@ class KnowledgeBase:
         if re.search(r"\b(?:bateria|baterias|almacenamiento)\b", clean):
             return "generation_storage"
         if re.search(r"\b(?:consumo electrico|consumo residencial|consumo de energia|"
-                     r"medidor electrico|kwh consumidos)\b", clean):
+                     r"medidor electrico|kwh consumidos)\b|"
+                     # «¿cuánto consume una casa?» es la jerga de nadie, y es la pregunta.
+                     r"\b(?:cuanto|que)\s+consume\b.{0,24}\b(?:casa|hogar|vivienda|familia)\b", clean):
             return "residential_consumption"
         if re.search(r"\b(?:produccion solar|produccion fotovoltaica|generacion fotovoltaica|cuanto produce|"
                      r"cuanta energia produce|produccion de los paneles)\b", clean):
@@ -468,7 +477,11 @@ class KnowledgeBase:
         if re.search(r"\b(?:paneles solares|placas solares|sistema fotovoltaico|"
                      r"energia fotovoltaica|produccion fotovoltaica|como funcionan los paneles|"
                      r"como funcionan las placas|como funciona la energia solar)\b", clean) or re.search(
-            r"\b(?:panel(?:es)?|placas?)\b.*\b(?:generan|producen|corriente)\b", clean
+            # Preguntar cómo se convierte el sol en electricidad es preguntar lo mismo
+            # sin nombrar el equipo.
+            r"\b(?:panel(?:es)?|placas?)\b.*\b(?:generan|producen|corriente)\b|"
+            r"\bconvierte\w*\b.{0,30}\b(?:sol|luz solar|luz del sol)\b|"
+            r"\b(?:sol|luz del sol)\b.{0,30}\ben electricidad\b", clean
         ):
             return "pv_operation"
         return None

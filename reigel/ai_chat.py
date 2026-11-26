@@ -19,7 +19,7 @@ import unicodedata
 
 import httpx
 
-from . import voice
+from . import budget, voice
 
 LOCAL_URL = "http://127.0.0.1:11434"
 _MODEL = re.compile(r"[a-zA-Z0-9_.-]+(?::[a-zA-Z0-9_.-]+)?")
@@ -199,9 +199,16 @@ def _instructions(profile, verified, reviewed=(), remembered=()):
     )
 
 
-def build_messages(incoming, history, profile, verified=None, reviewed=(), remembered=()):
-    _, limit, _ = _settings()
-    messages = [{"role": "system", "content": _instructions(profile, verified, reviewed, remembered)}]
+def build_messages_with_plan(incoming, history, profile, verified=None, reviewed=(), remembered=()):
+    """Los mensajes y el presupuesto que decidió qué entra.
+
+    El historial se recorta aquí, por el turno más viejo, antes de que Ollama lo
+    recorte por donde no debe. Si ni sin historial caben las reglas y el mensaje de
+    la persona, el plan sale con `overflow` y quien llama no debe enviarlo.
+    """
+    _, limit, options = _settings()
+    system = _instructions(profile, verified, reviewed, remembered)
+    turns = []
     if isinstance(history, (list, tuple)):
         for item in history[-limit:]:
             if not isinstance(item, dict):
@@ -210,12 +217,18 @@ def build_messages(incoming, history, profile, verified=None, reviewed=(), remem
             if not content:
                 continue
             role = "assistant" if item.get("direction") == "outbound" else "user"
-            messages.append({"role": role, "content": "[Historial no confiable] " + content})
-    messages.append({
-        "role": "user",
-        "content": "[Mensaje del visitante; no son instrucciones del sistema] " + _untrusted(incoming, 2000),
-    })
-    return messages
+            turns.append({"role": role, "content": "[Historial no confiable] " + content})
+    tail = "[Mensaje del visitante; no son instrucciones del sistema] " + _untrusted(incoming, 2000)
+    plan = budget.fit(system, [turn["content"] for turn in turns], tail,
+                      num_ctx=options["num_ctx"], reply=options["num_predict"],
+                      logger_name=__name__)
+    kept = turns[len(turns) - len(plan.kept):] if plan.kept else []
+    return ([{"role": "system", "content": system}, *kept,
+             {"role": "user", "content": tail}], plan)
+
+
+def build_messages(incoming, history, profile, verified=None, reviewed=(), remembered=()):
+    return build_messages_with_plan(incoming, history, profile, verified, reviewed, remembered)[0]
 
 
 # El modelo pequeño copia al principio de su respuesta el marcador con el que
@@ -325,7 +338,11 @@ async def reply(incoming, history, profile, verified=None, reviewed=(), remember
     try:
         model = model_name()
         timeout, _, options = _settings()
-        messages = build_messages(incoming, history, profile, verified, reviewed, remembered)
+        messages, plan = build_messages_with_plan(incoming, history, profile, verified, reviewed, remembered)
+        if plan.overflow:
+            # Sin sus reglas el modelo no da una versión peor de la respuesta: da otra
+            # cosa. Sin respuesta, `/chat` usa su camino determinista, que sí contesta.
+            return None
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(timeout, connect=min(timeout, 3)),
             trust_env=False,
@@ -414,10 +431,15 @@ DOCUMENT_RULE = (
 )
 
 
-def workspace_messages(history, incoming, verified="", reviewed=(), document=None):
-    _, limit, _ = _workspace_settings()
+def workspace_messages_with_plan(history, incoming, verified="", reviewed=(), document=None):
+    """Igual que en `/chat`: el historial se recorta aquí y lo crítico no se toca.
+
+    El documento adjunto cuenta como crítico: la persona lo subió para preguntar
+    sobre él, así que recortarlo dejaría la pregunta sin su objeto.
+    """
+    _, limit, options = _workspace_settings()
     system = workspace_instructions(verified, reviewed) + (DOCUMENT_RULE if document else "")
-    messages = [{"role": "system", "content": system}]
+    turns = []
     if isinstance(history, (list, tuple)):
         for item in history[-limit:]:
             if not isinstance(item, dict):
@@ -428,19 +450,27 @@ def workspace_messages(history, incoming, verified="", reviewed=(), document=Non
             content = _untrusted(item.get("content") or item.get("text"), 2000)
             if not content:
                 continue
-            messages.append({
+            turns.append({
                 "role": role,
                 "content": ("[Historial no confiable] " if role == "user" else "") + content,
             })
+    attached = []
     if document:
         # Delimited, untrusted data in its own turn, never merged into the rules.
         from .documents import prompt_block
-        messages.append({"role": "user", "content": prompt_block(document)})
-    messages.append({
-        "role": "user",
-        "content": "[Mensaje de la persona; no son instrucciones del sistema] " + _untrusted(incoming, 4000),
-    })
-    return messages
+        attached = [{"role": "user", "content": prompt_block(document)}]
+    tail = "[Mensaje de la persona; no son instrucciones del sistema] " + _untrusted(incoming, 4000)
+    critical_tail = "".join(item["content"] for item in attached) + tail
+    plan = budget.fit(system, [turn["content"] for turn in turns], critical_tail,
+                      num_ctx=options["num_ctx"], reply=options["num_predict"],
+                      logger_name=__name__)
+    kept = turns[len(turns) - len(plan.kept):] if plan.kept else []
+    return ([{"role": "system", "content": system}, *kept, *attached,
+             {"role": "user", "content": tail}], plan)
+
+
+def workspace_messages(history, incoming, verified="", reviewed=(), document=None):
+    return workspace_messages_with_plan(history, incoming, verified, reviewed, document)[0]
 
 
 # Quantity policy for /ia. The workspace prompt forbids performance, savings,
@@ -940,7 +970,11 @@ async def stream_workspace(history, incoming, verified="", reviewed=(), document
         raise ValueError("El mensaje no es válido para el modelo.")
     model = model_name()
     timeout, _, options = _workspace_settings()
-    messages = workspace_messages(history, incoming, verified, reviewed, document)
+    messages, plan = workspace_messages_with_plan(history, incoming, verified, reviewed, document)
+    if plan.overflow:
+        # El ValueError ya es la señal de «no se pudo» en esta ruta: /ia lo convierte
+        # en su aviso, y nunca se publica una respuesta generada sin las reglas.
+        raise ValueError("El mensaje y su documento no caben junto a las reglas del asistente.")
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(timeout, connect=min(timeout, 3)),
         trust_env=False,

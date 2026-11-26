@@ -103,12 +103,19 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1050 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1147 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
 Una ejecución de Python deja un aviso de obsolescencia de `starlette.testclient`
 originado en FastAPI, no en este código.
+
+`budget.py` decide qué entra en el prompt antes de enviarlo: lo crítico —las reglas y
+el mensaje de la persona— nunca se recorta, el historial se suelta por el turno más
+viejo y queda en el registro, y si ni así cabe la ruta se niega en vez de mandar un
+prompt sin reglas. `evaluacion/casos_ia.json` es la batería de 119 casos en dos
+particiones; lo determinista corre en `tests/test_eval_battery.py` y lo que necesita el
+modelo, en `scripts/evaluar_ia.py`. No afinar nunca contra la partición `final`: se gasta.
 
 El prompt tiene que caber en la ventana del modelo. Cuando no cabe, Ollama no avisa:
 recorta y responde igual, con la mitad de sus instrucciones. Así estuvieron los

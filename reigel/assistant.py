@@ -13,7 +13,7 @@ import os
 import re
 import httpx
 
-from . import voice
+from . import budget, voice
 
 LOCAL_URL = 'http://127.0.0.1:11434'
 _EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
@@ -159,9 +159,20 @@ async def draft(prompt, business, history=None, remembered=()):
             info = metadata.json()
             if not isinstance(info, dict) or info.get('remote_host') or info.get('remote_model'):
                 raise ValueError('Los modelos remotos están bloqueados.')
-            messages = [{'role': 'system', 'content': _instructions(business, remembered)}]
-            messages.extend(_history_messages(history))
-            messages.append({'role': 'user', 'content': prompt.strip()})
+            system = _instructions(business, remembered)
+            turns = _history_messages(history)
+            tail = prompt.strip()
+            # Esta es la ruta donde el recorte silencioso hacía más daño: su mensaje
+            # de sistema, él solo, no cabía en la ventana que tenía.
+            plan = budget.fit(system, [turn['content'] for turn in turns], tail,
+                              num_ctx=options['num_ctx'], reply=options['num_predict'],
+                              logger_name=__name__)
+            if plan.overflow:
+                raise ValueError('La solicitud no cabe junto a las reglas del asistente; '
+                                 'acórtala o amplía REIGEL_LOCAL_NUM_CTX.')
+            kept = turns[len(turns) - len(plan.kept):] if plan.kept else []
+            messages = [{'role': 'system', 'content': system}, *kept,
+                        {'role': 'user', 'content': tail}]
             response = await client.post(LOCAL_URL + '/api/chat', json={
                 'model': model, 'messages': messages, 'stream': False,
                 'options': options, 'keep_alive': '5m'})

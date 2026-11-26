@@ -93,17 +93,22 @@ def refuses_calls(message) -> bool:
     value = normalize(str(message or "")).strip()
     return bool(_CALL_OPT_OUT.search(value) and not _OPT_OUT.search(value))
 
+# «mi información» en singular y «corrijan» con jota son la forma normal de decirlo, y
+# los tres patrones las dejaban fuera: una solicitud de privacidad sin registrar es un
+# incumplimiento, así que estos reconocen de más antes que de menos. Reconocer no
+# ejecuta nada: `privacy.py` las deja pendientes de revisión humana y no borra registros.
+_MIS_DATOS = r"\b(?:mis|mi)\s+(?:datos|registros|informacion)\b"
 _PRIVACY_DELETION = re.compile(
-    r"\b(?:elimin\w*|borr\w*|suprim\w*)\b.{0,45}\bmis (?:datos|registros|informacion)\b|"
+    r"\b(?:elimin\w*|borr\w*|suprim\w*)\b.{0,45}" + _MIS_DATOS + r"|"
     r"\b(?:eliminacion|borrado|supresion) de mis datos\b"
 )
 _PRIVACY_ACCESS = re.compile(
-    r"\b(?:acced\w*|acceso|consult\w*|copi\w*|export\w*|ver)\b.{0,45}\bmis datos\b|"
+    r"\b(?:acced\w*|acceso|consult\w*|copi\w*|export\w*|ver)\b.{0,45}" + _MIS_DATOS + r"|"
     r"\bque (?:datos|informacion) (?:tienen|guardan|conservan) (?:sobre|de) mi\b"
 )
 _PRIVACY_CORRECTION = re.compile(
-    r"\b(?:correg\w*|corrig\w*|rectific\w*|actualiz\w*)\b.{0,45}\bmis (?:datos|registros|informacion)\b|"
-    r"\b(?:correg\w*|corrig\w*|rectific\w*)\b.{0,30}\bmi (?:nombre|telefono|correo)\b"
+    r"\b(?:corre[gj]\w*|corri[gj]\w*|rectific\w*|actualiz\w*)\b.{0,45}" + _MIS_DATOS + r"|"
+    r"\b(?:corre[gj]\w*|corri[gj]\w*|rectific\w*)\b.{0,30}\bmi (?:nombre|telefono|correo)\b"
 )
 
 
@@ -148,6 +153,10 @@ def classify_message(
     if re.search(
         r"\b(?:ignora|ignorar|instrucciones|system prompt|prompt|sql|"
         r"contrasena|cuenta bancaria|datos de otro cliente|"
+        # «Olvida las reglas anteriores» es de las formas más comunes de intentarlo,
+        # y sin esto el mensaje seguía su curso como una consulta comercial normal.
+        r"olvida\w*\s+(?:todo\s+)?(?:lo\s+anterior|las\s+reglas|tus\s+reglas|"
+        r"las\s+instrucciones|tus\s+instrucciones)|"
         r"(?:datos|numero|cvv|codigo)\s+"
         r"(?:de\s+)?(?:mi\s+|la\s+)?tarjeta)\b",
         value,

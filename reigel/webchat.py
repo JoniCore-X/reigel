@@ -179,12 +179,25 @@ class WebChat:
             rows = db.execute("""SELECT direction,text FROM messages WHERE conversation_id=?
                 AND (direction='inbound' OR (direction='outbound' AND status='sent'))
                 ORDER BY created_at DESC,rowid DESC LIMIT 12""", (session["conversation_id"],)).fetchall()
+            # Dos bases distintas, y hasta hoy el modelo solo veía una. `answer` trae
+            # lo del sitio corporativo; `answer_technical`, los temas generales con
+            # fuente oficial citada y vigente, que es de donde sale casi todo lo que
+            # un visitante pregunta. Sin esto, el modelo redactaba a ciegas y el
+            # validador le rechazaba cualquier explicación técnica, con razón.
+            # Solo entra lo que está «verified»: «insufficient» es precisamente el
+            # aviso de que no hay fuente, y pasarlo como tal sería mentir.
             verified = self.knowledge.answer(clean)
+            technical = self.knowledge.answer_technical(clean)
+            sources = [part for part in (
+                verified.get("text", "") if isinstance(verified, dict) else "",
+                technical.get("text", "") if isinstance(technical, dict)
+                and technical.get("status") == "verified" else "",
+            ) if part]
             return {
                 "incoming": clean,
                 "history": [dict(row) for row in reversed(rows)],
                 "profile": profile,
-                "verified": verified.get("text", "") if isinstance(verified, dict) else "",
+                "verified": " ".join(sources),
                 "fingerprint": self._ai_fingerprint(db, session),
                 # Sin prospecto vinculado no hay memoria que consultar: una visita
                 # anónima no arrastra lo que el equipo sabe de otra persona.
