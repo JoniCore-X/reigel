@@ -59,8 +59,16 @@ Usar el entorno virtual existente:
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 Get-ChildItem frontend/js -Filter *.js | ForEach-Object { node --check $_.FullName }
-node --test tests/frontend_operations.test.cjs tests/frontend_ia.test.cjs
+node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
+
+Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
+noviembre de 2026, en `main` (`ba8c80b`): 876 pruebas de Python, 20 archivos
+JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
+(`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
+Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
+Una ejecución de Python deja un aviso de obsolescencia de `starlette.testclient`
+originado en FastAPI, no en este código.
 
 Para una demostración con cuentas ficticias y una base temporal nueva:
 
