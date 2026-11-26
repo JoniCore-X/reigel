@@ -334,6 +334,12 @@
 .corporate-body .team-profile-head { display: flex; align-items: center; gap: 22px; }
 .corporate-body .team-monogram { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: 88px; height: 88px; border-radius: 50%; background: var(--corp-navy); color: #fff; font-size: 27px; font-weight: 650; letter-spacing: .04em; }
 .corporate-body .team-monogram::after { content: ""; position: absolute; inset: -7px; border: 1px solid #c9d7ea; border-top-color: var(--corp-orange); border-radius: 50%; transform: rotate(-24deg); }
+/* La foto va encima del monograma, no en su lugar: si el archivo falta o no carga,
+   el círculo sigue mostrando «JM» en vez de quedarse vacío. El nombre completo está
+   en el titular de al lado, así que la imagen es decorativa y no lleva texto alternativo. */
+/* El recorte de la cara está hecho en el archivo, no aquí: `cover` solo protege el
+   día que alguien reemplace la foto por una que no sea cuadrada. */
+.corporate-body .team-portrait { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .corporate-body .team-profile-id { min-width: 0; }
 .corporate-body .team-profile-copy h2 { margin-bottom: 8px; font-size: clamp(26px, 2.4vw, 33px); }
 .corporate-body .team-role { margin: 0; color: var(--corp-navy); font-size: 18px; font-weight: 650; line-height: 1.5; }

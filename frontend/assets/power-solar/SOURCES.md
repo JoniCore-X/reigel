@@ -70,3 +70,26 @@ Las descripciones de «qué cubre» y «qué no significa» de cada norma se red
 IEC 61215 e IEC 61730 con fuentes públicas (UL, Intertek, Fraunhofer ISE, ANSI y
 NREL/EPRI). Las normas CSA se transcriben porque están en el documento, y la página dice
 expresamente que son requisitos canadienses.
+
+## Retrato del consultor (`joniel-martinez.jpg`)
+
+Foto del titular, Joniel L. Martínez Rosario, aportada por él mismo el 2026-11-26 para
+el círculo de perfil de `/equipo`. Aparece con la camisa de Power Solar. Es su propia
+imagen y la entregó para este uso, así que el permiso consta en la conversación.
+
+Original de 1254 × 1254, de cuerpo visible. Recortada a la cara y los hombros
+(`crop=980:980:137:20`) y reducida a 176 × 176 con ffmpeg (`lanczos`, calidad 2): 13,1 KB.
+Sin ese recorte la foto entera se veía a 88 px y la cara quedaba diminuta, porque una
+imagen cuadrada dentro de un círculo cuadrado no recorta nada. El primer intento
+(`crop=780`) cortaba la coronilla; este deja margen alrededor de la cabeza para que el
+círculo no la muerda.
+
+176 px es el doble del círculo de 88 y 2,5 veces el de 70 en móvil, suficiente en
+pantallas densas. Se mantiene en JPEG porque la compilación de ffmpeg disponible no trae
+WebP, y para una foto de este tamaño la diferencia son unos 10 KB; no se añadió una
+dependencia nueva por eso.
+
+La foto se monta **encima** del monograma, no en su lugar: si el archivo falta o no
+carga, el círculo sigue mostrando «JM». Es decorativa (`alt=""`), porque el nombre
+completo está en el titular contiguo y repetirlo haría que un lector de pantalla lo
+dijera dos veces.
