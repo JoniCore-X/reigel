@@ -20,6 +20,11 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
     separado del buzón comercial.
   Los validadores son de patrones (sin cifras, precios, promesas ni contactos),
   no una revisión semántica.
+- `agent/`: motor comercial autónomo. `planner.py` decide por registro (función pura,
+  determinista, sin base ni modelo); `runtime.py` ejecuta el ciclo y el bucle de fondo;
+  `policy.py` fija la autorización de cada acción. Arranca apagado, solo crea tareas y
+  avisos internos, y rechaza toda acción marcada como saliente: no envía mensajes, no
+  marca llamadas y no cambia la etapa de un registro.
 - `knowledge.py`: evidencia con fuentes y vencimiento; un fallo no renueva su vigencia.
 - `energy.py`: aritmética con parámetros explícitos, sin tarifas ni ahorros inventados.
 - `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.

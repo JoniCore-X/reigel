@@ -1,0 +1,53 @@
+"""Tablas del motor. Migración aditiva e idempotente, como el resto del esquema.
+
+Las decisiones se guardan con su clave de idempotencia: el motor puede volver a
+pasar por el mismo registro las veces que haga falta sin duplicar trabajo.
+"""
+from __future__ import annotations
+
+from . import policy
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS agent_policies (
+ action TEXT PRIMARY KEY,mode TEXT NOT NULL,max_per_day INTEGER NOT NULL DEFAULT 0,
+ updated_at TEXT NOT NULL,updated_by TEXT REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS agent_runtime (
+ key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS agent_cycles (
+ id TEXT PRIMARY KEY,trigger TEXT NOT NULL,started_at TEXT NOT NULL,finished_at TEXT,
+ leads_seen INTEGER NOT NULL DEFAULT 0,decided INTEGER NOT NULL DEFAULT 0,
+ executed INTEGER NOT NULL DEFAULT 0,held INTEGER NOT NULL DEFAULT 0,
+ skipped INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS agent_decisions (
+ id TEXT PRIMARY KEY,cycle_id TEXT NOT NULL REFERENCES agent_cycles(id),
+ lead_id TEXT NOT NULL REFERENCES leads(id),advisor_id TEXT REFERENCES users(id),
+ action TEXT NOT NULL,reason TEXT NOT NULL,priority REAL NOT NULL DEFAULT 0,
+ mode TEXT NOT NULL,status TEXT NOT NULL,effect TEXT NOT NULL DEFAULT '',
+ entity_id TEXT,due_at TEXT,idempotency_key TEXT NOT NULL UNIQUE,
+ decided_at TEXT NOT NULL,resolved_at TEXT
+);
+CREATE INDEX IF NOT EXISTS agent_decisions_lead ON agent_decisions(lead_id,decided_at DESC);
+CREATE INDEX IF NOT EXISTS agent_decisions_status ON agent_decisions(status,priority DESC);
+CREATE INDEX IF NOT EXISTS agent_cycles_time ON agent_cycles(started_at DESC);
+"""
+
+VERSION = "team_caguas_agent_v1"
+
+
+def migrate_agent(db) -> None:
+    """Crea las tablas y siembra la política por defecto, sin encender el motor."""
+    from ..core import stamp
+
+    db.executescript(SCHEMA)
+    db.execute("CREATE TABLE IF NOT EXISTS schema_migrations(version TEXT PRIMARY KEY,applied_at TEXT NOT NULL)")
+    for action, mode in policy.defaults().items():
+        db.execute(
+            "INSERT OR IGNORE INTO agent_policies(action,mode,max_per_day,updated_at,updated_by) VALUES(?,?,0,?,NULL)",
+            (action, mode, stamp()),
+        )
+    # Apagado por defecto. Encenderlo es una decisión explícita de administración.
+    db.execute("INSERT OR IGNORE INTO agent_runtime(key,value,updated_at) VALUES('enabled','0',?)", (stamp(),))
+    db.execute("INSERT OR IGNORE INTO schema_migrations VALUES(?,?)", (VERSION, stamp()))

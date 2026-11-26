@@ -119,13 +119,18 @@ def create_app(db_path=None, *, load_env=None):
                 await asyncio.sleep(21600)
         # Tests and temporary previews have isolated databases and no implicit network.
         task = asyncio.create_task(update_knowledge()) if db_path is None else None
+        # El motor comercial solo corre en la instalación real, y únicamente actúa
+        # si administración lo encendió: el interruptor vive en la base de datos.
+        from .agent.runtime import loop as agent_loop
+        agent = asyncio.create_task(agent_loop(application.state.store)) if db_path is None else None
         try:
             yield
         finally:
-            if task:
-                task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
+            for pending in (task, agent):
+                if pending:
+                    pending.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await pending
 
     app = FastAPI(title="Power Solar · R.E.I.G.E.L.", version="1.1.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store = Store(db_path)
@@ -991,6 +996,8 @@ def create_app(db_path=None, *, load_env=None):
     register_privacy_routes(app, actor, payload)
     from .advisor_tools import register_routes as register_advisor_tools
     register_advisor_tools(app, actor, payload)
+    from .agent.api import register_routes as register_agent_routes
+    register_agent_routes(app, actor, payload)
     from . import seo
     seo.register_routes(app)
 

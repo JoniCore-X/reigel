@@ -271,6 +271,8 @@ class Store(OperationsMixin, TeamAccessMixin):
             from .identity import migrate_identity
             migrate_identity(db)
             team_access.migrate_team_access(db)
+            from .agent.schema import migrate_agent
+            migrate_agent(db)
             defaults = {
                 "name": "Power Solar", "timezone": "America/Puerto_Rico", "market": "Puerto Rico",
                 "privacy_contact": "", "site_url": "",

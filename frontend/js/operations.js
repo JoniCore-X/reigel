@@ -320,6 +320,126 @@ async function leadBrief(id) {
     $('#dialog-content').innerHTML=`<p class="hint orange">Preparación interna basada en registros autorizados. Requiere revisión humana; no es una evaluación técnica certificada.</p><section class="result-section"><h3>Datos conocidos</h3><dl class="brief-known">${(data.known||[]).map(item=>`<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl></section>${informationList('Información sin verificar',data.unverified)}${informationList('Preguntas pendientes',data.questions)}${informationList('Temas para explicar',data.topics)}${informationList('Próximas acciones sugeridas',data.next_actions)}<div class="form-actions">${actionButton('lead-detail','Volver a la ficha',`data-id="${esc(id)}"`,'small')}</div>`;
   } catch(error) {if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
 }
+const agentModes={auto:'Automático',approval:'Requiere aprobación',draft:'Borrador'};
+const agentStatus={executed:'Hecho',planned:'En espera de una persona'};
+// Este panel se construye con nodos y textContent, no con plantillas de HTML:
+// muestra nombres escritos por un visitante y así no depende del escapado.
+function node(tag,options={},children=[]) {
+  const element=document.createElement(tag);
+  if(options.class)element.className=options.class;
+  if(options.text!==undefined)element.textContent=options.text;
+  for(const [name,value] of Object.entries(options.attrs || {}))element.setAttribute(name,value);
+  for(const child of children)if(child)element.append(child);
+  return element;
+}
+function agentBadge(tone,label) {return node('span',{class:`badge ${tone}`,text:label});}
+function agentCount(value,singular,plural) {const total=Number(value);return `${total} ${total===1?singular:plural}`;}
+function agentCycleLine(cycle) {
+  if(!cycle)return 'El motor todavía no ha completado una vuelta.';
+  return `Última vuelta ${dateTime(cycle.started_at)}: ${agentCount(cycle.leads_seen,'registro revisado','registros revisados')}`
+    +`, ${agentCount(cycle.decided,'decisión','decisiones')} (${Number(cycle.executed)} aplicadas, ${Number(cycle.held)} en espera).`;
+}
+function agentTitle(actions,name) {return (actions[name] && actions[name].title) || name;}
+function agentDecisionList(decisions,actions) {
+  if(!decisions.length)return node('p',{class:'field-help',text:'Ninguna decisión registrada todavía.'});
+  return node('ul',{class:'agent-decisions'},decisions.slice(0,12).map(item=>node('li',{},[
+    node('div',{},[node('strong',{text:agentTitle(actions,item.action)}),
+                   node('p',{text:`${item.lead_name} · ${item.reason}`})]),
+    agentBadge(item.status==='executed'?'green':'orange',agentStatus[item.status] || item.status),
+  ])));
+}
+function agentPolicyRow(name,spec,mode,admin) {
+  const effect=spec.effect==='task'?'Crea una tarea para el asesor':'Avisa a quien corresponde';
+  let control;
+  if(admin) {
+    control=node('select',{attrs:{'data-agent-action':name,'aria-label':`Autorización de ${spec.title}`}},
+      Object.entries(agentModes).map(([value,label])=>{
+        const option=node('option',{text:label});option.value=value;option.selected=mode===value;return option;}));
+  } else {
+    control=node('span',{text:agentModes[mode] || mode});
+  }
+  return node('tr',{},[node('th',{attrs:{scope:'row'},text:spec.title}),node('td',{text:effect}),node('td',{},[control])]);
+}
+function agentPolicyTable(actions,modes,admin) {
+  return node('table',{class:'agent-policy'},[
+    node('caption',{text:'Qué puede hacer cada decisión y quién la autoriza'}),
+    node('thead',{},[node('tr',{},['Decisión','Efecto','Autorización'].map(
+      label=>node('th',{attrs:{scope:'col'},text:label})))]),
+    node('tbody',{},Object.entries(actions).map(([name,spec])=>agentPolicyRow(name,spec,modes[name],admin))),
+  ]);
+}
+function agentPlanView(plan,actions) {
+  const rows=plan.decisions || [];
+  return node('section',{class:'result-section'},[
+    node('h3',{text:`Plan para ${agentCount(plan.leads_seen,'registro abierto','registros abiertos')}`}),
+    node('p',{class:'field-help',text:'Esta vista no escribe nada: es lo que el motor decidiría ahora.'}),
+    rows.length?node('ol',{class:'agent-plan'},rows.map(row=>node('li',{},[
+      node('strong',{text:agentTitle(actions,row.action)}),
+      node('span',{text:` · ${row.lead_name}`}),
+      node('small',{text:`${row.reason} · ${agentModes[row.mode] || row.mode}`}),
+    ]))):node('p',{class:'field-help',text:'No hay nada pendiente en la cartera.'}),
+  ]);
+}
+async function appendAgentPanel() {
+  const parent=$('#view-content');
+  try {
+    const [engine,registered]=await Promise.all([api('/api/agent'),api('/api/agent/decisions')]);
+    if(state.view!=='automation'||!state.user)return;
+    const admin=state.user.role==='admin',actions=engine.actions || {},modes=engine.modes || {};
+    const cycleLine=node('p',{class:'status-inline',text:agentCycleLine((engine.cycles || [])[0])});
+    const error=node('p',{class:'form-error',attrs:{role:'alert'}});
+    const planResult=node('div',{attrs:{'aria-live':'polite'}});
+    const switchButton=node('button',{class:`button ${engine.enabled?'':'primary'} small`,
+      attrs:{type:'button'},text:engine.enabled?'Apagar el motor':'Encender el motor'});
+    const planButton=node('button',{class:'button small',attrs:{type:'button'},text:'Ver el plan sin aplicarlo'});
+    const runButton=node('button',{class:'button small',attrs:{type:'button'},text:'Ejecutar una vuelta ahora'});
+    runButton.disabled=!engine.enabled;
+    const section=node('section',{class:'panel agent-panel'},[
+      node('header',{class:'panel-head'},[
+        node('div',{},[node('p',{class:'section-kicker',text:'MOTOR AUTÓNOMO / CARTERA'}),
+                       node('h2',{text:'Trabajo que abre por su cuenta'})]),
+        agentBadge(engine.enabled?'green':'orange',engine.enabled?'Encendido':'Apagado'),
+      ]),
+      node('div',{class:'panel-body'},[
+        cycleLine,
+        admin?node('div',{class:'form-actions agent-controls'},[switchButton,planButton,runButton]):null,
+        error,
+        agentPolicyTable(actions,modes,admin),
+        planResult,
+        node('h3',{class:'agent-subhead',text:'Últimas decisiones'}),
+        agentDecisionList(registered.decisions || [],actions),
+        node('p',{class:'hint',text:`${engine.notice || ''} Cada decisión queda registrada con su motivo y no se repite el mismo día.`}),
+      ]),
+    ]);
+    parent.append(section);
+    if(!admin)return;
+    const fail=problem=>{error.textContent=problem.message;};
+    const reload=async()=>{if(state.view==='automation'&&section.parentNode){section.remove();await appendAgentPanel();}};
+    switchButton.addEventListener('click',async()=>{
+      try {await post('/api/agent/state',{enabled:!engine.enabled});await reload();} catch(problem) {fail(problem);}});
+    runButton.addEventListener('click',async()=>{
+      runButton.disabled=true;
+      try {
+        const result=await post('/api/agent/tick',{});error.textContent='';
+        if(result.status==='disabled')cycleLine.textContent='El motor está apagado: la vuelta no hizo nada.';
+        else await reload();
+      } catch(problem) {fail(problem);runButton.disabled=false;}});
+    planButton.addEventListener('click',async()=>{
+      try {
+        const plan=await api('/api/agent/preview');
+        if(state.view!=='automation')return;
+        planResult.replaceChildren(agentPlanView(plan,actions));
+      } catch(problem) {fail(problem);}});
+    for(const select of section.querySelectorAll('[data-agent-action]')) {
+      select.addEventListener('change',async()=>{
+        try {await post('/api/agent/policy',{action:select.dataset.agentAction,mode:select.value});error.textContent='';}
+        catch(problem) {fail(problem);await reload();}});
+    }
+  } catch(problem) {
+    if(state.view==='automation')parent.append(node('p',{class:'field-help',
+      text:`Motor autónomo no disponible: ${problem.message}`}));
+  }
+}
 async function appendTrainer() {
   const parent=$('#view-content');
   try {

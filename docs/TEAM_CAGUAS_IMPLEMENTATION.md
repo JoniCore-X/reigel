@@ -2419,3 +2419,113 @@ Sin cambios en autenticación, permisos, rutas, identificadores ni clases. Sin d
 - `node --check` de `frontend/js/*.js`: sin errores. Pruebas escalonadas, no la suite completa: nueve archivos de `tests/` relacionados con el acceso y los cuatro `tests/*.test.cjs` (resultados en el informe de la tarea).
 - Demo sintética 8878 (reiniciada), navegador integrado a 1280×800, tema oscuro, con teclado: Tab → Enter en el enlace de salto enfoca `#login-email` en la entrada y `#main` dentro; el diálogo «Código de recuperación» abre en «Motivo», escribir y Enter emite, el foco queda en el resultado y los pasos nuevos aparecen; «Añadir persona», «Disponibilidad», «Dar de baja» y «Registrar prospecto» abren en su primer campo y devuelven el foco al cerrar; `aria-invalid` aparece y desaparece en cuenta, código de `/app` y cambio de teléfono de `/app/acceso`.
 - **Sin verificar:** el parpadeo se comprobó reescribiendo el documento de `/app/acceso` con un `MutationObserver` ya instalado (ningún paso marcado → paso 3), no en una carga de navegación real; `aria-invalid` en invitación y registro de `/app` y en el formulario de código de un solo uso de `/app/acceso` (misma ruta de código, no ejercitada en el navegador); lectores de pantalla reales; tema claro (contraste calculado cambiando el atributo de tema, sin recorrerlo); anchos móviles; Safari y Firefox; las copias 8877 y 8880 (no se reiniciaron: sirven el frontend nuevo, pero el texto de recuperación sigue siendo el anterior hasta reiniciarlas); la base comercial (no se abrió). El resultado del código emitido muestra el contorno de foco alrededor de todo el bloque.
+
+## Motor comercial autónomo, fase A: decisión y bucle (26 de noviembre de 2026)
+
+El encargo del titular fue dar «vida artificial» a R.E.I.G.E.L. para que prospecte,
+venda, dé seguimiento, convenza, modifique su memoria interna a voluntad y haga
+llamadas, todo autónomo. Esta fase entrega la parte que decide y actúa sola.
+Tres piezas del encargo quedaron fuera por motivos que no son de calendario:
+
+- **Llamadas salientes con voz artificial.** La FCC declaró en febrero de 2024 que
+  una voz generada por IA es voz «artificial» bajo la TCPA: una llamada comercial
+  así a un número sin consentimiento previo expreso por escrito es ilegal, y Puerto
+  Rico se rige por la ley federal. Se construyó la preparación y el cierre, no el
+  marcado (fase siguiente).
+- **Memoria interna modificable a voluntad.** Un registro de creencias que el agente
+  pueda sobrescribir deriva: acumula afirmaciones sin fuente que alimentan las
+  siguientes y acaban en una promesa falsa a un cliente. La alternativa acordada es
+  un registro con procedencia, confianza, vencimiento y sustitución (fase siguiente),
+  que permite revisar y olvidar con historial.
+- **Prometer para convencer.** Precios, ahorro, garantías y financiación siguen
+  prohibidos (`AGENTS.md`). «Convencer» se construirá como manejo de objeciones con
+  evidencia verificada, no como presión.
+
+### Lo que hace
+
+- **`reigel/agent/planner.py`** decide por registro. Función pura y determinista: recibe
+  el registro, su contexto y el instante, y devuelve las acciones candidatas ordenadas
+  por prioridad. No lee la base, no escribe y no llama a ningún modelo, así que una
+  respuesta generativa no puede alterar la política.
+- **`reigel/agent/runtime.py`** es el bucle. `tick` revisa la cartera, decide y ejecuta;
+  `preview` muestra lo mismo sin escribir nada; `loop` corre en segundo plano y vuelve a
+  leer el interruptor en cada vuelta. Solo arranca en la instalación real
+  (`create_app()` sin ruta), nunca en pruebas ni en vistas previas temporales.
+- **`reigel/agent/policy.py`** define las diez acciones y su autorización: `auto`,
+  `approval` o `draft`. Cada acción declara `outbound`; `runtime` rechaza cualquier
+  acción saliente aunque la política la autorice (defensa en profundidad).
+- **`reigel/agent/schema.py`** añade `agent_policies`, `agent_runtime`, `agent_cycles` y
+  `agent_decisions`. Migración aditiva e idempotente, como el resto del esquema.
+- **`reigel/agent/api.py`**: `GET /api/agent` (cualquier cuenta del equipo),
+  `GET /api/agent/decisions` (un asesor ve solo sus registros) y, reservadas a
+  administración, `GET /api/agent/preview`, `POST /api/agent/state`,
+  `POST /api/agent/policy` y `POST /api/agent/tick`.
+- **Panel en `/app` → R.E.I.G.E.L.** (`appendAgentPanel` en `operations.js`): estado,
+  última vuelta, tabla de autorización editable, plan sin aplicar, últimas decisiones.
+  Se construye con nodos del DOM y `textContent`, no con plantillas de HTML, porque
+  muestra nombres escritos por un visitante.
+
+Las diez decisiones, con su prioridad base: asignar asesor (130), negociación detenida
+(120), confirmar cita próxima (110), registrar el resultado de la cita (105), primer
+contacto (100), proponer orientación (95), seguimiento vencido o sin próximo paso (90),
+preparar propuesta (85), seguimiento de propuesta (80) y revisar registro inactivo (20).
+A la base se suma el retraso acumulado y el valor que el equipo anotó en la oportunidad
+(`opportunity_value`, o `monthly_bill` si no hay importe). El motor no estima ninguna cifra.
+
+### Lo que no hace, por diseño
+
+- No envía un mensaje, no marca una llamada y no cambia la etapa de un registro.
+  Sus únicos efectos son crear una tarea para el asesor asignado y un aviso interno.
+- Arranca **apagado**. Una base nueva nunca empieza a trabajar sola; encenderlo es una
+  acción de administración que queda en la auditoría (`agent.enabled`, `agent.cycle`).
+- No repite trabajo: cada decisión lleva una clave de idempotencia por acción, registro
+  y día, y el planificador descarta una acción cuyo tipo de tarea ya está pendiente.
+- No desborda al equipo: 300 registros y 60 decisiones por vuelta, una decisión por
+  registro, ajustable en `agent_runtime` sin tocar el código.
+- Pasado un silencio de 30 días, el único candidato es «revisar registro inactivo», que
+  pide aprobación: el motor no llena la agenda con registros que nadie tocó en meses.
+
+### Verificación (local)
+
+- Suite completa de Python en verde con la fase A (la cifra final se registra en el
+  commit). Nuevas: `tests/test_agent_planner.py` (20 casos) y `tests/test_agent_runtime.py`
+  (15 casos). `node --check` de `frontend/js/*.js` sin errores.
+- **Demostración sobre base temporal nueva**, 13 registros sintéticos repartidos por el
+  embudo: con el motor apagado, cero escrituras; encendido, una vuelta revisó 12 registros
+  abiertos (el ganado queda fuera), tomó 12 decisiones y creó 9 tareas y 3 avisos; la
+  segunda vuelta inmediata tomó 0 decisiones.
+- **Vista previa sintética 8877, navegador integrado a 1280×900**, con la cuenta
+  propietaria sintética: el panel aparece en la vista R.E.I.G.E.L., `GET /api/agent` y
+  `/api/agent/decisions` responden 200, «Ver el plan sin aplicarlo» lista el plan,
+  «Encender el motor» cambia el estado y «Ejecutar una vuelta ahora» registra el ciclo.
+  Los dos 401 de consola son `/api/auth/me` antes de iniciar sesión, como siempre.
+
+### Hallazgos y límites
+
+- **Dos huecos del planificador los encontró la demostración, no las pruebas:** las etapas
+  `cita` y `propuesta_preparacion` no tenían ninguna regla, y un registro `contactado` sin
+  próximo paso programado no producía nada. Se añadió la acción «registrar el resultado de
+  la cita» y la regla del próximo paso ausente, más una prueba que recorre todas las etapas
+  de `STAGES` y exige una decisión en cada etapa abierta.
+- **Fragilidad latente en `reigel/identity.py`:** hace `from .core import now`, lo que copia
+  la función al importar, mientras `stamp()` resuelve `core.now` en cada llamada. Una prueba
+  que congela `core.now` afecta a una u otra según el orden de importación, porque `core.py`
+  importa `identity` de forma tardía. Eso hacía que un desafío de registro naciera vencido y
+  que dos de estas pruebas fallaran solo cuando su archivo no era el primero. Se corrigió en
+  las pruebas (no congelan el reloj; cada ciclo recibe su instante). **No se tocó
+  `identity.py`:** en producción ambos relojes son el real, así que es fragilidad de pruebas,
+  no un fallo del producto. Queda anotado para decidirlo aparte.
+- **Sin verificar:** el bucle de fondo (`loop`) nunca se ejecutó, porque solo arranca con
+  `create_app()` sin ruta, que es la instalación real con la base comercial; se probó `tick`,
+  que es lo que el bucle llama. Tampoco se verificó el panel en tema claro, en anchos de
+  móvil, con lectores de pantalla, en Safari ni en Firefox, ni con una cartera grande
+  (el máximo probado son 13 registros), ni la vista del asesor en el navegador (sí por HTTP
+  en las pruebas). La base comercial no se abrió.
+- **Tercer defecto, visto en pantalla:** la primera columna de la tabla de autorización
+  es `th[scope="row"]`, y `styles.css` pinta todo `th` casi blanco mientras el tema oscuro
+  pone el texto casi blanco encima: blanco sobre blanco, ilegible. Se corrigió en
+  `operations.css` devolviendo esa celda al fondo del panel (`background:none`), sin tocar
+  la regla general ni las demás tablas. Comprobado en los dos temas: en oscuro el texto
+  queda en `#e8eef8` sobre el panel; en claro, `#5d6c80` sobre blanco (≈5,4:1).
+- **Versiones:** `operations.js?v=3`, `app.js?v=12`, `operations.css?v=7` (y la prueba que
+  las fija en `tests/test_access_copy.py`).

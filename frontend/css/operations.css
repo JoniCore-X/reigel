@@ -369,3 +369,23 @@
 .allow-list strong{overflow-wrap:anywhere}
 .allow-list small{color:var(--muted)}
 .rule-box{margin-top:16px;padding-top:14px;border-top:1px solid var(--line,#dde3ec);display:grid;gap:8px;justify-items:start}
+
+/* Motor comercial autónomo. La primera columna es th[scope=row]: `styles.css` pinta
+   todo th casi blanco y en tema oscuro el texto también lo es, así que aquí se
+   devuelve al fondo del panel y se deja el color al tema. */
+.agent-panel .panel-body{display:grid;gap:15px}
+.agent-controls{justify-content:flex-start;flex-wrap:wrap;margin:0}
+.agent-policy{width:100%;border-collapse:collapse}
+.agent-policy caption{text-align:left;padding-bottom:9px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#53627b)}
+.agent-policy th,.agent-policy td{padding:10px 12px;border-bottom:1px solid var(--line,#e0e6ee);text-align:left;vertical-align:middle;font-size:13px}
+.agent-policy thead th{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.agent-policy tbody th{background:none;font-weight:650;overflow-wrap:anywhere}
+.agent-policy td:last-child{width:210px}
+.agent-policy select{width:100%;max-width:210px}
+.agent-subhead{margin:2px 0 0;font-size:13px}
+.agent-decisions{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.agent-decisions li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line,#e2e8f0);border-radius:6px;flex-wrap:wrap}
+.agent-decisions li>div{min-width:0;flex:1}
+.agent-decisions p{margin:4px 0 0;font-size:12px;color:var(--muted,#53627b);overflow-wrap:anywhere}
+.agent-plan{margin:0;padding-left:21px;display:grid;gap:9px;font-size:13px}
+.agent-plan small{display:block;margin-top:3px;font-size:11px;color:var(--muted,#53627b);overflow-wrap:anywhere}
