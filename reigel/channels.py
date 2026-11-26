@@ -273,6 +273,16 @@ def _store_event(store, event: dict) -> tuple[str, str] | None:
     return conversation_id, event_id
 
 
+def _remembered_for(store, lead_id):
+    """Memoria del agente para redactar. Si falla, el canal responde igual, sin ella."""
+    try:
+        from .agent import memory
+        return memory.for_prompt(store, lead_id)
+    except Exception:
+        logging.getLogger(__name__).warning("No se pudo leer la memoria del agente para un canal.")
+        return []
+
+
 def _record_need(store, conversation, reason, incoming_text):
     """El informe de necesidad nunca bloquea ni rompe la atención de un mensaje."""
     try:
@@ -300,7 +310,8 @@ async def _respond_locked(store, conversation_id: str, event_id: str, incoming_t
     try:
         # This route sends without human review: safety topics never reach the model.
         reply = safety.reply_for(incoming_text, safety.HANDOFF_CHAT) or await assistant.draft(
-            incoming_text, store.settings(), history=history[:-1])
+            incoming_text, store.settings(), history=history[:-1],
+            remembered=_remembered_for(store, conversation["lead_id"]))
         # Re-check handover/opt-out immediately before dispatch.
         with store.connect() as db:
             current = db.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()

@@ -242,6 +242,16 @@ def create_app(db_path=None, *, load_env=None):
         except Exception:
             logging.getLogger(__name__).warning("No se pudo registrar un hueco de aprendizaje (%s, %s).", route, reason)
 
+    def remembered_for(lead_id):
+        """La memoria del agente para redactar: solo lo vigente y usable, y nunca
+        bloquea una respuesta si falla."""
+        try:
+            from .agent import memory
+            return memory.for_prompt(app.state.store, lead_id)
+        except Exception:
+            logging.getLogger(__name__).warning("No se pudo leer la memoria del agente.")
+            return []
+
     def record_need(context):
         """El informe nunca bloquea ni rompe una respuesta al visitante."""
         try:
@@ -476,6 +486,7 @@ def create_app(db_path=None, *, load_env=None):
         if brief:
             app.state.limiter.check(request, "chat_ai", 20, 60)
             ai_reply = await ai_chat.reply(brief["incoming"], brief["history"], brief["profile"], brief["verified"],
+                                           remembered=remembered_for(brief.get("lead_id")),
                                            **reviewed(brief["incoming"], "chat"))
         gaps, pending = [], []
         result = app.state.webchat.message(

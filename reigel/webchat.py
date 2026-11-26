@@ -186,6 +186,9 @@ class WebChat:
                 "profile": profile,
                 "verified": verified.get("text", "") if isinstance(verified, dict) else "",
                 "fingerprint": self._ai_fingerprint(db, session),
+                # Sin prospecto vinculado no hay memoria que consultar: una visita
+                # anónima no arrastra lo que el equipo sabe de otra persona.
+                "lead_id": conversation["lead_id"],
             }
 
     @staticmethod

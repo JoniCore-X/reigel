@@ -319,7 +319,25 @@ async function leadBrief(id) {
   try {
     const data=await api(`/api/leads/${encodeURIComponent(id)}/brief`);if(!dialog.open)return;
     $('#dialog-content').innerHTML=`<p class="hint orange">Preparación interna basada en registros autorizados. Requiere revisión humana; no es una evaluación técnica certificada.</p><section class="result-section"><h3>Datos conocidos</h3><dl class="brief-known">${(data.known||[]).map(item=>`<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl></section>${informationList('Información sin verificar',data.unverified)}${informationList('Preguntas pendientes',data.questions)}${informationList('Temas para explicar',data.topics)}${informationList('Próximas acciones sugeridas',data.next_actions)}<div class="form-actions">${actionButton('lead-detail','Volver a la ficha',`data-id="${esc(id)}"`,'small')}</div>`;
+    briefMemory(data.remembered||[]);
   } catch(error) {if(dialog.open)$('#dialog-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)}</p>`;}
+}
+function briefMemory(remembered) {
+  // Se añade con nodos, después del resto: el texto lo pudo escribir un visitante.
+  const parent=$('#dialog-content');
+  if(!parent||!dialog.open)return;
+  const section=node('section',{class:'result-section brief-memory'},[
+    node('h3',{text:'Lo que R.E.I.G.E.L. recuerda'}),
+    remembered.length
+      ? node('ul',{class:'brief-memory-list'},remembered.map(item=>node('li',{},[
+          node('strong',{text:item.claim}),
+          node('small',{text:`${item.subject} · ${item.source} · confianza ${Math.round(Number(item.confidence)*100)}%`}),
+        ])))
+      : node('p',{class:'field-help',text:'Todavía no hay nada recordado sobre esta persona.'}),
+    node('p',{class:'field-help',
+      text:'Solo aparece lo vigente y usable. Una deducción del modelo sin aprobar no se muestra aquí ni llega al cliente.'}),
+  ]);
+  parent.insertBefore(section,parent.querySelector('.form-actions'));
 }
 const needUrgency={high:['red','Urgente'],normal:['orange','Pendiente'],low:['blue','Cuando se pueda']};
 function needReportRow(report,reload) {
@@ -330,7 +348,7 @@ function needReportRow(report,reload) {
     node('div',{},[
       node('strong',{text:report.need}),
       node('blockquote',{text:report.question}),
-      node('p',{text:`${report.reason_label}${report.repeats>1?` · lo preguntó ${report.repeats} veces`:''}${report.lead_name?` · ${report.lead_name}`:''}`}),
+      node('p',{class:'muted',text:`${report.reason_label}${report.repeats>1?` · lo preguntó ${report.repeats} veces`:''}${report.lead_name?` · ${report.lead_name}`:''}`}),
       (report.known||[]).length?facts:null,
       (report.missing||[]).length?node('small',{text:`Falta por preguntar: ${report.missing.join(', ')}`}):null,
     ]),
@@ -340,15 +358,16 @@ function needReportRow(report,reload) {
       actions,
     ]),
   ]);
+  // Un solo botón destacado por fila: atender, que es lo que se espera que ocurra.
   if(report.status!=='claimed') {
-    const claim=node('button',{class:'button small',attrs:{type:'button'},text:'Atender'});
+    const claim=node('button',{class:'button small primary',attrs:{type:'button'},text:'Atender'});
     claim.addEventListener('click',async()=>{
       claim.disabled=true;
       try {await post(`/api/needs/${encodeURIComponent(report.id)}/claim`,{});await reload();}
       catch(problem) {claim.disabled=false;toast(problem.message);}});
     actions.append(claim);
   }
-  const close=node('button',{class:'button small primary',attrs:{type:'button'},text:'Cerrar'});
+  const close=node('button',{class:'button small',attrs:{type:'button'},text:'Cerrar'});
   close.addEventListener('click',()=>{
     const outcome=node('input',{attrs:{type:'text',maxlength:'400','aria-label':'Qué se hizo'}});
     const confirm=node('button',{class:'button small primary',attrs:{type:'submit'},text:'Guardar'});
@@ -401,7 +420,7 @@ function memoryBeliefRow(belief,reload) {
   const row=node('li',{class:belief.usable?'is-usable':''},[
     node('div',{},[
       node('strong',{text:belief.claim}),
-      node('p',{text:`${belief.subject_label} · ${belief.source_label} · confianza ${Math.round(Number(belief.confidence)*100)}%`}),
+      node('p',{class:'muted',text:`${belief.subject_label} · ${belief.source_label} · confianza ${Math.round(Number(belief.confidence)*100)}%`}),
       node('small',{text:belief.retracted_reason
         ? `Retirada: ${belief.retracted_reason}`
         : `Observada ${dateTime(belief.observed_at)}${belief.expires_at?` · vence ${dateTime(belief.expires_at)}`:''}`}),
@@ -421,7 +440,9 @@ function memoryBeliefRow(belief,reload) {
       catch(problem) {approve.disabled=false;toast(problem.message);}});
     actions.append(approve);
   }
-  const retract=node('button',{class:'button small danger',attrs:{type:'button'},text:'Retirar'});
+  // Retirar no borra nada: no lleva el color de una acción destructiva. El rojo se
+  // reserva para el momento de confirmar, que es cuando hay consecuencia.
+  const retract=node('button',{class:'button small',attrs:{type:'button'},text:'Retirar'});
   retract.addEventListener('click',()=>{
     const reason=node('input',{attrs:{type:'text',maxlength:'200','aria-label':'Motivo para retirar'}});
     const confirm=node('button',{class:'button small danger',attrs:{type:'submit'},text:'Confirmar'});
@@ -521,7 +542,7 @@ function agentDecisionList(decisions,actions) {
   if(!decisions.length)return node('p',{class:'field-help',text:'Ninguna decisión registrada todavía.'});
   return node('ul',{class:'agent-decisions'},decisions.slice(0,12).map(item=>node('li',{},[
     node('div',{},[node('strong',{text:agentTitle(actions,item.action)}),
-                   node('p',{text:`${item.lead_name} · ${item.reason}`})]),
+                   node('p',{class:'muted',text:`${item.lead_name} · ${item.reason}`})]),
     agentBadge(item.status==='executed'?'green':'orange',agentStatus[item.status] || item.status),
   ])));
 }

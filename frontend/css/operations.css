@@ -376,19 +376,19 @@
 .agent-panel .panel-body{display:grid;gap:15px}
 .agent-controls{justify-content:flex-start;flex-wrap:wrap;margin:0}
 .agent-policy{width:100%;border-collapse:collapse}
-.agent-policy caption{text-align:left;padding-bottom:9px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#53627b)}
-.agent-policy th,.agent-policy td{padding:10px 12px;border-bottom:1px solid var(--line,#e0e6ee);text-align:left;vertical-align:middle;font-size:13px}
+.agent-policy caption{text-align:left;padding-bottom:9px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#5e6a7d)}
+.agent-policy th,.agent-policy td{padding:10px 12px;border-bottom:1px solid var(--line,#dfe3e8);text-align:left;vertical-align:middle;font-size:13px}
 .agent-policy thead th{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
 .agent-policy tbody th{background:none;font-weight:650;overflow-wrap:anywhere}
 .agent-policy td:last-child{width:210px}
 .agent-policy select{width:100%;max-width:210px}
 .agent-subhead{margin:2px 0 0;font-size:13px}
 .agent-decisions{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.agent-decisions li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line,#e2e8f0);border-radius:6px;flex-wrap:wrap}
+.agent-decisions li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line,#dfe3e8);border-radius:6px;flex-wrap:wrap}
 .agent-decisions li>div{min-width:0;flex:1}
-.agent-decisions p{margin:4px 0 0;font-size:12px;color:var(--muted,#53627b);overflow-wrap:anywhere}
+.agent-decisions p{margin:4px 0 0;font-size:12px;overflow-wrap:anywhere}
 .agent-plan{margin:0;padding-left:21px;display:grid;gap:9px;font-size:13px}
-.agent-plan small{display:block;margin-top:3px;font-size:11px;color:var(--muted,#53627b);overflow-wrap:anywhere}
+.agent-plan small{display:block;margin-top:3px;font-size:11px;color:var(--muted,#5e6a7d);overflow-wrap:anywhere}
 
 /* Memoria del agente en la ficha del prospecto. */
 .lead-memory{margin-top:18px}
@@ -397,12 +397,12 @@
 .belief-form-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .belief-form-row label{flex:1;min-width:170px}
 .belief-list{list-style:none;margin:0;padding:0;display:grid;gap:9px}
-.belief-list li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line,#e2e8f0);border-left:3px solid var(--line,#e2e8f0);border-radius:6px;flex-wrap:wrap}
-.belief-list li.is-usable{border-left-color:#2f8f5b}
+.belief-list li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line,#dfe3e8);border-left:3px solid var(--line,#dfe3e8);border-radius:6px;flex-wrap:wrap}
+.belief-list li.is-usable{border-left-color:var(--green)}
 .belief-list li>div:first-child{flex:1;min-width:0}
 .belief-list strong{overflow-wrap:anywhere}
-.belief-list p{margin:4px 0 0;font-size:12px;color:var(--muted,#53627b)}
-.belief-list small{display:block;margin-top:4px;font-size:11px;color:var(--muted,#53627b)}
+.belief-list p{margin:4px 0 0;font-size:12px}
+.belief-list small{display:block;margin-top:4px;font-size:11px;color:var(--muted,#5e6a7d)}
 .belief-tags{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}
 .belief-tags .actions{display:flex;gap:7px;flex-wrap:wrap}
 .belief-retract{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap}
@@ -411,18 +411,28 @@
 /* Cola de atención humana con el informe de necesidad. */
 .need-panel{margin-bottom:18px}
 .need-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.need-report{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line,#e2e8f0);border-left:3px solid var(--line,#e2e8f0);border-radius:6px;flex-wrap:wrap}
-.need-report.urgency-high{border-left-color:#b23a3a}
-.need-report.urgency-normal{border-left-color:#c67b1d}
-.need-report.urgency-low{border-left-color:#2b5b96}
+.need-report{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line,#dfe3e8);border-left:3px solid var(--line,#dfe3e8);border-radius:6px;flex-wrap:wrap}
+/* El naranja vivo del sistema mide 2,9:1 sobre blanco, por debajo del 3:1 que pide
+   un elemento no textual. En claro se usa el naranja oscuro de la paleta; en oscuro,
+   donde el fondo invierte, vuelve el vivo (dark-mode.css). */
+.need-panel{--urgencia-alta:var(--red);--urgencia-normal:var(--sol-orange-ink,#a84400);--urgencia-baja:var(--blue)}
+.need-report.urgency-high{border-left-color:var(--urgencia-alta)}
+.need-report.urgency-normal{border-left-color:var(--urgencia-normal)}
+.need-report.urgency-low{border-left-color:var(--urgencia-baja)}
 .need-report>div:first-child{flex:1;min-width:0}
 .need-report strong{overflow-wrap:anywhere}
-.need-report blockquote{margin:6px 0 0;padding-left:11px;border-left:2px solid var(--line,#e2e8f0);font-size:13px;overflow-wrap:anywhere}
-.need-report p{margin:6px 0 0;font-size:12px;color:var(--muted,#53627b)}
-.need-report small{display:block;margin-top:5px;font-size:11px;color:var(--muted,#53627b)}
+.need-report blockquote{margin:6px 0 0;padding-left:11px;border-left:2px solid var(--line,#dfe3e8);font-size:13px;overflow-wrap:anywhere}
+.need-report p{margin:6px 0 0;font-size:12px}
+.need-report small{display:block;margin-top:5px;font-size:11px;color:var(--muted,#5e6a7d)}
 .need-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-.need-fact{padding:2px 8px;border:1px solid var(--line,#e2e8f0);border-radius:999px;font-size:11px}
+.need-fact{padding:2px 8px;border:1px solid var(--line,#dfe3e8);border-radius:999px;font-size:11px}
 .need-tags{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}
 .need-tags .actions{display:flex;gap:7px;flex-wrap:wrap}
 .need-close{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap}
 .need-close input{min-width:180px}
+
+/* Memoria del agente dentro de la preparación de la orientación. */
+.brief-memory-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.brief-memory-list li{padding:9px 11px;border:1px solid var(--line,#dfe3e8);border-left:3px solid var(--green);border-radius:6px}
+.brief-memory-list strong{display:block;overflow-wrap:anywhere}
+.brief-memory-list small{display:block;margin-top:4px;font-size:11px;color:var(--muted,#5e6a7d)}

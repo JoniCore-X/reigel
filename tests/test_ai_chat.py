@@ -235,8 +235,11 @@ def test_http_route_uses_model_only_when_configured(tmp_path, configured, monkey
     client.get("/api/public/chat")
     calls = []
 
-    async def fake_reply(incoming, history, profile, verified=None):
+    async def fake_reply(incoming, history, profile, verified=None, **extra):
+        # `**extra` recoge lo que la ruta añade al contexto (revisadas, memoria del
+        # agente): el doble no se rompe cada vez que crece la firma real.
         calls.append(incoming)
+        assert extra.get("remembered") == [], "una conversación sin prospecto no trae memoria"
         return "Puedo orientarte sobre ese tema. ¿Qué te gustaría aclarar primero?"
 
     monkeypatch.setattr(ai_chat, "reply", fake_reply)

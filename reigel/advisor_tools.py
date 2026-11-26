@@ -124,8 +124,17 @@ def prepare_brief(store, lead_id, actor):
     else:
         next_actions.append("Si la persona lo solicita, consultar disponibilidad real para una orientación.")
     next_actions.append("Registrar el resultado de la conversación y acordar el siguiente seguimiento.")
+    # Lo que el agente recuerda de esta persona, con su origen. Solo lo vigente y usable:
+    # una deducción del modelo sin aprobar no aparece aquí, igual que no llega a un cliente.
+    try:
+        from .agent.memory import speaking_context
+        remembered = [{"claim": item["claim"], "subject": item["subject_label"],
+                       "source": item["source_label"], "confidence": item["confidence"]}
+                      for item in speaking_context(store, lead["id"])]
+    except Exception:  # noqa: BLE001 - la preparación nunca se cae por la memoria
+        remembered = []
     return {
-        "lead_id": lead["id"], "known": known,
+        "lead_id": lead["id"], "known": known, "remembered": remembered,
         "unverified": ["Los datos declarados no han sido verificados técnicamente por esta herramienta.",
                        "Estado del techo, sombras, cargas críticas, producción, capacidad de respaldo y condiciones contractuales requieren revisión profesional."],
         "questions": questions,

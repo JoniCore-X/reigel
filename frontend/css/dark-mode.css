@@ -34,6 +34,9 @@
 }
 :root[data-theme="dark"] .workspace-body :is(th, td) { border-color: var(--line); color: var(--ink); }
 :root[data-theme="dark"] .workspace-body thead th { background: var(--dark-raised); color: var(--muted); }
+/* Urgencia de la cola humana: sobre fondo oscuro el naranja vivo contrasta 5,6:1,
+   mientras que el naranja oscuro de tema claro se perdería. */
+:root[data-theme="dark"] .workspace-body .need-panel { --urgencia-normal: var(--orange); }
 :root[data-theme="dark"] .workspace-body :is(input, select, textarea) {
   background: #0f1a2e;
   color: var(--ink);

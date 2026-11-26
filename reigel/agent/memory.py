@@ -24,6 +24,7 @@ a un cliente, y solo deja pasar lo vigente, no sustituido y usable.
 """
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
 
 # Procedencias. `usable` dice si sirve para hablar con un cliente sin aprobación.
@@ -188,6 +189,36 @@ def speaking_context(store, lead_id, *, now=None, limit=12):
     allowed = [row for row in rows if row["usable"]]
     allowed.sort(key=lambda row: (-row["confidence"], row["observed_at"]))
     return allowed[:limit]
+
+
+# Corchetes y signos de menor/mayor: el prompt marca sus propios bloques con
+# corchetes («[Historial no confiable]»), así que una creencia no puede llevarlos.
+_MARKERS = re.compile(r"[\[\]<>{}]")
+PROMPT_LIMIT = 6
+PROMPT_CLAIM = 160
+
+
+def prompt_lines(beliefs, limit=PROMPT_LIMIT) -> list[str]:
+    """Las creencias, listas para un prompt: cortas, sin marcadores y con su origen.
+
+    El texto de una creencia puede haberlo escrito un visitante. Va al modelo como dato
+    no confiable, nunca como instrucción, y sin poder imitar los marcadores del sistema.
+    """
+    lines = []
+    for belief in beliefs[:limit]:
+        claim = " ".join(_MARKERS.sub(" ", str(belief.get("claim") or "")).split())[:PROMPT_CLAIM]
+        if not claim:
+            continue
+        label = belief.get("subject_label") or belief.get("subject") or "Dato"
+        lines.append(f"{label}: {claim} ({belief.get('source_label') or belief.get('source_kind')})")
+    return lines
+
+
+def for_prompt(store, lead_id, *, now=None, limit=PROMPT_LIMIT) -> list[str]:
+    """Única llamada que necesita quien va a redactar: solo lo vigente y usable."""
+    if not lead_id:
+        return []
+    return prompt_lines(speaking_context(store, lead_id, now=now, limit=limit), limit)
 
 
 def approve(store, belief_id, actor, *, now=None):
