@@ -1,9 +1,14 @@
+/* `overflow: clip` y no `hidden` en los contenedores de imagen que anima el scroll
+   (`.sc-storm-media`, `.sc-edge-frame`, `.sc-stage`): `hidden` los convierte en contenedores de
+   scroll, y entonces `view()` mide contra una caja que no se mueve y la animación de
+   `scroll-cinema.css` se queda congelada a mitad. Recortan igual. */
 /* Imágenes de referencia repartidas por las páginas públicas.
    Todo cuelga de clases sc-* que solo existen en esos bloques añadidos:
    .sc y .sc-storm (/captacion), .sc-maker y .sc-edge (dentro de la sección
    Tesla de /captacion), .sc-home, .sc-split, .sc-macro y .sc-inset
    (/soluciones, /empresa, /proceso). Sin JS todo es visible: los estados ocultos solo existen bajo
-   .sc-armed, clase que añade system-showcase.js a cada [data-sc-reveal]. */
+   `scroll-cinema.css`, que ata la aparición de `[data-sc-reveal]` a la posición
+   del scroll. */
 
 .corporate-body :is(.sc, .sc-maker, .sc-edge, .sc-split, .sc-inset, .sc-stage, .sc-home, .sc-storm, .sc-macro) {
   --sc-navy: var(--sol-navy, #071d43);
@@ -51,7 +56,7 @@
 .corporate-body .sc .ui-hero-secondary { gap: 8px; }
 
 .corporate-body .sc-figure { margin: clamp(32px, 4.5vw, 56px) 0 0; }
-.corporate-body .sc-stage { position: relative; overflow: hidden; border-radius: 2px; background: #e7edf5; }
+.corporate-body .sc-stage { position: relative; overflow: clip; border-radius: 2px; background: #e7edf5; }
 .corporate-body .sc-photo { position: relative; }
 .corporate-body .sc-stage img { display: block; width: 100%; max-width: none; height: auto; }
 /* La foto no se recorta: --x/--y son fracciones de la imagen de 1400 × 932. */
@@ -108,7 +113,7 @@
 
 /* Borde de la placa, a lo ancho (1280 × 720 como máximo). */
 .corporate-body .sc-edge { padding-block: clamp(48px, 6vw, 88px) 0; }
-.corporate-body .sc-edge-frame { overflow: hidden; background: #020a1b; }
+.corporate-body .sc-edge-frame { overflow: clip; background: #020a1b; }
 .corporate-body .sc-edge-frame img { width: 100%; max-width: 1280px; height: auto; }
 .corporate-body .sc-edge figcaption { margin-top: 12px; color: var(--tx-mute, #aebfd9); font-size: 12.5px; line-height: 1.5; }
 .corporate-body .sc-edge figcaption strong { margin-right: 10px; color: #fff; font-size: 13px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
@@ -141,20 +146,8 @@
 .corporate-body .sc-inset-copy > p:not(.corp-eyebrow) { max-width: 46ch; margin: 14px 0 0; color: var(--sc-muted); }
 .corporate-body .sc-inset--product { border-top: 1px solid var(--sc-line); }
 
-/* Revelado: solo con JS activo y pestaña visible. */
-.corporate-body .sc-armed .sc-r,
-.corporate-body .sc-armed .sc-dot,
-.corporate-body .sc-armed .sc-marks {
-  transition: opacity .8s var(--sc-ease), transform .9s var(--sc-ease);
-  transition-delay: calc(var(--i, 0) * 90ms);
-}
-.corporate-body .sc-armed .sc-dot,
-.corporate-body .sc-armed .sc-marks { transition-delay: .75s; }
-.corporate-body .sc-armed:not(.is-in) .sc-r { opacity: 0; transform: translate3d(0, 22px, 0); }
-.corporate-body .sc-armed:not(.is-in) .sc-dot,
-.corporate-body .sc-armed:not(.is-in) .sc-marks { opacity: 0; }
-.corporate-body .sc-armed .sc-edge-frame img { transition: transform 1.6s var(--sc-ease); }
-.corporate-body .sc-armed:not(.is-in) .sc-edge-frame img { transform: scale(1.05); }
+/* El revelado se mudó a `scroll-cinema.css`: ahora va atado al scroll, no a un
+   disparador. Aquí no queda nada que lo arme. */
 
 @media (max-width: 900px) {
   .corporate-body .sc-split { grid-template-columns: minmax(0, 1fr); }
@@ -222,21 +215,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .corporate-body :is(.sc, .sc-maker, .sc-edge, .sc-split, .sc-inset, .sc-home, .sc-storm, .sc-macro) * { transition: none !important; }
-  .corporate-body .sc-armed:not(.is-in) .sc-edge-frame img { transform: none; }
-  .corporate-body .sc-armed:not(.is-in) .sc-r,
-  .corporate-body .sc-armed:not(.is-in) .sc-dot,
-  .corporate-body .sc-armed:not(.is-in) .sc-marks { opacity: 1; transform: none; }
 }
 
 @media (forced-colors: active) {
   .corporate-body .sc-dot,
   .corporate-body .sc-marks li { border: 1px solid CanvasText; }
-}
-
-@media print {
-  .corporate-body .sc-armed .sc-r,
-  .corporate-body .sc-armed .sc-dot,
-  .corporate-body .sc-armed .sc-marks { opacity: 1 !important; transform: none !important; }
 }
 
 /* ---------- Recorrido de venta: deseo, detalle y emoción ---------- */
@@ -260,14 +243,13 @@
 /* Clímax de /captacion: tormenta de noche (2000 × 1000), antes del cierre. */
 .corporate-body .sc-storm { margin-top: clamp(40px, 6vw, 80px); color: #fff; background: var(--sc-navy); }
 .corporate-body .sc-storm-band { position: relative; max-width: 1920px; margin-inline: auto; }
-.corporate-body .sc-storm-media { position: relative; height: min(calc(min(100vw, 1920px) / 2), 88vh); margin: 0; overflow: hidden; background: #020a1b; }
+.corporate-body .sc-storm-media { position: relative; height: min(calc(min(100vw, 1920px) / 2), 88vh); margin: 0; overflow: clip; background: #020a1b; }
 .corporate-body .sc-storm-media img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 52% 56%; }
 .corporate-body .sc-storm-media figcaption { position: absolute; right: 16px; bottom: 12px; color: #d8e4f4; font-size: 12px; line-height: 1.4; text-shadow: 0 1px 6px #000; }
 .corporate-body .sc-storm-copy { position: absolute; top: clamp(32px, 5.5%, 88px); left: max(32px, calc((100% - 1180px) / 2)); max-width: min(600px, 46%); }
 .corporate-body .sc-storm h2 { margin: 0; color: #fff; font-size: clamp(34px, 4.2vw, 60px); line-height: 1.04; letter-spacing: -.04em; text-wrap: balance; text-shadow: 0 2px 18px #000c; }
 .corporate-body .sc-storm-copy .corp-eyebrow { margin: 0 0 14px; color: #dbe7fb; text-shadow: 0 1px 10px #000; }
-.corporate-body .sc-armed .sc-storm-media img { transition: transform 1.8s var(--sc-ease); }
-.corporate-body .sc-armed:not(.is-in) .sc-storm-media img { transform: scale(1.04); }
+/* El acercamiento de esta foto se mudó a `scroll-cinema.css`, atado al scroll. */
 
 /* Tres detalles de la placa. Sin JS o con movimiento reducido: lista estática.
    Con .sc-macro-live (system-showcase.js) el desplazamiento recorre los tres
@@ -530,9 +512,8 @@
 .corporate-body .sc-app-pin::after { position: absolute; top: 100%; left: 50%; width: 2px; height: clamp(6px, 1.2vw, 16px); margin: 5px 0 0 -1px; background: var(--sol-link, #1b55c4); content: ""; }
 .corporate-body .sc-app-pin.is-active { opacity: 1; transform: translate(-50%, -50%); }
 
-/* Revelado propio: 24 px y 800 ms, en cadena. */
-.corporate-body .sc-app .sc-armed .sc-r { transition: opacity .8s var(--sc-ease), transform .8s var(--sc-ease); transition-delay: calc(var(--i, 0) * 80ms); }
-.corporate-body .sc-app .sc-armed:not(.is-in) .sc-r { transform: translate3d(0, 24px, 0); }
+/* El revelado propio de esta sección (24 px, 800 ms) se unificó con el del resto al
+   pasar a scrub: la diferencia eran dos píxeles de recorrido. */
 
 @media (max-width: 900px) {
   .corporate-body .sc-app-inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "figure" "guide"; }
@@ -547,7 +528,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .corporate-body .sc-app *, .corporate-body .sc-app *::before { transition: none !important; }
-  .corporate-body .sc-app .sc-armed:not(.is-in) .sc-r { opacity: 1; transform: none; }
   .corporate-body .sc-app-live .sc-app-panel { transform: none; }
 }
 
@@ -555,10 +535,6 @@
   .corporate-body .sc-app-shot::after { display: none; }
   .corporate-body .sc-app-tab[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .corporate-body .sc-app-pin { background: Highlight; }
-}
-
-@media print {
-  .corporate-body .sc-app .sc-armed .sc-r { opacity: 1 !important; transform: none !important; }
 }
 
 /* ---------- Beneficios (/captacion, tras la portada) ---------- */
@@ -1131,7 +1107,6 @@
   .corporate-body .sc-jr *,
   .corporate-body .sc-jr *::before,
   .corporate-body .sc-jr *::after { transition: none !important; }
-  .corporate-body .sc-jr .sc-armed:not(.is-in) .sc-r { opacity: 1; transform: none; }
   .corporate-body .sc-jr-rail::after { transform: none; }
 }
 
@@ -1141,7 +1116,6 @@
 }
 
 @media print {
-  .corporate-body .sc-jr .sc-armed .sc-r { opacity: 1 !important; transform: none !important; }
   .corporate-body .sc-jr-more[hidden] { display: block !important; }
   .corporate-body .sc-jr-cue { display: none; }
 }

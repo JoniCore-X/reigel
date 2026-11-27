@@ -16,10 +16,15 @@
    - Si el navegador no las soporta, no pasa nada: la regla entera se ignora y la
      página queda como estaba. Por eso va dentro de `@supports`.
 
-   Regla que no se rompe: **el texto solo se mueve, nunca se desvanece.** Si algo
-   fallara, lo peor que puede pasar es que una línea esté unos píxeles corrida; nunca
-   que el visitante se quede mirando un hueco en blanco. La opacidad se reserva para
-   capas decorativas, que pueden faltar sin que se pierda nada. */
+   Regla para lo que se añade aquí por iniciativa propia: **el texto solo se mueve,
+   nunca se desvanece.** Si algo fallara, lo peor que puede pasar es que una línea esté
+   unos píxeles corrida; nunca que el visitante se quede mirando un hueco en blanco.
+
+   La excepción está abajo y es deliberada: la aparición de `[data-sc-reveal]` sí
+   desvanece, porque es la conversión fiel de un sistema que ya existía y ya lo hacía.
+   Se comprobó antes de convertirla que un elemento que está en pantalla al cargar
+   llega a progreso 1 —no 0— en los cuatro tipos de rango, así que la primera pantalla
+   de cada página sale completa. */
 
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
@@ -118,13 +123,10 @@
          texto sin ninguna transformación propia. Solo se mueven, nunca se
          desvanecen, así que lo peor que puede fallar son unos píxeles.
        Lo demás se queda como está, a propósito. */
-    .corporate-body .corp-home-photo { overflow: clip; }
-    .corporate-body .corp-home-photo img {
-      animation: cine-acercar linear both;
-      animation-timeline: view();
-      animation-range: entry 0% exit 100%;
-      will-change: transform;
-    }
+    /* Aquí iba el empuje de cámara sobre la foto de apertura. Esa foto ya no está:
+       el hero de /captacion es ahora una escena 3D con su propio scrub en
+       `js/solar-hero-3d.js`, y dos efectos sobre lo mismo no se suman. El papel
+       `plano` sigue disponible por atributo para la próxima foto que lo pida. */
 
     /* El encabezado de página y cada rótulo de sección entran montados sobre el
        scroll. `.corp-page-heading` envuelve un `.corp-container` con migas, antetítulo,
@@ -144,6 +146,79 @@
     .corporate-body .corp-section-label > :nth-child(2) { animation-range: entry 8% cover 26%; }
     .corporate-body .corp-page-heading > .corp-container > :nth-child(3) { animation-range: entry 16% cover 34%; }
     .corporate-body .corp-page-heading > .corp-container > :nth-child(n + 4) { animation-range: entry 24% cover 42%; }
+
+
+    /* ---- La aparición de los bloques, convertida de disparador a scrub ----
+       Hasta el 26 nov 2026 esto lo llevaba `system-showcase.js`: un
+       IntersectionObserver armaba `.sc-armed`, y al entrar el bloque añadía `.is-in`
+       y dejaba correr una transición que ya no dependía de ti. Entraba igual de
+       rápido tanto si bajabas despacio como si saltabas media página, y subir no
+       deshacía nada, porque el observador dejaba de mirar tras el primer cruce.
+
+       Aquí cada propiedad está atada a la posición. Si subes, retrocede.
+
+       El escalonado se conserva: `--i` ya venía en el marcado (0 a 6) y
+       `animation-range` admite `calc()` con una propiedad personalizada, comprobado
+       en el navegador —`cover calc(16% + 2 * 7%)` resuelve a `cover 30%`—. Antes eran
+       90 ms de retraso por puesto; ahora es un trozo más de recorrido, que es lo
+       mismo pero medido en scroll y no en tiempo.
+
+       Esta sí desvanece, a diferencia del resto del archivo, porque así era el
+       sistema que sustituye y la conversión es fiel. Se midió primero que un
+       elemento visible al cargar llega a progreso 1 en `cover`, `entry`, `entry→cover`
+       y `entry→exit`: la primera pantalla nunca sale en blanco. */
+    .corporate-body [data-sc-reveal] .sc-r {
+      animation: cine-aparecer linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover calc(16% + var(--i, 0) * 7%);
+    }
+
+    @keyframes cine-aparecer {
+      from { opacity: 0; transform: translate3d(0, 22px, 0); }
+      to { opacity: 1; transform: none; }
+    }
+
+    /* El punto y las marcas solo se encendían, con tres cuartos de segundo de
+       espera. Ese retraso pasa a ser un tramo del cruce. */
+    .corporate-body [data-sc-reveal] :is(.sc-dot, .sc-marks) {
+      animation: cine-encender linear both;
+      animation-timeline: view();
+      animation-range: cover 12% cover 40%;
+    }
+
+    @keyframes cine-encender {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* El acercamiento del borde: la foto entraba al 1.05 y se asentaba. */
+    .corporate-body [data-sc-reveal] .sc-edge-frame img {
+      animation: cine-asentar linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 55%;
+      will-change: transform;
+    }
+
+    @keyframes cine-asentar {
+      from { transform: scale(1.05); }
+      to { transform: none; }
+    }
+
+    /* La foto de tormenta entraba al 1.04 con la misma transición de 1,8 s. Su
+       contenedor y el del borde recortan con `clip` y no con `hidden`: el cambio está
+       en `system-showcase.css`, que es donde se declaran, y en ese archivo queda
+       escrito por qué. */
+    .corporate-body .sc-storm-media img {
+      animation: cine-asentar-tormenta linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+      will-change: transform;
+    }
+
+    @keyframes cine-asentar-tormenta {
+      from { transform: scale(1.04); }
+      to { transform: none; }
+    }
 
     /* ---- La barra de avance: saber cuánto queda de la escena ----
        Un detalle de reproductor, y además información útil en una página larga. */
@@ -196,4 +271,13 @@
       to { transform: translate3d(0, 0, 0); }
     }
   }
+}
+
+/* En papel no hay scroll que seguir: sin esto la hoja se imprimiría con el primer
+   fotograma de cada animación, es decir, con bloques invisibles. */
+@media print {
+  .corporate-body :is([data-sc-reveal] .sc-r, [data-sc-reveal] .sc-dot,
+                      [data-sc-reveal] .sc-marks) { opacity: 1 !important; transform: none !important; }
+  .corporate-body :is([data-sc-reveal] .sc-edge-frame img, .sc-storm-media img) { transform: none !important; }
+  .corporate-body .cine-progreso { display: none !important; }
 }

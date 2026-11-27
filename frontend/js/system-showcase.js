@@ -76,46 +76,14 @@
   reduced.addEventListener?.('change', () => setLive(!reduced.matches));
 })();
 
-// Revelado de los bloques de imágenes de referencia ([data-sc-reveal]) en las
-// páginas públicas. Sin este archivo todo queda visible y completo; en una
-// página sin esos bloques no hace nada.
-(() => {
-  const blocks = [...document.querySelectorAll('[data-sc-reveal]')];
-  if (!blocks.length) return;
-
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let observer = null;
-
-  function showAll() {
-    observer?.disconnect();
-    observer = null;
-    blocks.forEach(block => {
-      block.classList.add('is-in');
-      block.classList.remove('sc-armed');
-    });
-  }
-
-  // Una pestaña oculta no entrega observaciones: ahí el contenido queda visible.
-  if (reduced.matches || document.visibilityState !== 'visible' || !('IntersectionObserver' in window)) {
-    showAll();
-    return;
-  }
-
-  blocks.forEach(block => block.classList.add('sc-armed'));
-  observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add('is-in');
-      observer?.unobserve(entry.target);
-    });
-  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.06 });
-  blocks.forEach(block => observer.observe(block));
-
-  reduced.addEventListener?.('change', () => { if (reduced.matches) showAll(); });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') showAll();
-  });
-})();
+// El revelado de los bloques ([data-sc-reveal]) ya no vive aquí. Hasta el 26 de
+// noviembre de 2026 era un IntersectionObserver que armaba `.sc-armed`, añadía
+// `.is-in` al primer cruce y dejaba de mirar: un disparador, que entraba igual de
+// rápido bajaras despacio o saltaras media página, y que no se deshacía al subir.
+// Ahora está atado a la posición del scroll en `css/scroll-cinema.css`, en CSS puro
+// y sobre el compositor. Si el navegador no soporta `animation-timeline`, la regla
+// entera se ignora y los bloques quedan visibles y completos, igual que quedaban
+// aquí sin JavaScript.
 
 // Capítulos de ingeniería en /empresa ([data-sc-eng]): cada [data-sc-scrub]
 // recibe --p (0 a 1) según su paso por la ventana. "enter" se completa al
