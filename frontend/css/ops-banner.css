@@ -1,0 +1,87 @@
+/* Banner de Operaciones: la única zona inmersiva del espacio privado.
+ *
+ * El resto del CRM se queda claro y funcional, que es lo que sirve para trabajar a
+ * diario con tablas y formularios. Aquí, arriba del panel, cabe una escena pequeña.
+ *
+ * La altura no cambia: el canvas va detrás del encabezado que ya existía, con
+ * `position: absolute`, así que quien manda sobre la altura sigue siendo el texto.
+ * Un bloque nuevo con su propia altura habría movido todo el panel hacia abajo. */
+
+.ops-banner {
+  position: relative;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  overflow: clip; /* nunca `hidden`: crearía un contenedor de scroll. */
+  background: radial-gradient(118% 150% at 82% 12%, #0b1f4d 0%, #07122a 48%, #03060d 100%);
+  isolation: isolate;
+}
+
+.ops-banner-canvas {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity .7s cubic-bezier(.22, 1, .36, 1);
+}
+.ops-banner[data-ops-banner="activo"] .ops-banner-canvas,
+.ops-banner[data-ops-banner="quieto"] .ops-banner-canvas { opacity: 1; }
+
+/* El encabezado conserva su estructura y su ritmo; solo cambia de color, porque
+   ahora está sobre fondo oscuro. */
+.ops-banner .page-heading {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 26px 30px;
+}
+.ops-banner .page-heading h1 { color: #f4f6fb; }
+.ops-banner .page-heading .eyebrow { color: #ffb547; }
+.ops-banner .page-heading p:not(.eyebrow) { color: #9aa6c1; }
+
+/* Un velo desde la izquierda, por la misma razón que en el hero: el saludo tiene que
+   leerse esté la fila de paneles encendida o apagada. No es una tarjeta, es luz. */
+.ops-banner::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: linear-gradient(96deg, #03060de0 0%, #03060da6 38%, #03060d30 64%, transparent 82%);
+  content: "";
+  pointer-events: none;
+}
+
+/* El botón es el único naranja de la zona: en lo oscuro el naranja es luz y hay uno
+   solo, para que señale dónde se actúa. */
+.ops-banner .actions .button.primary {
+  background: #ff7a1a;
+  border-color: #ff7a1a;
+  color: #03060d;
+  font-weight: 700;
+}
+.ops-banner .actions .button.primary:hover { background: #ffb547; border-color: #ffb547; }
+.ops-banner .actions .button.primary:focus-visible { outline: 3px solid #ffb547; outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .ops-banner .page-heading { padding: 20px 18px; }
+  /* En estrecho la fila de paneles cae justo debajo del saludo, así que el velo deja
+     de venir de la izquierda y pasa a venir de arriba, que es de donde se lee. */
+  .ops-banner::before {
+    background: linear-gradient(170deg, #03060de6 0%, #03060db3 52%, #03060d3d 84%, transparent 100%);
+  }
+}
+
+/* Sin escena —sin WebGL o sin el módulo— queda el degradado con su texto, que es
+   legible por sí solo. No se anuncia que falte nada. */
+@media (forced-colors: active) {
+  .ops-banner { background: Canvas; }
+  .ops-banner-canvas, .ops-banner::before { display: none; }
+  .ops-banner .page-heading :is(h1, p, .eyebrow) { color: CanvasText; }
+}
+
+@media print {
+  .ops-banner { background: none; }
+  .ops-banner-canvas, .ops-banner::before { display: none; }
+  .ops-banner .page-heading :is(h1, p, .eyebrow) { color: #03060d; }
+}
