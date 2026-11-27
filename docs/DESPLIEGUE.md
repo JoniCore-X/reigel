@@ -56,6 +56,13 @@ Estas tareas son tuyas:
 
 ## Requisitos
 
+**¿No tienes servidor todavía?** [DESPLIEGUE_ORACLE.md](DESPLIEGUE_ORACLE.md) es el
+prólogo de esta guía: consigue una máquina gratuita y permanente con disco de verdad,
+le abre los puertos —que en Oracle son dos cortafuegos distintos, y olvidar el segundo
+deja el servidor mudo sin decir por qué—, le pone un dominio gratuito y la deja lista
+para empezar aquí por el Paso 1.
+
+
 | Qué | Sin IA | Con IA local (Ollama) |
 |---|---|---|
 | Procesador | 1 vCPU | 4 vCPU o más |

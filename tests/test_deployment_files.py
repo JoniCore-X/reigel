@@ -391,3 +391,22 @@ def test_runbook_covers_the_steps_only_the_owner_can_take_and_uses_placeholders(
                               "docs.docker.com", "github.com", "DOMAIN")), host
     for address in re.findall(r"[\w.+-]+@([\w-]+\.[\w.-]+)", guide):
         assert address.rstrip(".").endswith(("ejemplo.com", "example.com")), address
+
+
+def test_the_oracle_prologue_leaks_no_real_host_and_stays_honest_about_what_is_untested():
+    """El repositorio es público: un nombre de dominio real escrito aquí queda
+    publicado. Y la guía promete una máquina que nadie ha levantado todavía, así que
+    tiene que decirlo donde se lee, no en una nota al pie."""
+    guide = read("docs/DESPLIEGUE_ORACLE.md")
+    for host in re.findall(r"https?://([\w.-]+)", guide):
+        assert host.endswith(("ejemplo.com", "127.0.0.1", "localhost",
+                              "docs.docker.com", "github.com", "DOMAIN")), host
+    for address in re.findall(r"[\w.+-]+@([\w-]+\.[\w.-]+)", guide):
+        assert address.rstrip(".").endswith(("ejemplo.com", "example.com")), address
+    # El subdominio de ejemplo va con marcador, no con un nombre que alguien registre.
+    for sub in re.findall(r"([\w-]+)\.duckdns\.org", guide):
+        assert sub == "TU-NOMBRE", sub
+    assert "nadie ha desplegado todavía" in guide
+    # Los dos cortafuegos de Oracle: olvidar el de la máquina deja el servidor mudo.
+    assert "netfilter-persistent" in guide and "Security List" in guide
+    assert "DESPLIEGUE.md" in guide, "el prólogo tiene que devolver a la guía principal"
