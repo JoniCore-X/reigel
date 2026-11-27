@@ -273,7 +273,7 @@
 /* Interior pages keep an editorial rhythm rather than repeating card grids. */
 .corporate-body .corp-page-heading { position: relative; background: #f1f5f9; padding-block: 17px 40px; border-bottom: 1px solid var(--ui-line); }
 .corporate-body .corp-page-heading::after { content: ""; display: block; position: absolute; bottom: -1px; left: max(32px, calc((100% - 1180px) / 2)); width: 72px; height: 4px; background: var(--ui-orange); }
-.corporate-body .corp-page-heading h1 { font-size: clamp(36px, 4vw, 56px); max-width: 920px; }
+.corporate-body .corp-page-heading :is(h1, h2) { font-size: clamp(36px, 4vw, 56px); max-width: 920px; }
 .corporate-body .corp-page-heading .corp-lead { max-width: 780px; }
 .corporate-body .corp-breadcrumb { margin-bottom: 22px; font-size: 14px; }
 .corporate-body .corp-editorial { gap: 65px; padding-block: 52px; }
@@ -439,7 +439,7 @@
   .corporate-body .corp-home-note p { font-size: 14px; }
   .corporate-body .corp-page-heading { padding-block: 10px 29px; }
   .corporate-body .corp-page-heading::after { left: 18px; }
-  .corporate-body .corp-page-heading h1 { font-size: clamp(34px, 8.6vw, 42px); }
+  .corporate-body .corp-page-heading :is(h1, h2) { font-size: clamp(34px, 8.6vw, 42px); }
   .corporate-body .corp-breadcrumb { margin-bottom: 18px; }
   .corporate-body .corp-editorial { padding-block: 32px; }
   .corporate-body .corp-editorial .corp-prose { padding-left: 19px; }

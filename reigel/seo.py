@@ -5,7 +5,7 @@ from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
@@ -16,14 +16,23 @@ NOT_FOUND = ("Página no encontrada | Power Solar · Team Caguas",
 # Routes and fragments are a closed set. Request parameters never select files.
 PUBLIC_PAGES = {
     "/captacion": ("inicio", "Power Solar | Team Caguas", "Conoce a Power Solar · Team Caguas, explora opciones de energía para tu hogar en Puerto Rico y cómo solicitar orientación."),
-    "/empresa": ("empresa", "Empresa | Power Solar · Team Caguas", "Conoce el enfoque de orientación y atención de Power Solar · Team Caguas para hogares de Puerto Rico."),
-    "/equipo": ("equipo", "Equipo | Power Solar · Team Caguas", "Conoce a Team Caguas, su forma de orientar y cómo coordinar una evaluación para tu hogar o negocio en Puerto Rico."),
-    "/soluciones": ("soluciones", "Soluciones | Power Solar · Team Caguas", "Información para evaluar energía solar, respaldo y consumo de tu hogar con Power Solar · Team Caguas."),
-    "/proceso": ("proceso", "Evaluación | Power Solar · Team Caguas", "Conoce el proceso de orientación, evaluación y revisión de una propuesta de energía para tu hogar."),
-    "/contacto": ("contacto", "Contacto | Power Solar · Team Caguas", "Comparte tu interés mediante el formulario de Power Solar o conversa con R.E.I.G.E.L. para coordinar una evaluación."),
     "/soluciones/tesla-panel-mount-flat": ("panel-mount-flat", "Tesla Panel Mount Flat | Power Solar · Team Caguas", "Cómo funciona esta estructura para techos de madera de baja pendiente, sus piezas, normas y condiciones. Requiere evaluación estructural."),
     "/soluciones/certificaciones": ("certificaciones", "Certificaciones de los equipos | Power Solar · Team Caguas", "Los documentos de certificación del fabricante para los equipos Tesla que instala Team Caguas, con su referencia, sus normas y qué no significa cada una."),
-    "/preguntas": ("preguntas", "Preguntas frecuentes | Power Solar · Team Caguas", "Respuestas sobre evaluación, consumo, respaldo, contacto y condiciones de una propuesta de energía solar."),
+}
+# El sitio público pasó a una sola página el 27 de noviembre de 2026: estas seis
+# secciones viven ahora dentro de `/captacion` y sus direcciones llevan a su ancla.
+# Se redirige con 302 y no con 301 a propósito: un 301 se queda cacheado con fuerza
+# en el navegador de quien lo visite, y mientras la estructura siga moviéndose eso
+# convierte cualquier vuelta atrás en un problema para esas personas. Cuando la
+# decisión esté asentada, 301 es lo correcto, porque consolida la autoridad en una
+# sola dirección.
+MERGED_PAGES = {
+    "/empresa": "#empresa",
+    "/equipo": "#equipo",
+    "/soluciones": "#soluciones",
+    "/proceso": "#proceso",
+    "/contacto": "#contacto",
+    "/preguntas": "#preguntas",
 }
 # Subpáginas que marcan su sección en el menú.
 NAV_PARENT = {"panel-mount-flat": "soluciones", "certificaciones": "soluciones"}
@@ -115,6 +124,17 @@ def register_routes(app):
     for page_path, (page_key, _, _) in PUBLIC_PAGES.items():
         app.add_api_route(page_path, page_endpoint(page_path), methods=["GET"],
                           include_in_schema=False, name=f"corporate_{page_key}")
+
+    # Las direcciones de las secciones fundidas siguen respondiendo: quien tenga un
+    # enlace guardado o impreso llega a donde esperaba, no a un 404.
+    def merged_endpoint(anchor):
+        async def merged_page():
+            return RedirectResponse(f"/captacion{anchor}", status_code=302)
+        return merged_page
+
+    for page_path, anchor in MERGED_PAGES.items():
+        app.add_api_route(page_path, merged_endpoint(anchor), methods=["GET"],
+                          include_in_schema=False, name=f"corporate_merged_{anchor.lstrip('#')}")
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon():

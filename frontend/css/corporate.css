@@ -88,7 +88,7 @@
 .corporate-body .corp-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 30px; color: #5a6d85; font-size: 13px; line-height: 1.6; }
 .corporate-body .corp-breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; color: #405a7d; text-decoration: none; }
 .corporate-body .corp-breadcrumb a:hover { text-decoration: underline; }
-.corporate-body .corp-page-heading h1 { max-width: 950px; font-size: clamp(34px, 3.7vw, 49px); }
+.corporate-body .corp-page-heading :is(h1, h2) { max-width: 950px; font-size: clamp(34px, 3.7vw, 49px); }
 .corporate-body .corp-page-heading .corp-lead { max-width: 800px; margin-top: 19px; font-size: 17px; }
 .corporate-body .corp-page-heading .corp-eyebrow { margin-bottom: 15px; }
 .corporate-body .corp-editorial { display: grid; grid-template-columns: .85fr 1.15fr; gap: 80px; padding-block: 52px; }
@@ -228,7 +228,7 @@
   .corporate-body .mobile-menu-note { font-size: 11px; }
   .corporate-body main h1,
   .corporate-body .corp-home h1,
-  .corporate-body .corp-page-heading h1 { font-size: clamp(32px, 8.5vw, 40px); }
+  .corporate-body .corp-page-heading :is(h1, h2) { font-size: clamp(32px, 8.5vw, 40px); }
   .corporate-body main h2 { font-size: 27px; }
   .corporate-body main p { font-size: 16px; }
   .corporate-body .corp-eyebrow { font-size: 11px; margin-bottom: 15px; }

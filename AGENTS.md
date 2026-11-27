@@ -82,7 +82,13 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
 - `/` y `/ia`: conversación generativa; no reserva, no deriva a humanos, no
   registra bajas ni solicitudes de privacidad, y lo remite a `/chat` («Citas y
   equipo»). `/chat`: chat de coordinación con reserva, atención humana, baja y
-  privacidad. `/captacion`: landing existente. Conservar sus enlaces configurados.
+  privacidad. `/captacion`: **la única página del sitio público** desde el 27 de
+  noviembre de 2026. Empresa, soluciones, evaluación, equipo, preguntas y contacto son
+  capítulos suyos (`<div class="corp-chapter" id="...">`), y sus direcciones de antes
+  redirigen con 302 a su ancla —`MERGED_PAGES` en `seo.py` y en `scripts/public_gate.py`,
+  que tienen que coincidir o la demostración publicada da 404—. Un solo `h1`, el del
+  hero: los titulares de capítulo son `h2`. Conservar sus enlaces configurados; los
+  internos son anclas, no rutas, para que no recarguen la página entera.
   `/soluciones/certificaciones`: documentos de certificación del fabricante, transcritos
   con su referencia y enlazados a `energylibrary.tesla.com`. Solo equipos que Team Caguas
   instala, y cada norma dice también lo que **no** significa.
@@ -119,9 +125,10 @@ Get-ChildItem frontend/js -Filter *.js | ForEach-Object { node --check $_.FullNa
 node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
-Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1186 pruebas de Python, 20 archivos
-JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
+Los comodines cubren los archivos nuevos sin editar este bloque. El 27 de
+noviembre de 2026, tras fundir el sitio público en una página: 1190 pruebas de
+Python, 22 archivos JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro
+archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
 Una ejecución de Python deja un aviso de obsolescencia de `starlette.testclient`

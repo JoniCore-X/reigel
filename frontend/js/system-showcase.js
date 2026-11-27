@@ -85,14 +85,16 @@
 // entera se ignora y los bloques quedan visibles y completos, igual que quedaban
 // aquí sin JavaScript.
 
-// Capítulos de ingeniería en /empresa ([data-sc-eng]): cada [data-sc-scrub]
+// Capítulos de ingeniería ([data-sc-eng]): cada [data-sc-scrub]
 // recibe --p (0 a 1) según su paso por la ventana. "enter" se completa al
 // entrar; "pass" recorre todo el cruce. Solo se lee la posición (escucha
 // pasiva), es reversible y con movimiento reducido no se escribe nada: quedan
 // los valores estáticos de la hoja de estilos.
-(() => {
-  const section = document.querySelector('[data-sc-eng]');
-  if (!section) return;
+// Desde que el sitio es una sola página hay más de una sección de capítulos —la de
+// empresa y la de evaluación conviven—, así que se montan todas. Con `querySelector`
+// en singular solo cobraba vida la primera y la otra se quedaba quieta sin dar ningún
+// error, que es la peor forma de romperse.
+document.querySelectorAll('[data-sc-eng]').forEach(section => {
   const targets = [...section.querySelectorAll('[data-sc-scrub]')];
   if (!targets.length) return;
 
@@ -143,7 +145,7 @@
   window.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule, { passive: true });
   reduced.addEventListener?.('change', () => setLive(!reduced.matches));
-})();
+});
 
 // Indicadores de la aplicación en /soluciones ([data-sc-tabs]). Sin este
 // archivo los tres bloques quedan a la vista, uno tras otro, y la lista de

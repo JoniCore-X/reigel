@@ -60,10 +60,15 @@ def client(tmp_path, monkeypatch):
     return TestClient(create_app(tmp_path / "actions.sqlite3"))
 
 
-@pytest.mark.parametrize("page", ["contacto", "preguntas", "proceso"])
+@pytest.mark.parametrize("page", ["landing"])
 def test_corporate_text_that_offers_booking_or_humans_links_to_chat(page):
-    html = (FRONTEND / "pages" / f"{page}.html").read_text(encoding="utf-8")
-    promising = [block for block in paragraphs(html) if COMMERCIAL_PROMISE.search(block)]
+    # Contacto, preguntas y evaluación se fundieron en la página única el 27 de
+    # noviembre de 2026: su texto vive aquí y se revisa de una vez.
+    html = (FRONTEND / f"{page}.html").read_text(encoding="utf-8")
+    # `sc-app-demo-text` rotula la pantalla de la batería: «Reserva para apagones» es
+    # capacidad guardada, no una cita que ofrecer. La regla busca promesas en prosa.
+    promising = [block for block in paragraphs(html)
+                 if COMMERCIAL_PROMISE.search(block) and 'class="sc-app-demo-text"' not in block]
     assert promising, page
     for block in promising:
         parsed = Links(block)

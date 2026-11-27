@@ -65,9 +65,10 @@ def test_controls_are_real_and_only_appear_with_javascript(client):
 def test_scene_only_lives_in_solutions_and_existing_routes_still_work(client):
     assert client.get("/static/js/energy-scene.js?v=8").status_code == 200
     assert client.get("/static/css/energy-scene.css?v=8").status_code == 200
-    for path in ("/captacion", "/empresa", "/equipo", "/proceso", "/contacto", "/preguntas"):
-        response = client.get(path)
-        assert response.status_code == 200 and 'id="energia-en-casa"' not in response.text, path
+    # Las secciones fundidas solo redirigen; la escena se comprueba donde vive.
+    for path in ("/empresa", "/equipo", "/proceso", "/contacto", "/preguntas"):
+        assert client.get(path, follow_redirects=False).status_code == 302, path
+    assert client.get("/captacion").status_code == 200
     for path in ("/ia", "/chat", "/app"):
         response = client.get(path)
         assert response.status_code == 200 and "energy-scene" not in response.text, path

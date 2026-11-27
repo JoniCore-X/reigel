@@ -45,13 +45,16 @@ def test_public_header_keeps_existing_booking_chat_and_private_app(system):
         landing = client.get("/captacion")
         assert landing.status_code == 200
         assert 'id="public-menu-toggle"' in landing.text
-        for path in ("/captacion", "/empresa", "/equipo", "/soluciones", "/proceso", "/contacto", "/preguntas", "/app"):
-            assert f'href="{path}"' in landing.text
+        # La navegación dejó de apuntar a rutas y apunta a anclas de esta misma
+        # página; solo `/app` sigue siendo un destino aparte.
+        for anchor in ("#inicio", "#empresa", "#equipo", "#soluciones", "#proceso", "#contacto", "#preguntas"):
+            assert f'href="{anchor}"' in landing.text, anchor
+        assert 'href="/app"' in landing.text
         assert 'data-open-chat' in landing.text
         assert 'id="reigel-chat"' in landing.text
         assert 'id="chat-form"' in landing.text
         assert 'id="chat-book-form"' in landing.text
-        assert 'href="/contacto#privacidad"' in landing.text
+        assert 'href="#privacidad"' in landing.text
         assert '/static/js/header-menu.js' in landing.text
         header_script = client.get("/static/js/header-menu.js")
         assert header_script.status_code == 200
@@ -201,18 +204,22 @@ def test_google_form_frame_permission_is_limited_to_contact_page(tmp_path, monke
     monkeypatch.delenv("SITE_URL", raising=False)
     app = create_app(tmp_path / "frame-policy.sqlite3")
     with TestClient(app) as client:
-        for path, expected_status in (("/contacto", 200), ("/contacto?utm_source=test", 200),
-                                      ("/captacion", 200), ("/empresa", 200), ("/equipo", 200),
-                                      ("/soluciones", 200), ("/proceso", 200), ("/preguntas", 200), ("/", 200),
+        # El formulario de Google vive en la página pública única desde el 27 de
+        # noviembre de 2026, así que la excepción de `frame-src` la lleva `/captacion`.
+        # Las direcciones de las secciones fundidas solo redirigen, y una redirección
+        # no enmarca nada.
+        for path, expected_status in (("/captacion", 200), ("/captacion?utm_source=test", 200),
+                                      ("/contacto", 302), ("/empresa", 302), ("/equipo", 302),
+                                      ("/soluciones", 302), ("/proceso", 302), ("/preguntas", 302), ("/", 200),
                                       ("/app", 200), ("/health", 200), ("/api/auth/me", 401)):
-            response = client.get(path)
+            response = client.get(path, follow_redirects=False)
             assert response.status_code == expected_status, path
             directives = {
                 parts[0]: parts[1:]
                 for directive in response.headers["content-security-policy"].split(";")
                 if (parts := directive.split())
             }
-            expected_frames = ["'self'", "https://docs.google.com"] if path.startswith("/contacto") else ["'self'"]
+            expected_frames = ["'self'", "https://docs.google.com"] if path.startswith("/captacion") else ["'self'"]
             assert directives["frame-src"] == expected_frames, path
             assert directives["default-src"] == ["'self'"]
             assert directives["script-src"] == ["'self'"]

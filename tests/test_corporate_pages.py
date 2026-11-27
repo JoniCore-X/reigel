@@ -9,14 +9,18 @@ from fastapi.testclient import TestClient
 from reigel.api import create_app
 
 
+# El sitio público es una sola página desde el 27 de noviembre de 2026. Las seis
+# direcciones de antes redirigen a su ancla y se comprueban aparte.
 PAGES = {
     "/captacion": "inicio",
-    "/empresa": "empresa",
-    "/equipo": "equipo",
-    "/soluciones": "soluciones",
-    "/proceso": "proceso",
-    "/contacto": "contacto",
-    "/preguntas": "preguntas",
+}
+REDIRECTED = {
+    "/empresa": "#empresa",
+    "/equipo": "#equipo",
+    "/soluciones": "#soluciones",
+    "/proceso": "#proceso",
+    "/contacto": "#contacto",
+    "/preguntas": "#preguntas",
 }
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScbCm-67NFR1qFYLfD9oR-nMkCGsGionTB5iG9uR0JKWdZHMQ/viewform?embedded=true"
 
@@ -65,18 +69,23 @@ def test_corporate_routes_have_specific_server_rendered_content_and_shared_navig
             assert document.headings[0], path
             headings.add(document.headings[0])
             hrefs = {attrs.get("href") for tag, attrs in document.tags if tag == "a"}
-            assert set(PAGES) <= hrefs, path
+            # La navegación apunta a anclas de esta misma página desde que el sitio
+            # público se fundió en una sola, el 27 de noviembre de 2026.
+            assert {f"#{c}" for c in ("inicio", "empresa", "equipo", "soluciones",
+                                      "proceso", "contacto", "preguntas")} <= hrefs, path
             assert "/app" in hrefs, path
-            assert "/contacto#privacidad" in hrefs, path
+            assert "#privacidad" in hrefs, path
             active = [attrs for tag, attrs in document.tags if tag == "a" and attrs.get("aria-current") == "page"]
             assert active, path
             assert all(link.get("data-site-page") == page_key for link in active), path
-            assert all(link.get("href") == path for link in active), path
+            assert all(link.get("href") == "#inicio" for link in active), path
             ids = [attrs["id"] for _, attrs in document.tags if "id" in attrs]
             assert len(ids) == len(set(ids)), path
             assert {"main", "public-menu-toggle", "public-nav", "reigel-chat", "chat-form", "chat-book-form"} <= set(ids), path
             frames = [attrs for tag, attrs in document.tags if tag == "iframe"]
-            if path == "/contacto":
+            # El formulario de Google vive en el capítulo de contacto de la página
+            # única; sigue siendo el único marco de todo el sitio público.
+            if path == "/captacion":
                 assert len(frames) == 1
                 assert frames[0]["src"] == FORM_URL
                 assert frames[0].get("scrolling") != "no"
@@ -168,10 +177,12 @@ def test_team_page_publishes_only_the_verified_contact_card(corporate_app):
                       "paneles-solares-edificio-comercial-puerto-rico.jpg"):
             assert f'/static/assets/power-solar/{image}' in page.text
             assert client.get(f"/static/assets/power-solar/{image}").status_code == 200
-        assert page.text.count("data-chat-prefill=") == 3
+        # Tres son las del capítulo del equipo; el resto de la página aporta las suyas.
+        equipo = page.text.split('id="equipo"', 1)[1].split('id="preguntas"', 1)[0]
+        assert equipo.count("data-chat-prefill=") == 3
         assert "Categorías y nombres publicados por Power Solar" in page.text
         for unverified in ("2018", "1,400", "80,000", "150,000", "24/7", "gratis"):
-            assert unverified not in page.text
+            assert unverified not in equipo, unverified
 
 
 def test_subscription_plans_are_not_part_of_the_public_site(corporate_app):

@@ -177,7 +177,12 @@ def create_app(db_path=None, *, load_env=None):
     async def boundaries(request: Request, call_next):
         # Audit rows keep only the truncated network of the client (IPv4 /24, IPv6 /48).
         CLIENT_NET.set(client_network(request.client.host if request.client else None))
-        frame_sources = "'self' https://docs.google.com" if request.url.path == "/contacto" else "'self'"
+        # El formulario de Google vive ahora dentro de la página pública única, no en
+        # una ruta propia: desde el 27 de noviembre de 2026 `/contacto` solo redirige.
+        # La excepción se mueve con él. No se amplía nada en la práctica —es el mismo
+        # formulario, el mismo origen y el mismo contenido, en una dirección en vez de
+        # dos—, y sigue sin alcanzar al CRM ni a ninguna otra ruta.
+        frame_sources = "'self' https://docs.google.com" if request.url.path == "/captacion" else "'self'"
         headers = {
             "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "strict-origin-when-cross-origin",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=()",

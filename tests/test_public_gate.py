@@ -13,7 +13,13 @@ CID = "0123456789abcdef0123456789abcdef"
 
 
 def test_gate_pages_match_the_app_public_pages():
+    """La puerta tiene su propia copia de las rutas: si la aplicación añade o funde
+    una página y la puerta no se entera, la demostración publicada da 404."""
+    from reigel.seo import MERGED_PAGES
+
     assert gate.PUBLIC_PAGES == frozenset(PUBLIC_PAGES)
+    # Las direcciones fundidas no son páginas, pero tienen que pasar: redirigen.
+    assert gate.MERGED_PAGES == frozenset(MERGED_PAGES)
 
 
 @pytest.mark.parametrize("method,target", [

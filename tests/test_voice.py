@@ -60,7 +60,9 @@ def test_fixed_texts_shown_to_people_avoid_jargon():
     from reigel.knowledge import TECHNICAL_TOPICS
     texts = [topic["answer"] for topic in TECHNICAL_TOPICS.values() if "answer" in topic]
     texts.append((ROOT / "reigel" / "webchat.py").read_text(encoding="utf-8"))
-    texts.append((ROOT / "frontend" / "pages" / "soluciones.html").read_text(encoding="utf-8"))
+    # El sitio público es una sola página desde el 27 de noviembre de 2026: lo que
+    # antes era `pages/soluciones.html` vive dentro del shell.
+    texts.append((ROOT / "frontend" / "landing.html").read_text(encoding="utf-8"))
     for text in texts:
         lowered = text.lower()
         for word in JARGON:

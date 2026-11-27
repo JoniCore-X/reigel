@@ -31,11 +31,15 @@ CHUNK = 8192
 
 # Mirrors reigel/seo.py PUBLIC_PAGES plus the AI conversation. Exact, case-sensitive.
 PUBLIC_PAGES = frozenset({
-    "/captacion", "/empresa", "/equipo", "/soluciones",
+    "/captacion",
     "/soluciones/tesla-panel-mount-flat", "/soluciones/certificaciones",
-    "/proceso", "/contacto", "/preguntas",
 })
-READ_EXACT = PUBLIC_PAGES | {
+# Desde el 27 de noviembre de 2026 estas seis direcciones solo redirigen a su ancla
+# dentro de `/captacion`. Pasan igual: un enlace viejo tiene que seguir llegando.
+MERGED_PAGES = frozenset({
+    "/empresa", "/equipo", "/soluciones", "/proceso", "/contacto", "/preguntas",
+})
+READ_EXACT = PUBLIC_PAGES | MERGED_PAGES | {
     "/", "/ia", "/robots.txt", "/sitemap.xml", "/favicon.ico",
     "/api/ia/bootstrap", "/api/ia/status", "/api/ia/conversations", "/api/ia/suggestions",
 }

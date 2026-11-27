@@ -56,8 +56,14 @@ def test_the_image_is_small_enough_to_not_cost_a_visit(client):
 def test_no_third_party_image_or_frame_was_introduced(client):
     """La política de contenido no admite imágenes ni marcos de fuera, y la página
     tampoco los pide: el retrato se sirve desde el sitio."""
-    page = client.get("/equipo").text
-    assert "facebook.com" not in page and "<iframe" not in page
-    policy = client.get("/equipo").headers["content-security-policy"]
+    # El capítulo del equipo vive en la página única desde el 27 de noviembre de 2026.
+    respuesta = client.get("/captacion")
+    page = respuesta.text
+    assert "facebook.com" not in page
+    # El único marco admitido es el formulario de Google, que ya estaba en contacto.
+    marcos = [m for m in re.findall(r'<iframe[^>]*src="([^"]+)"', page)
+              if not m.startswith("https://docs.google.com/")]
+    assert not marcos, marcos
+    policy = respuesta.headers["content-security-policy"]
     assert "img-src 'self' data:" in policy
-    assert "frame-src 'self'" in policy
+    assert "frame-src 'self' https://docs.google.com" in policy
