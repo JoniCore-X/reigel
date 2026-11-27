@@ -67,6 +67,18 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
 - `privacy.py`: solicitudes administrativas con revisión humana; no elimina registros.
 - `advisor_tools.py`: preparación autorizada y práctica comercial expresamente simulada.
 - `frontend/index.html` y `frontend/js/app.js`: espacio privado `/app`.
+- `frontend/css/scroll-cinema.css`: la escena al scrollear del sitio público, en CSS puro
+  (`animation-timeline`), sin JavaScript: la política `script-src 'self'` no admite una
+  biblioteca de animación de fuera. Es un **scrub** —cada propiedad atada a la posición
+  del scroll, reversible— y no un disparador como las apariciones de `system-showcase.js`.
+  Medido el 26 nov 2026, casi todas las fotos grandes **ya** se movían (`.sc-r`,
+  `data-sc-scrub` en /empresa y /proceso, `.pm-seq-fig`, `.tx-hero-media`), y una
+  animación con `both` gana a una declaración normal en la cascada: superponer un
+  segundo efecto no suma, sustituye. Por eso el scrub se queda donde no pisa nada —la
+  foto de apertura, los rótulos de sección y el encabezado de página— y la barra de
+  avance, que es nueva. Recortar con `overflow: clip`, nunca `hidden`: `hidden` crea un
+  contenedor de scroll y `view()` pasa a medir contra una caja quieta, que congela la
+  animación a mitad de recorrido. El texto solo se mueve, nunca se desvanece.
 - `/` y `/ia`: conversación generativa; no reserva, no deriva a humanos, no
   registra bajas ni solicitudes de privacidad, y lo remite a `/chat` («Citas y
   equipo»). `/chat`: chat de coordinación con reserva, atención humana, baja y
@@ -108,7 +120,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1182 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1186 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.

@@ -1,0 +1,199 @@
+/* Escena al scrollear: que la página se sienta rodada, no montada por partes.
+
+   La diferencia con lo que ya había no es de intensidad, es de naturaleza. Las
+   apariciones de `system-showcase.js` son un **disparador**: el bloque entra en
+   pantalla y se dispara una transición que ya no depende de ti. Esto es un **scrub**:
+   cada propiedad está atada a la posición del scroll, así que si subes, retrocede; si
+   paras a la mitad, se queda a la mitad. Eso es lo que hace que parezca un vídeo que
+   tú mueves, y no una web que te enseña cosas.
+
+   Todo esto es CSS, sin una línea de JavaScript, por tres razones que importan:
+   - La política de contenido del sitio es `script-src 'self'`: una biblioteca de
+     animación traída de fuera no cargaría, y hacerle sitio sería abrir esa puerta.
+   - Las animaciones con `animation-timeline` las lleva el compositor, fuera del hilo
+     principal. En el móvil de alguien en Caguas eso es la diferencia entre fluido y
+     a tirones.
+   - Si el navegador no las soporta, no pasa nada: la regla entera se ignora y la
+     página queda como estaba. Por eso va dentro de `@supports`.
+
+   Regla que no se rompe: **el texto solo se mueve, nunca se desvanece.** Si algo
+   fallara, lo peor que puede pasar es que una línea esté unos píxeles corrida; nunca
+   que el visitante se quede mirando un hueco en blanco. La opacidad se reserva para
+   capas decorativas, que pueden faltar sin que se pierda nada. */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+
+    /* ---- El plano: la imagen se acerca mientras la sección cruza la pantalla ----
+       Un empuje de cámara lento. Arranca algo más grande y se asienta: la misma
+       gramática de un plano de apertura. */
+    /* Recorta con `clip`, no con `hidden`: `overflow: hidden` convierte el elemento
+       en contenedor de scroll, y entonces `view()` mide contra esa caja, que nunca se
+       mueve, y la animación se queda congelada a mitad de recorrido. `overflow: clip`
+       recorta igual sin crear contenedor. */
+    .corporate-body [data-cine~="plano"] { overflow: clip; }
+    .corporate-body [data-cine~="plano"] img {
+      animation: cine-acercar linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+      will-change: transform;
+    }
+
+    @keyframes cine-acercar {
+      from { transform: scale(1.09) translate3d(0, -1.2%, 0); }
+      to { transform: scale(1) translate3d(0, 1.2%, 0); }
+    }
+
+    /* ---- Profundidad: las capas no van a la misma velocidad ----
+       Es el truco más viejo del cine y sigue siendo el que más se nota: lo que está
+       lejos se mueve menos que lo que está cerca, y el ojo lee eso como espacio. */
+    .corporate-body [data-cine~="fondo"] {
+      animation: cine-fondo linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform;
+    }
+
+    @keyframes cine-fondo {
+      from { transform: translate3d(0, -3.5%, 0); }
+      to { transform: translate3d(0, 3.5%, 0); }
+    }
+
+    /* ---- El titular entra montado sobre el scroll ----
+       Solo transform: el texto nunca desaparece, pase lo que pase. */
+    .corporate-body [data-cine~="titular"] > * {
+      animation: cine-subir linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 90%;
+    }
+    /* Las líneas no llegan a la vez; entran una detrás de otra, como en un plano. */
+    .corporate-body [data-cine~="titular"] > :nth-child(2) { animation-range: entry 18% entry 96%; }
+    .corporate-body [data-cine~="titular"] > :nth-child(3) { animation-range: entry 26% cover 4%; }
+    .corporate-body [data-cine~="titular"] > :nth-child(n + 4) { animation-range: entry 34% cover 10%; }
+
+    @keyframes cine-subir {
+      from { transform: translate3d(0, 26px, 0); }
+      to { transform: translate3d(0, 0, 0); }
+    }
+
+    /* ---- Velo: oscurece la imagen mientras entra y la suelta al centrarse ----
+       Decorativo y encima de una imagen, así que aquí sí puede jugar la opacidad.
+
+       Solo para lo que entra desde abajo. Probado el 26 nov 2026 en la foto de
+       apertura, que ya está en pantalla al cargar: el rango `entry` no llega a
+       correr nunca y el velo se queda en opacidad 1 para siempre, así que lo
+       primero que ve el visitante es la foto oscurecida y no se aclara. Por eso
+       ningún elemento del primer pliegue lleva este papel. */
+    .corporate-body [data-cine~="velo"] { position: relative; }
+    .corporate-body [data-cine~="velo"]::after {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(180deg, #071d4366 0%, #071d4300 55%);
+      content: "";
+      pointer-events: none;
+      animation: cine-velo linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+
+    @keyframes cine-velo {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+
+    /* ---- Quién hace de qué, y por qué son tan pocos ----
+       Al repartir papeles salió un hecho incómodo: casi todas las fotos grandes del
+       sitio público **ya** se mueven con el scroll. `.sc-r` las desliza al entrar,
+       `data-sc-scrub` las escala por posición en /empresa y /proceso, `.pm-seq-fig`
+       tiene su escena completa en el montaje, y `.tx-hero-media` lleva su propio
+       paralaje. Y una animación con `both` gana a una declaración normal en la
+       cascada: poner un segundo efecto encima no se suma, sustituye. Habría
+       apagado en silencio movimientos que alguien decidió.
+
+       Así que el scrub va donde no pisa nada:
+       - La foto de apertura, que no tenía más que su borde.
+       - Los rótulos de sección y el encabezado de página, en las cinco páginas:
+         texto sin ninguna transformación propia. Solo se mueven, nunca se
+         desvanecen, así que lo peor que puede fallar son unos píxeles.
+       Lo demás se queda como está, a propósito. */
+    .corporate-body .corp-home-photo { overflow: clip; }
+    .corporate-body .corp-home-photo img {
+      animation: cine-acercar linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+      will-change: transform;
+    }
+
+    /* El encabezado de página y cada rótulo de sección entran montados sobre el
+       scroll. `.corp-page-heading` envuelve un `.corp-container` con migas, antetítulo,
+       título y entradilla: ahí el escalonado tiene sentido.
+
+       Los rangos se atan al cruce (`cover`) y no solo a la entrada: medido el 26 nov
+       2026, `entry 10% entry 90%` sobre un `h2` de 110 px se completaba en 120 px de
+       scroll, que es un parpadeo y vuelve a parecer un disparador. El recorrido tiene
+       que durar una fracción de pantalla para que se lea como movimiento. */
+    .corporate-body .corp-page-heading > .corp-container > *,
+    .corporate-body .corp-section-label > * {
+      animation: cine-subir linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 18%;
+    }
+    .corporate-body .corp-page-heading > .corp-container > :nth-child(2),
+    .corporate-body .corp-section-label > :nth-child(2) { animation-range: entry 8% cover 26%; }
+    .corporate-body .corp-page-heading > .corp-container > :nth-child(3) { animation-range: entry 16% cover 34%; }
+    .corporate-body .corp-page-heading > .corp-container > :nth-child(n + 4) { animation-range: entry 24% cover 42%; }
+
+    /* ---- La barra de avance: saber cuánto queda de la escena ----
+       Un detalle de reproductor, y además información útil en una página larga. */
+    .corporate-body .cine-progreso {
+      position: fixed;
+      /* Por encima del encabezado pegajoso, que va en 1000: con z-index 30 la barra
+         quedaba detrás de él y no se veía nunca. Son dos píxeles en el borde
+         superior, así que no tapa nada con lo que se pueda interactuar. */
+      z-index: 1001;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      transform-origin: 0 50%;
+      background: linear-gradient(90deg, var(--corp-orange, #e96100), #ffc247);
+      animation: cine-avance linear both;
+      animation-timeline: scroll(root block);
+      pointer-events: none;
+    }
+
+    @keyframes cine-avance {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+  }
+}
+
+/* Sin la barra no falta nada: es decoración pura, así que no existe si no se anima. */
+.corporate-body .cine-progreso { display: none; }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .corporate-body .cine-progreso { display: block; }
+  }
+}
+
+/* En pantallas pequeñas el recorrido es más corto y el mismo movimiento se nota el
+   doble. Se queda, pero a la mitad. */
+@media (max-width: 760px) {
+  @supports (animation-timeline: view()) {
+    @keyframes cine-acercar {
+      from { transform: scale(1.045) translate3d(0, -0.6%, 0); }
+      to { transform: scale(1) translate3d(0, 0.6%, 0); }
+    }
+    @keyframes cine-fondo {
+      from { transform: translate3d(0, -1.6%, 0); }
+      to { transform: translate3d(0, 1.6%, 0); }
+    }
+    @keyframes cine-subir {
+      from { transform: translate3d(0, 14px, 0); }
+      to { transform: translate3d(0, 0, 0); }
+    }
+  }
+}
