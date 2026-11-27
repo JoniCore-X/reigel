@@ -105,7 +105,9 @@ ANSWERS = {
     "locations": "Power Solar tiene una página corporativa para localizar tiendas. Consulta allí la ubicación y confirma el horario antes de ir; esta página no permite verificar automáticamente una dirección o disponibilidad concreta. También puedes coordinar una evaluación con el equipo desde aquí.",
 }
 
-TECHNICAL_REVIEWED_AT = "2026-11-05T00:00:00+00:00"
+# Revisadas el 26 nov 2026: se abrieron las once direcciones una a una y todas
+# respondieron. Esa comprobación es lo que renueva la fecha; no se renueva sola.
+TECHNICAL_REVIEWED_AT = "2026-11-26T00:00:00+00:00"
 TECHNICAL_VALIDITY_DAYS = 180
 TECHNICAL_SOURCES = {
     "doe_inverters": {
@@ -117,6 +119,51 @@ TECHNICAL_SOURCES = {
         "title": "Measuring Electricity",
         "url": "https://www.eia.gov/energyexplained/electricity/measuring-electricity.php",
         "organization": "U.S. Energy Information Administration",
+    },
+    # Añadidas el 26 nov 2026. Cada una se abrió y se leyó antes de citarla, y cada
+    # respuesta dice solo lo que su fuente sostiene. Las que no encontraron fuente se
+    # quedaron en revisión: la base prefiere decir «no lo sé» a rellenar el hueco.
+    "eia_photovoltaics": {
+        "title": "Solar explained: Photovoltaics and electricity",
+        "url": "https://www.eia.gov/energyexplained/solar/photovoltaics-and-electricity.php",
+        "organization": "U.S. Energy Information Administration",
+    },
+    "doe_homeowner": {
+        "title": "Homeowner's Guide to Going Solar",
+        "url": "https://www.energy.gov/eere/solar/homeowners-guide-going-solar",
+        "organization": "U.S. Department of Energy",
+    },
+    "doe_storage": {
+        "title": "Solar Integration: Solar Energy and Storage Basics",
+        "url": "https://www.energy.gov/eere/solar/solar-integration-solar-energy-and-storage-basics",
+        "organization": "U.S. Department of Energy",
+    },
+    "doe_efficiency": {
+        "title": "Solar Photovoltaic Performance and Efficiency Basics",
+        "url": "https://www.energy.gov/eere/solar/solar-performance-and-efficiency",
+        "organization": "U.S. Department of Energy",
+    },
+    "doe_end_of_life": {
+        "title": "End-of-Life Management for Solar Photovoltaics",
+        "url": "https://www.energy.gov/eere/solar/end-life-management-solar-photovoltaics",
+        "organization": "U.S. Department of Energy",
+    },
+    "doe_degradation": {
+        "title": "A Clearer Picture of U.S. Solar Power Performance",
+        "url": "https://www.energy.gov/node/4830605",
+        "organization": "U.S. Department of Energy",
+    },
+    "doe_replace": {
+        "title": "Should I Replace My Rooftop Solar System?",
+        "url": "https://www.energy.gov/eere/solar/articles/should-i-replace-my-rooftop-solar-system",
+        "organization": "U.S. Department of Energy",
+    },
+    # La ley, publicada por el propio Negociado de Energía de Puerto Rico. Es la única
+    # fuente local: para lo de aquí no sirve una página federal.
+    "pr_ley_17_2019": {
+        "title": "Ley 17-2019, Ley de Política Pública Energética de Puerto Rico",
+        "url": "https://energia.pr.gov/wp-content/uploads/sites/7/2019/05/17-2019.pdf",
+        "organization": "Negociado de Energía de Puerto Rico",
     },
 }
 
@@ -195,38 +242,79 @@ TECHNICAL_TOPICS = {
         ),
     },
     "solar_production": {
+        # Pregunta por la producción de un techo concreto: ninguna fuente general la
+        # contesta, y abstenerse es lo correcto, no una carencia que haya que tapar.
         "status": "pending_review",
         "source_ids": (),
     },
     "hybrid_system": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("doe_storage",),
+        "answer": (
+            "Lo que la gente llama sistema híbrido es solar con batería. Las placas producen "
+            "cuando hay sol y la batería guarda esa electricidad para cuando no lo hay, que es "
+            "lo que permite tener respaldo si se va la luz. Qué cubriría en tu casa depende del "
+            "diseño, y eso lo ve el equipo en la evaluación."
+        ),
     },
     "efficiency": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("doe_efficiency",),
+        "answer": (
+            "La eficiencia es qué parte de la energía del sol que cae sobre la placa sale "
+            "convertida en electricidad. Se mide en laboratorio, con una luz y una temperatura "
+            "fijas, así que en un techo de verdad no sale igual: el calor, por ejemplo, le baja "
+            "el rendimiento. Comparar placas solo por ese dato dice poco."
+        ),
     },
     "net_metering_puerto_rico": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("pr_ley_17_2019",),
+        "answer": (
+            "La medición neta existe en Puerto Rico por ley y la regula el Negociado de Energía: "
+            "es lo que permite que quien produce su propia electricidad reciba un crédito en la "
+            "factura. La misma ley deja que el Negociado revise y cambie las condiciones del "
+            "programa, así que las que apliquen hoy conviene confirmarlas antes de contar con "
+            "ellas. Yo no puedo decirte cuáles están vigentes."
+        ),
     },
     "luma_billing": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("pr_ley_17_2019",),
+        "answer": (
+            "La ley exige que la factura eléctrica identifique de manera clara y detallada las "
+            "categorías de cargos y créditos al consumidor, incluido el crédito por medición "
+            "neta, y que el Negociado de Energía la apruebe. Si algo en tu factura no cuadra, "
+            "ahí es donde se reclama. Yo no puedo revisar tu factura ni confirmarte un cargo."
+        ),
     },
     "preliminary_sizing": {
+        # Cuántos paneles necesita una casa depende de esa casa. Se abstiene.
         "status": "pending_review",
         "source_ids": (),
     },
     "maintenance": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("doe_replace", "doe_homeowner"),
+        "answer": (
+            "Un sistema solar necesita mantenimiento regular y que se mantenga limpio: sucio "
+            "rinde menos. Qué hace falta en tu caso y cada cuánto lo dice quien lo instaló, y "
+            "una avería la revisa una persona cualificada. No subas tú al techo a mirarlo."
+        ),
     },
     "electrical_safety": {
-        "status": "pending_review",
-        "source_ids": (),
+        "status": "verified",
+        "source_ids": ("doe_homeowner",),
+        "answer": (
+            "Lo que hace segura una instalación es que la haga un profesional cualificado y que "
+            "cumpla los códigos locales de construcción, de incendios y eléctricos. Por tu parte, "
+            "no subas al techo ni toques cables, inversores ni placas, tampoco para revisarlos. "
+            "Si algo no va bien, lo mira una persona del equipo."
+        ),
     },
     "component_lifespan": {
+        # La pregunta que llega suele ser por la batería, y las fuentes encontradas el
+        # 26 nov 2026 cubren las placas, no las baterías. Se abstiene.
         "status": "pending_review",
         "source_ids": (),
     },

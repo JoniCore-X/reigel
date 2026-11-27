@@ -38,9 +38,11 @@ def test_a_topic_without_a_source_is_never_passed_off_as_verified(chat):
     """`insufficient` es el aviso de que no hay fuente. Pasarlo como evidencia sería
     justo lo contrario de lo que significa."""
     service, token = chat
-    answer = service.knowledge.answer_technical("que mantenimiento llevan estos equipos")
+    # Cuántos paneles necesita una casa concreta: ninguna fuente general lo contesta,
+    # y por eso este tema sigue absteniéndose aunque otros ganaran fuente.
+    answer = service.knowledge.answer_technical("cuantos paneles necesita mi casa")
     assert answer and answer["status"] == "insufficient"
-    brief = service.ai_brief(token, "y eso del mantenimiento como va la cosa", "verif-002")
+    brief = service.ai_brief(token, "y lo de cuantos paneles como va la cosa", "verif-002")
     if brief:
         assert answer["text"] not in brief["verified"]
 

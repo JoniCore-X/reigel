@@ -3435,3 +3435,80 @@ corre en la aplicación real, nunca en una vista previa.
 El motor abre trabajo; no habla con nadie. No envía mensajes, no marca llamadas y no
 cambia la etapa de un registro. La «vida» que da es que la cartera deja de depender de
 que alguien se acuerde.
+
+## Fuentes para los temas sin citar (26 de noviembre de 2026)
+
+La base tenía 17 temas técnicos y solo 8 con fuente. Los otros 9 estaban escritos pero
+sin nada que los respaldara, y por eso el chat se abstenía en todos. Se buscaron
+fuentes oficiales para los nueve, se comprobó cada dirección y se leyó cada página
+antes de citarla.
+
+### Resultado: 6 ganan fuente, 3 se quedan absteniéndose
+
+| Tema | Fuente | Organización |
+| --- | --- | --- |
+| `efficiency` | Solar Photovoltaic Performance and Efficiency Basics | Dept. de Energía EE. UU. |
+| `hybrid_system` | Solar Integration: Solar Energy and Storage Basics | Dept. de Energía EE. UU. |
+| `electrical_safety` | Homeowner's Guide to Going Solar | Dept. de Energía EE. UU. |
+| `maintenance` | Should I Replace My Rooftop Solar System? + la guía anterior | Dept. de Energía EE. UU. |
+| `net_metering_puerto_rico` | **Ley 17-2019** | **Negociado de Energía de Puerto Rico** |
+| `luma_billing` | **Ley 17-2019** | **Negociado de Energía de Puerto Rico** |
+
+**Los tres que no:** `preliminary_sizing`, `component_lifespan` y `solar_production`.
+Las preguntas que los activan son «¿cuántos paneles necesita **mi** casa?», «¿cuántos
+años dura **una batería**?» y «¿qué producción tendrá **mi** techo?». Ninguna fuente
+general contesta eso. Abstenerse ahí no es una carencia que haya que tapar, y así se
+dejaron, a propósito.
+
+### Las dos de Puerto Rico, que eran las difíciles
+
+Para lo de aquí no sirve una página federal. La Ley 17-2019, publicada por el propio
+Negociado, resultó dar las dos:
+
+- **Medición neta.** La ley nombra el «Programa de Medición Neta en la Autoridad de
+  Energía Eléctrica» (Ley 114-2007) y hace política pública que el consumidor pueda
+  volverse prosumidor por esa vía. Y dice algo decisivo para no mentir: pasados cinco
+  años, «el Negociado podrá tomar cualquier determinación relacionada con el programa de
+  medición neta». Por eso la respuesta explica el marco y manda a confirmar las
+  condiciones vigentes en lugar de afirmarlas.
+- **La factura.** La ley exige establecer «una factura de energía eléctrica para cada
+  tipo de cliente que identifique de manera clara y detallada las categorías de los
+  diferentes cargos y créditos al consumidor», incluido «el crédito por medición neta»,
+  y que el Negociado la apruebe. La respuesta dice eso y añade que no revisa el recibo
+  de nadie.
+
+El PDF no se dejaba leer con una descarga normal: devolvía binario. Se extrajo con
+`pypdf`, que ya es dependencia del proyecto, y las citas de arriba son texto literal.
+
+### Lo que se cuidó al promover los temas
+
+Marcar un tema `verified` no es solo mostrar su texto: la evidencia pasa al modelo y
+`validate_reply` **relaja** la comprobación de detalle técnico. Por eso:
+
+- Ninguna respuesta nueva lleva cifras, aunque las fuentes las traigan. Hay una prueba.
+- Cada respuesta dice solo lo que su fuente sostiene. La página de almacenamiento del
+  DOE, por ejemplo, nunca usa la palabra «híbrido»: la respuesta dice «lo que la gente
+  llama sistema híbrido es solar con batería» y describe lo que la página sí afirma.
+- Una prueba anterior protegía que los temas locales o específicos de una instalación se
+  abstuvieran «por falta de fuente autorizada». Esa premisa dejó de valer para los dos de
+  Puerto Rico, y se dividió: los tres específicos de una casa siguen con su prueba, y los
+  dos locales tienen una nueva que comprueba que citan al Negociado y que siguen sin
+  interpretar la factura de nadie.
+
+### Medido
+
+**La cobertura pasó de 16 a 25 de los 119 casos de la batería, del 13 % al 21 %**, y ya
+no queda ningún tema que reconozca la pregunta y no tenga con qué contestarla: los
+«sin fuente» pasaron de 11 a 0.
+
+También se reverificaron las dos fuentes que ya existían —ambas responden— y por eso se
+movió `TECHNICAL_REVIEWED_AT` al 26 de noviembre. Esa fecha la renueva una comprobación,
+nunca el paso del tiempo.
+
+### Lo que no se encontró
+
+No existe, o no se encontró, una página oficial `.gov` con guía de mantenimiento para
+quien tiene placas en casa: limpieza, revisiones, cada cuánto. Lo único utilizable es
+una frase de un artículo del DOE que dice que el mantenimiento regular y la limpieza
+mejoran el rendimiento, y a eso —y nada más— se limita la respuesta. Es la fuente más
+débil de las once y conviene sustituirla si aparece algo mejor.

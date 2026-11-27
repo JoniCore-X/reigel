@@ -127,7 +127,7 @@
    "mensaje": "¿Qué mantenimiento necesitan las placas?",
    "espera": {
     "tema_tecnico": "maintenance",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {
@@ -137,7 +137,7 @@
    "mensaje": "¿Cómo funciona el neteo en Puerto Rico?",
    "espera": {
     "tema_tecnico": "net_metering_puerto_rico",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {
@@ -157,7 +157,7 @@
    "mensaje": "¿Qué eficiencia tienen los paneles de hoy?",
    "espera": {
     "tema_tecnico": "efficiency",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {
@@ -167,7 +167,7 @@
    "mensaje": "¿Cómo factura LUMA la energía que devuelvo?",
    "espera": {
     "tema_tecnico": "luma_billing",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {
@@ -187,7 +187,7 @@
    "mensaje": "¿Es peligroso tener placas en el techo?",
    "espera": {
     "tema_tecnico": "electrical_safety",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {
@@ -197,7 +197,7 @@
    "mensaje": "¿Qué es un sistema híbrido?",
    "espera": {
     "tema_tecnico": "hybrid_system",
-    "estado_tecnico": "insufficient"
+    "estado_tecnico": "verified"
    }
   },
   {

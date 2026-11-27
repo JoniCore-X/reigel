@@ -213,7 +213,10 @@ def test_technical_knowledge_answers_with_citations_without_company_claims(tmp_p
     assert "Power Solar" not in answer["reply"]
 
 
-def test_technical_chat_abstains_on_unverified_luma_billing(tmp_path):
+def test_the_chat_explains_what_the_law_requires_of_a_bill_and_still_refuses_to_read_yours(tmp_path):
+    """Hasta el 26 nov 2026 esto se abstenía por falta de fuente. Ahora cita la Ley
+    17-2019 publicada por el Negociado, que es quien aprueba la factura. Lo que no
+    cambia: no interpreta el recibo de nadie, y la atención humana sigue a mano."""
     store = Store(tmp_path / "luma-chat.db")
     service = WebChat(store, KnowledgeBase(store))
     token, _ = service.start()
@@ -224,9 +227,10 @@ def test_technical_chat_abstains_on_unverified_luma_billing(tmp_path):
         "technical-luma-001",
     )
 
-    assert "no tengo una fuente técnica vigente" in answer["reply"].lower()
-    assert answer["sources"] == []
-    assert answer["actions"] == ["human"]
+    assert "Negociado" in answer["reply"]
+    assert "no puedo revisar tu factura" in answer["reply"].lower()
+    assert [s for s in answer["sources"] if "energia.pr.gov" in s["url"]], answer["sources"]
+    assert "human" in answer["actions"]
 
 
 def test_technical_chat_abstains_on_unverified_maintenance_guidance(tmp_path):

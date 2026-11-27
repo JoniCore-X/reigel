@@ -218,14 +218,17 @@ def test_technical_general_answer_does_not_assert_company_offerings(kb):
 @pytest.mark.parametrize(
     "query,topic",
     [
-        ("¿Cómo funciona la medición neta en Puerto Rico?", "net_metering_puerto_rico"),
-        ("¿Qué cargos de LUMA significa este recibo?", "luma_billing"),
+        # Las tres preguntan por la casa de quien escribe: cuántos paneles necesita,
+        # cuánto produciría su techo, cuánto le durará su batería. Ninguna fuente
+        # general contesta eso, así que la abstención no es una carencia por llenar.
+        # El 26 nov 2026 se buscaron fuentes para los nueve temas sin citar y estos
+        # tres se dejaron a propósito como estaban.
         ("¿Cuántos paneles necesita mi casa?", "preliminary_sizing"),
         ("¿Cuántos años dura una batería?", "component_lifespan"),
         ("¿Qué producción fotovoltaica tendrá mi techo?", "solar_production"),
     ],
 )
-def test_local_or_installation_specific_topics_abstain_without_authorized_source(
+def test_installation_specific_topics_abstain_because_no_general_source_can_answer_them(
     kb,
     query,
     topic,
@@ -270,3 +273,47 @@ def test_user_injected_instruction_is_never_used_as_retrieval_policy(kb):
     )
 
     assert answer is None
+
+
+@pytest.mark.parametrize("query,topic,source_id", [
+    ("¿Cómo funciona la medición neta en Puerto Rico?", "net_metering_puerto_rico", "pr_ley_17_2019"),
+    ("¿Qué cargos de LUMA significa este recibo?", "luma_billing", "pr_ley_17_2019"),
+])
+def test_the_two_local_topics_now_cite_the_law_from_the_regulator_itself(kb, query, topic, source_id):
+    """El 26 nov 2026 dejaron de abstenerse porque apareció la fuente que faltaba: la
+    Ley 17-2019 publicada por el propio Negociado de Energía. Lo que no cambia es que
+    la respuesta no se moja con el caso de nadie: dice el marco y manda a confirmarlo."""
+    answer = kb.answer_technical(query)
+    assert answer["status"] == "verified"
+    assert answer["topic"] == topic
+    assert [s for s in answer["sources"] if "energia.pr.gov" in s["url"]], answer["sources"]
+    assert "Negociado" in answer["text"]
+    # Ni revisa facturas ni afirma qué condiciones rigen hoy.
+    assert "no puedo" in answer["text"].lower()
+
+
+def test_every_usable_topic_cites_a_real_organization_and_an_https_source():
+    from reigel import knowledge
+
+    for name, spec in knowledge.TECHNICAL_TOPICS.items():
+        if spec["status"] != "verified":
+            assert not spec["source_ids"], name
+            continue
+        assert spec["source_ids"], name
+        assert spec.get("answer"), name
+        for source_id in spec["source_ids"]:
+            source = knowledge.TECHNICAL_SOURCES[source_id]
+            assert source["url"].startswith("https://"), (name, source_id)
+            assert source["organization"].strip(), (name, source_id)
+
+
+def test_no_usable_answer_carries_a_figure():
+    """Las fuentes traen cifras; las respuestas no. El validador de /chat rechaza
+    dígitos, y una cifra suelta en un chat se recuerda como una promesa."""
+    import re as _re
+
+    from reigel import knowledge
+
+    for name, spec in knowledge.TECHNICAL_TOPICS.items():
+        if spec["status"] == "verified":
+            assert not _re.search(r"\d", spec["answer"]), name
