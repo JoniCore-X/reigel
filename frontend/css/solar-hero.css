@@ -1,0 +1,167 @@
+/* Hero inmersivo de /captacion.
+ *
+ * Una sola idea en pantalla: la escena detrás, un titular y un botón delante. Lo que
+ * había antes eran tres cosas compitiendo —texto, botones y una foto con pie—, y por
+ * eso no miraba a ningún sitio.
+ *
+ * El fondo oscuro vive aquí y no en el `<canvas>`: así la zona ya es negra antes de
+ * que cargue Three.js, y si no carga nunca —sin WebGL, sin módulos, sin el archivo—
+ * no se nota que falta nada. El canvas se limita a pintar encima.
+ *
+ * El naranja es luz, no relleno: ilumina el botón y el halo del sol, y no rellena
+ * ninguna superficie grande. */
+
+.corporate-body .solar-hero {
+  position: relative;
+  display: grid;
+  align-items: center;
+  width: 100%;
+  min-height: min(92svh, 880px);
+  margin: 0;
+  padding: 0;
+  overflow: clip; /* nunca `hidden`: crearía un contenedor de scroll. */
+  background:
+    radial-gradient(120% 78% at 18% 86%, #0b1f4d 0%, #07122a 42%, #03060d 100%);
+  color: #f4f6fb;
+  isolation: isolate;
+}
+
+/* A sangre: el hero rompe el contenedor de la página, que es lo que lo separa de una
+   sección más. */
+.corporate-body .solar-hero {
+  margin-inline: calc(50% - 50vw);
+  width: 100vw;
+  max-width: 100vw;
+}
+
+.corporate-body .hero3d-canvas {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Hasta que la escena mide y dibuja, el degradado de abajo es lo que se ve. */
+  opacity: 0;
+  transition: opacity .9s cubic-bezier(.22, 1, .36, 1);
+}
+.corporate-body [data-solar-hero="activo"] .hero3d-canvas { opacity: 1; }
+
+/* Un velo de luz, no una tarjeta.
+ *
+ * Al pasar el scroll, el arreglo encendido cruza por detrás del titular, y texto
+ * claro sobre una celda naranja da unos 2,6:1 de contraste: ilegible. Un degradado
+ * desde la izquierda resuelve lo mismo que resolvería una caja oscura detrás del
+ * texto, sin meter una tarjeta en una zona inmersiva, que es justo lo que no se
+ * quiere. Es iluminación: oscurece el lado del que se lee y suelta el otro. */
+.corporate-body .solar-hero::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: linear-gradient(94deg, #03060de8 0%, #03060db0 34%, #03060d36 58%, transparent 76%);
+  content: "";
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .corporate-body .solar-hero::before {
+    background: linear-gradient(176deg, #03060dd9 0%, #03060d8c 46%, #03060d26 78%, transparent 100%);
+  }
+}
+
+.corporate-body .solar-hero-copy {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 48px, 1180px);
+  margin-inline: auto;
+  padding: clamp(72px, 12vh, 140px) 0;
+}
+
+.corporate-body .solar-hero-eyebrow {
+  margin: 0 0 clamp(18px, 2.4vh, 30px);
+  color: #9aa6c1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.corporate-body .solar-hero h1 {
+  max-width: 15ch;
+  margin: 0;
+  color: #f4f6fb;
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 700;
+  line-height: .95;
+  letter-spacing: -.03em;
+  text-wrap: balance;
+}
+
+/* El naranja como luz: una sola palabra encendida, no un bloque de color. */
+.corporate-body .solar-hero h1 em {
+  color: #ffb547;
+  font-style: normal;
+}
+
+.corporate-body .solar-hero-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 54px;
+  margin-top: clamp(28px, 4vh, 48px);
+  padding: 0 30px;
+  border-radius: 3px;
+  background: #ff7a1a;
+  box-shadow: 0 0 0 0 rgb(255 122 26 / .45);
+  color: #03060d;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-decoration: none;
+  transition: background .25s cubic-bezier(.22, 1, .36, 1), box-shadow .35s cubic-bezier(.22, 1, .36, 1);
+}
+.corporate-body .solar-hero-action:hover {
+  background: #ffb547;
+  box-shadow: 0 0 44px 0 rgb(255 122 26 / .45);
+}
+.corporate-body .solar-hero-action:focus-visible {
+  outline: 3px solid #ffb547;
+  outline-offset: 4px;
+}
+.corporate-body .solar-hero-action span { font-size: 19px; line-height: 1; }
+
+/* Entrada: opacidad y un desplazamiento corto, nada aparece de golpe. Es una
+   transición de carga y no un scrub: ocurre una vez, al abrir la página. */
+@media (prefers-reduced-motion: no-preference) {
+  .corporate-body .solar-hero-copy > * {
+    animation: solar-hero-entra .62s cubic-bezier(.22, 1, .36, 1) both;
+  }
+  .corporate-body .solar-hero-copy > :nth-child(2) { animation-delay: .1s; }
+  .corporate-body .solar-hero-copy > :nth-child(3) { animation-delay: .2s; }
+
+  @keyframes solar-hero-entra {
+    from { opacity: 0; transform: translate3d(0, 18px, 0); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 760px) {
+  .corporate-body .solar-hero { min-height: min(86svh, 680px); }
+  .corporate-body .solar-hero-copy { width: calc(100% - 32px); }
+  .corporate-body .solar-hero h1 { max-width: 12ch; }
+  .corporate-body .solar-hero-action { width: 100%; justify-content: center; }
+}
+
+/* Sin escena —sin WebGL, sin módulos o sin el archivo— queda el degradado y el texto,
+   que es lo que hay que poder leer. No se anuncia la ausencia. */
+@media (forced-colors: active) {
+  .corporate-body .hero3d-canvas { display: none; }
+  .corporate-body .solar-hero { background: Canvas; color: CanvasText; }
+  .corporate-body .solar-hero h1 { color: CanvasText; }
+}
+
+@media print {
+  .corporate-body .hero3d-canvas { display: none; }
+  .corporate-body .solar-hero { min-height: 0; background: none; color: #03060d; }
+  .corporate-body .solar-hero h1 { color: #03060d; }
+}

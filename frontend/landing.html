@@ -21,7 +21,8 @@
   <link rel="stylesheet" href="/static/css/public-intents.css">
   <link rel="stylesheet" href="/static/css/power-solar-identity.css?v=2">
   <link rel="stylesheet" href="/static/css/corporate.css?v=8">
-  <link rel="stylesheet" href="/static/css/scroll-cinema.css?v=1">
+  <link rel="stylesheet" href="/static/css/scroll-cinema.css?v=2">
+  <link rel="stylesheet" href="/static/css/solar-hero.css?v=2">
   <link rel="stylesheet" href="/static/css/uiverse-components.css?v=4">
   <link rel="stylesheet" href="/static/css/reigel-loader.css?v=5">
   <link rel="stylesheet" href="/static/css/site-loader.css?v=10">
@@ -36,13 +37,14 @@
   <script src="/static/js/tesla-experience.js?v=1" defer></script>
   <script src="/static/js/launcher-yield.js?v=2" defer></script>
   <script src="/static/js/depth-3d.js?v=6" defer></script>
-  <script src="/static/js/system-showcase.js?v=7" defer></script>
+  <script src="/static/js/system-showcase.js?v=8" defer></script>
+  <script type="module" src="/static/js/solar-hero-3d.js?v=7"></script>
   <link rel="stylesheet" href="/static/css/energy-scene.css?v=8">
   <link rel="stylesheet" href="/static/css/energy-view.css?v=6">
   <link rel="stylesheet" href="/static/css/tesla-experience.css?v=6">
   <link rel="stylesheet" href="/static/css/public-shell.css?v=9">
   <link rel="stylesheet" href="/static/css/depth-3d.css?v=6">
-  <link rel="stylesheet" href="/static/css/system-showcase.css?v=10">
+  <link rel="stylesheet" href="/static/css/system-showcase.css?v=11">
   <link rel="stylesheet" href="/static/css/solar-theme.css?v=3">
 </head>
 <body class="public-body corporate-body">
@@ -96,14 +98,16 @@
   <div class="cine-progreso" aria-hidden="true"></div>
   <main id="main">
 <!--corporate:content:start-->
-    <section class="corp-home corp-container" aria-labelledby="home-title">
-      <div class="corp-home-copy">
-        <p class="corp-eyebrow">POWER SOLAR · TEAM CAGUAS</p>
-        <h1 id="home-title">Energía solar.<br>Información para decidir.</h1>
-        <p class="corp-lead">Conoce las opciones de energía para tu hogar en Puerto Rico y los aspectos que conviene evaluar antes de tomar una decisión.</p>
-        <div class="ui-hero-actions"><a class="corp-text-link ui-action ui-action-primary" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a><a class="ui-hero-secondary" href="/empresa">Conoce nuestro enfoque <span aria-hidden="true">→</span></a></div>
+    <!-- El canvas no comunica nada que no esté escrito al lado, así que se oculta a
+         quien lee la página con lectores de pantalla. El titular y el botón son HTML
+         real y la página se lee entera sin la escena. -->
+    <section class="solar-hero" data-solar-hero aria-labelledby="home-title">
+      <canvas class="hero3d-canvas" aria-hidden="true"></canvas>
+      <div class="solar-hero-copy">
+        <p class="solar-hero-eyebrow">Power Solar · Team Caguas</p>
+        <h1 id="home-title">Del amanecer<br>a tu <em>energía</em>.</h1>
+        <a class="solar-hero-action" href="/contacto#evaluacion">Solicitar evaluación <span aria-hidden="true">↗</span></a>
       </div>
-      <figure class="corp-home-photo"><img src="/static/assets/power-solar/residencia-paneles-puerto-rico-1384.webp" width="1384" height="1030" alt="Instalación solar sobre una residencia de Puerto Rico" fetchpriority="high" decoding="async"><figcaption>ENERGÍA RESIDENCIAL · PUERTO RICO</figcaption></figure>
     </section>
     <section class="sc-why" aria-labelledby="sc-why-title">
       <div class="corp-container">
