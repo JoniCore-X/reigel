@@ -317,3 +317,26 @@ def test_no_usable_answer_carries_a_figure():
     for name, spec in knowledge.TECHNICAL_TOPICS.items():
         if spec["status"] == "verified":
             assert not _re.search(r"\d", spec["answer"]), name
+
+
+def test_no_source_is_defined_without_a_topic_that_uses_it():
+    """Una fuente definida y sin usar engaña: parece que algo está respaldado cuando
+    no lo está. Pasó el 26 nov 2026 al dejar dos temas absteniéndose."""
+    from reigel import knowledge
+
+    usadas = {source_id for spec in knowledge.TECHNICAL_TOPICS.values()
+              for source_id in spec["source_ids"]}
+    assert set(knowledge.TECHNICAL_SOURCES) == usadas, set(knowledge.TECHNICAL_SOURCES) - usadas
+
+
+def test_the_maintenance_answer_names_the_storm_routine_without_telling_anyone_to_do_it():
+    """El checklist que la respalda manda desenergizar y auditar anclajes. Eso se
+    cuenta para que la persona sepa que existe, nunca como instrucción para ella."""
+    from reigel import knowledge
+
+    texto = knowledge.TECHNICAL_TOPICS["maintenance"]["answer"]
+    assert "tormenta" in texto
+    assert "gente cualificada" in texto
+    assert "no subas al techo" in texto.lower()
+    # Sin jerga: el checklist dice «de-energize», la respuesta no.
+    assert "desenergiz" not in texto.lower()

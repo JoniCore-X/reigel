@@ -143,20 +143,21 @@ TECHNICAL_SOURCES = {
         "url": "https://www.energy.gov/eere/solar/solar-performance-and-efficiency",
         "organization": "U.S. Department of Energy",
     },
-    "doe_end_of_life": {
-        "title": "End-of-Life Management for Solar Photovoltaics",
-        "url": "https://www.energy.gov/eere/solar/end-life-management-solar-photovoltaics",
-        "organization": "U.S. Department of Energy",
+    # Para mantenimiento, la única página federal que se encontró era un artículo con
+    # una frase suelta. Estas dos, de la oficina de energía de un estado, dicen algo
+    # concreto: cada cuánto, quién y qué pasa con la garantía. El checklist de tormenta
+    # viene de una guía del Departamento de Energía y Lawrence Berkeley, y pesa aquí
+    # más que en otro sitio: esto es una isla con huracanes.
+    "sc_energy_maintenance": {
+        "title": "Warranties, Insurance, and Maintenance",
+        "url": "https://solar.sc.gov/installing-and-maintaining-system/warranties-insurance-and-maintenance",
+        "organization": "South Carolina Energy Office",
     },
-    "doe_degradation": {
-        "title": "A Clearer Picture of U.S. Solar Power Performance",
-        "url": "https://www.energy.gov/node/4830605",
-        "organization": "U.S. Department of Energy",
-    },
-    "doe_replace": {
-        "title": "Should I Replace My Rooftop Solar System?",
-        "url": "https://www.energy.gov/eere/solar/articles/should-i-replace-my-rooftop-solar-system",
-        "organization": "U.S. Department of Energy",
+    "sc_storm_checklist": {
+        "title": "Solar Photovoltaic System Resilience: Pre- and Post-Storm Checklist",
+        "url": ("https://solar.sc.gov/sites/orssolar/files/Documents/"
+                "installing-and-maintaining-a-system/documents/pre-and-post-storm-checklist.pdf"),
+        "organization": "South Carolina Energy Office (a partir de una guía del U.S. DOE)",
     },
     # La ley, publicada por el propio Negociado de Energía de Puerto Rico. Es la única
     # fuente local: para lo de aquí no sirve una página federal.
@@ -170,7 +171,7 @@ TECHNICAL_SOURCES = {
 TECHNICAL_TOPICS = {
     "pv_operation": {
         "status": "verified",
-        "source_ids": ("doe_inverters",),
+        "source_ids": ("doe_inverters", "eia_photovoltaics"),
         "answer": (
             "Las placas atrapan la luz del sol y la convierten en electricidad. Esa electricidad "
             "todavía no sirve tal cual para la casa: un equipo llamado inversor la deja lista para "
@@ -295,11 +296,15 @@ TECHNICAL_TOPICS = {
     },
     "maintenance": {
         "status": "verified",
-        "source_ids": ("doe_replace", "doe_homeowner"),
+        "source_ids": ("sc_energy_maintenance", "sc_storm_checklist", "doe_homeowner"),
         "answer": (
-            "Un sistema solar necesita mantenimiento regular y que se mantenga limpio: sucio "
-            "rinde menos. Qué hace falta en tu caso y cada cuánto lo dice quien lo instaló, y "
-            "una avería la revisa una persona cualificada. No subas tú al techo a mirarlo."
+            "Lo habitual es una revisión al año hecha por quien lo instaló, siguiendo el manual "
+            "del sistema, que conviene leer: mantener la garantía del fabricante suele exigir "
+            "ese mantenimiento. Y aquí hay algo propio de la isla: antes y después de una "
+            "tormenta hay toda una rutina —asegurar piezas sueltas, dejar el sistema sin "
+            "corriente, revisar los anclajes, secar y comprobar el equipo—, y es trabajo de "
+            "gente cualificada. Tú no subas al techo ni toques el sistema, ni para mirar cómo "
+            "quedó."
         ),
     },
     "electrical_safety": {

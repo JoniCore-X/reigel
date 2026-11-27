@@ -108,7 +108,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1180 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1182 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.

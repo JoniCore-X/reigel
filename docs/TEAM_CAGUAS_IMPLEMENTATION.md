@@ -3507,8 +3507,39 @@ nunca el paso del tiempo.
 
 ### Lo que no se encontró
 
-No existe, o no se encontró, una página oficial `.gov` con guía de mantenimiento para
-quien tiene placas en casa: limpieza, revisiones, cada cuánto. Lo único utilizable es
-una frase de un artículo del DOE que dice que el mantenimiento regular y la limpieza
-mejoran el rendimiento, y a eso —y nada más— se limita la respuesta. Es la fuente más
-débil de las once y conviene sustituirla si aparece algo mejor.
+Quedó anotado que la fuente de mantenimiento era la más floja de todas: una frase
+suelta de un artículo del DOE. **Sustituida el mismo día** (ver abajo).
+
+## Una fuente mejor para mantenimiento (26 de noviembre de 2026)
+
+La primera búsqueda no encontró ninguna página federal con guía de mantenimiento para
+quien tiene placas en casa. La segunda la encontró en otro sitio: la oficina de energía
+de un estado, y un documento que resultó valer más aquí que cualquier página federal.
+
+- **South Carolina Energy Office, «Warranties, Insurance, and Maintenance».** Da lo que
+  faltaba, que es concreto: «Most vendors recommend a yearly maintenance check by the
+  installer», leer el manual del sistema con el proveedor, y —esto importa
+  comercialmente— que «maintenance may be required to comply with a manufacturer's
+  warranty». Una revisión al año no es un consejo vago: es lo que mantiene viva la
+  garantía.
+- **«Pre- and Post-Storm Checklist», de la misma oficina**, derivado según su propia
+  nota al pie de una guía del Departamento de Energía de EE. UU. y Lawrence Berkeley.
+  Este pesa más en Puerto Rico que en Carolina del Sur: asegurar piezas sueltas antes,
+  y después dejar el sistema sin corriente, revisar anclajes, secar el equipo y probar
+  si hay fallas eléctricas.
+
+El PDF tampoco se dejaba leer con una descarga normal; se extrajo con `pypdf`, igual que
+la ley.
+
+**Lo que no se hizo con ese checklist.** Manda desenergizar, hacer auditorías de torque
+y pruebas Megger. Nada de eso se le dice a una persona: `voice.INSTALLATION` prohíbe dar
+instrucciones de manipulación y el validador caza «subir al techo». La respuesta cuenta
+**que esa rutina existe y que es trabajo de gente cualificada**, y cierra con «tú no
+subas al techo ni toques el sistema, ni para mirar cómo quedó». Una prueba comprueba
+justo eso, incluida la ausencia de la palabra «desenergizar», que es jerga.
+
+**De paso, dos fuentes quedaron huérfanas** al dejar `component_lifespan` y
+`solar_production` absteniéndose, y una fuente definida y sin usar engaña: parece que
+algo está respaldado cuando no lo está. Se quitaron, la de la EIA se asignó a
+`pv_operation`, que explica justo eso, y ahora hay una prueba que impide que vuelva a
+pasar. Nueve fuentes, nueve usadas.
