@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+import re
 import json
 
 import pytest
@@ -186,8 +187,12 @@ def test_unverified_company_info_and_prices_are_not_invented(chat):
     assert "no tengo información vigente" in unknown["reply"].lower()
     assert unknown["sources"] == []
     price = service.message(token, "¿Cuánto cuesta y me aprueban financiamiento?", "message-company-002")
-    assert "no puedo prometer" in price["reply"]
-    assert "aprobación" in price["reply"]
+    # Desde el 26 nov 2026 cada pregunta comercial tiene su propia respuesta, así que
+    # aquí se comprueba lo que importa y no una frase concreta: que no promete, que no
+    # inventa cifras y que dice expresamente que no puede adelantar la aprobación.
+    assert not re.search(r"\d", price["reply"]), price["reply"]
+    assert not re.search(r"garantiz|\bahorr", price["reply"], re.I), price["reply"]
+    assert "no te puedo adelantar plazos ni aprobación" in price["reply"]
 
 
 def test_technical_knowledge_answers_with_citations_without_company_claims(tmp_path):

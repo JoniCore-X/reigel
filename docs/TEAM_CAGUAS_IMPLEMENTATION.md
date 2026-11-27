@@ -3365,3 +3365,73 @@ La política de contenido sigue igual (`frame-src 'self'`), no se habilitaron if
 terceros, el comportamiento de fallar cerrado se mantiene en las tres rutas y ninguna
 respuesta que no pase los validadores se envía. No se descargaron modelos ni se
 contrataron servicios.
+
+## Que la IA venda: qué se midió y qué se hizo (26 de noviembre de 2026)
+
+El titular pidió poner la IA a contestar en `/chat` y darle motor para que venda. Antes
+de ampliarle terreno se midió qué pasaría, porque el modelo ya cubre el 49 % de los
+mensajes: solo entra cuando el motor determinista no clasifica.
+
+### La medición que cambió la respuesta
+
+24 mensajes de conversación de venta —objeción, precio, financiación, garantía—
+contestados por el motor de hoy y por el modelo que lo sustituiría. **13 de 24
+respuestas del modelo se publicarían.** Lo grave no es el número: es qué hay dentro de
+las que pasan.
+
+| Pregunta | Lo que el modelo publicaría | ¿Pasa el validador? |
+| --- | --- | --- |
+| ¿Me dan garantía de por vida? | «La garantía de por vida es una opción que el equipo de Power Solar puede ofrecer» | **Sí** |
+| ¿Tienen financiamiento sin intereses? | «Nosotros no ofrecemos financiamiento sin intereses» | **Sí** |
+| ¿Cuánto tarda el proceso? | «generalmente tarda unos meses» | **Sí** |
+
+Las tres son inventadas y las tres pasan. Los validadores son de patrones: cazan las
+palabras que conocen, no las afirmaciones falsas que no. Una garantía de por vida
+prometida por escrito a un cliente no es un fallo de calidad, es un problema legal.
+
+**Decisión: la conversación de venta se queda en el motor determinista.**
+
+### Lo que sí se hizo: respuestas de venta que responden
+
+`commercial_terms`, `financing` y `guaranteed_savings` compartían **un solo párrafo**.
+«¿Cuánto cuesta?», «¿hay promoción?», «¿garantía de por vida?» y «¿tienen
+financiamiento?» recibían exactamente el mismo texto, que es como contestar con un
+recorte de papel. Ahora son cinco respuestas (`WebChat.COMMERCIAL_REPLIES`), cada una a
+lo que le preguntaron y cada una terminando por donde conviene seguir:
+
+- **precio** — cualquier cifra ahora sería inventada; se ve con números tuyos.
+- **oferta** — no se anuncian promociones que después no existan; lo confirma el equipo.
+- **garantía** — las garantías tienen letra, y viene por escrito con la propuesta.
+- **financiación** — quién califica lo decide la entidad, no este chat.
+- **ahorro** — no se promete, y se avisa de quien sí lo promete sin ver la factura.
+
+Siguen siendo deterministas y ninguna promete nada: las pruebas comprueban que no
+aparece ninguna cifra, ni «garantizar», ni «ahorrar», ni el equipo hablando en primera
+persona, y que todas dejan la conversación abierta con una pregunta.
+
+**Un defecto que introduje y corregí en el mismo paso:** como las nuevas respuestas
+terminan preguntando, el motor les encimaba además su pregunta de calificación y
+salían dos preguntas seguidas en 11 de 119 respuestas. Se aplicó al final la misma
+regla que ya existía para la respuesta del modelo —si ya termina preguntando, no se
+añade otra—, y quedan 0 de 119. Dos preguntas seguidas obligan a elegir cuál contestar,
+y casi siempre se contesta la última, que es la que menos tiene que ver con lo suyo.
+
+### El motor comercial autónomo, encendido y demostrado
+
+Estaba construido desde las fases A–E y **apagado**. En la vista previa sintética se
+encendió desde `/app` → R.E.I.G.E.L. y se ejecutó una vuelta:
+
+- `Ver el plan sin aplicarlo` → 1 registro revisado, 1 decisión: «Cita dentro de 36
+  horas, sin confirmar» → `confirm_appointment`.
+- `Ejecutar una vuelta ahora` → «1 registro revisado, 1 decisión (1 aplicadas, 0 en
+  espera)», y la tarea quedó creada para el asesor con su vencimiento.
+
+**En el sistema real lo enciendes tú**, con ese mismo botón, en el servidor. No se tocó
+la base comercial: el interruptor vive en la base de datos y el bucle de fondo solo
+corre en la aplicación real, nunca en una vista previa.
+
+### Lo que esto no es
+
+El motor abre trabajo; no habla con nadie. No envía mensajes, no marca llamadas y no
+cambia la etapa de un registro. La «vida» que da es que la cartera deja de depender de
+que alguien se acuerde.

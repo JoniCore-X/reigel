@@ -350,6 +350,63 @@ class WebChat:
             self._save_request(db, session, request_id, "message", content_hash, result)
             return result
 
+    # Hasta el 26 de noviembre de 2026 estas cuatro preguntas —precio, descuento,
+    # garantía y financiación— recibían el mismo párrafo. Decir lo mismo a quien
+    # pregunta por una promoción y a quien pregunta por la garantía suena a recorte
+    # de papel, y nadie contesta así. Siguen siendo deterministas y ninguna promete:
+    # lo que cambia es que cada una responde a lo que le preguntaron y abre por donde
+    # conviene seguir. Qué puede prometerse vive en la propuesta por escrito, no aquí.
+    COMMERCIAL_REPLIES = {
+        "precio": (
+            "El costo depende de tu consumo, de lo que quieras resolver y del diseño que salga"
+            " de la evaluación, así que cualquier cifra que te diera ahora sería inventada."
+            " Lo honesto es verlo con números tuyos y pedir la propuesta por escrito para"
+            " compararla con calma. ¿Quieres que te cuente qué se mira en esa evaluación?"),
+        "oferta": (
+            "No manejo promociones ni descuentos desde aquí, y prefiero no anunciarte uno que"
+            " después no exista. Las condiciones vigentes te las confirma una persona del"
+            " equipo, por escrito y con tu caso delante. ¿Te paso con alguien del equipo para"
+            " preguntarlo?"),
+        "garantia": (
+            "Las garantías tienen letra: qué cubre cada una, cuántos años y qué deja fuera."
+            " Eso viene por escrito con la propuesta y conviene leerlo antes de firmar nada,"
+            " no fiarse de lo que te diga un chat. ¿Quieres que el equipo te explique las"
+            " condiciones de garantía de los equipos?"),
+        "financiacion": (
+            "Las condiciones de financiación y quién califica las decide la entidad que"
+            " financia, no este chat, así que no te puedo adelantar plazos ni aprobación."
+            " El equipo te explica las opciones reales cuando hay una propuesta. ¿Prefieres"
+            " que lo veamos en una evaluación o que te contacte alguien del equipo?"),
+        "ahorro": (
+            "No te lo puedo prometer, y con franqueza: desconfía de quien te lo prometa sin"
+            " haber visto tu factura ni tu techo. Lo que sí se puede es mirar tu consumo real"
+            " y qué cubriría un sistema en tu caso, y que tú decidas con eso delante."
+            " ¿Quieres empezar por tu consumo?"),
+        "general": (
+            "Todavía no tengo una propuesta validada para tu hogar, así que no puedo prometer"
+            " precios, aprobación, incentivos ni condiciones de garantía. Lo que sí ayuda es"
+            " revisar tu consumo y lo que buscas resolver, y pedir la propuesta por escrito"
+            " para comparar. ¿Por dónde quieres empezar?"),
+    }
+
+    @classmethod
+    def _commercial_reply(cls, intent, value):
+        """La respuesta comercial que corresponde a lo que preguntaron, no una sola
+        para todo. La intención no se toca: solo se afina el texto."""
+        if intent == "guaranteed_savings":
+            key = "ahorro"
+        elif intent == "financing":
+            key = "financiacion"
+        elif re.search(r"\bgarant\w*\b", value):
+            key = "garantia"
+        elif re.search(r"\b(?:descuento|promocion|oferta|rebaja|especial|incentivo)\w*\b", value):
+            key = "oferta"
+        elif re.search(r"\b(?:precio|precios|cuesta|costo|coste|vale|mensualidad|cuota)\w*\b", value):
+            key = "precio"
+        else:
+            key = "general"
+        return cls.COMMERCIAL_REPLIES[key]
+
     @staticmethod
     def _need_context(reason, conversation, profile, incoming):
         """Lo que hace falta para armar el informe, recogido dentro de la transacción."""
@@ -537,7 +594,7 @@ class WebChat:
         elif decision.intent == "defer":
             return "¡Tómate tu tiempo! Si te ayuda a comparar, aclaramos una duda puntual o vemos una evaluación cuando tú decidas. Conversar aquí no es una reserva ni una compra.", actions, sources
         elif decision.intent in {"commercial_terms", "financing", "guaranteed_savings"}:
-            reply = "Todavía no tengo una propuesta validada para tu hogar, así que no puedo prometer precios, aprobación, ahorros, incentivos ni condiciones de garantía. Lo que sí ayuda es revisar tu consumo y lo que buscas resolver, y pedir la propuesta por escrito para comparar."
+            reply = self._commercial_reply(decision.intent, value)
         elif decision.intent == "maintenance":
             technical = self.knowledge.answer_technical(value)
             if technical:
@@ -617,6 +674,12 @@ class WebChat:
                 gaps.append("fallback")
                 reply = "No te entendí bien. Te puedo orientar sobre la factura de luz, el respaldo en apagones o los sistemas solares, coordinar una evaluación o pasarte con alguien del equipo. ¿Qué prefieres?"
                 return reply, actions, sources
+        # La misma regla que ya se aplica a la respuesta del modelo más arriba: si el
+        # texto ya termina preguntando, no se le encima la pregunta de calificación.
+        # Dos preguntas seguidas obligan a la persona a elegir cuál contestar, y casi
+        # siempre contesta la última, que es la que menos tiene que ver con lo suyo.
+        if reply.rstrip().endswith("?"):
+            return reply, actions, sources
         return reply + " " + self._next_question(profile), actions, sources
 
     def human(self, token):

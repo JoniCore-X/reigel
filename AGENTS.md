@@ -8,6 +8,11 @@ contradicciones y distinguir pruebas locales de publicación o entrega externa.
 - `reigel/operations.py`: migraciones aditivas, CRM, actividades, tareas, avisos e indicadores.
 - `reigel/api.py`: composición HTTP; reutilizar `actor`, `payload` y `DomainError`.
 - `conversation.py` y `webchat.py`: decisiones deterministas, sesiones y reservas públicas.
+  La conversación de venta la lleva el motor, no el modelo: medido el 26 nov 2026, el
+  modelo publicaba garantías y plazos inventados que los validadores no cazan, porque
+  son de patrones. `WebChat.COMMERCIAL_REPLIES` da una respuesta distinta a precio,
+  oferta, garantía, financiación y ahorro; ninguna promete y todas cierran preguntando,
+  y por eso al final no se les añade la pregunta de calificación.
   Rechazar llamadas y darse de baja son cosas distintas: «no me llamen» es
   `call_opt_out` —sigue el chat y queda una constancia `do_not_call` sin actor, que solo
   restringe—, y «no me escriban» o «dejen de escribirme» son `opt_out` y apagan la
@@ -103,7 +108,7 @@ node --test (Get-ChildItem tests -Filter *.test.cjs).FullName
 ```
 
 Los comodines cubren los archivos nuevos sin editar este bloque. El 26 de
-noviembre de 2026, en `main` tras la fase F: 1152 pruebas de Python, 20 archivos
+noviembre de 2026, en `main` tras la fase F: 1178 pruebas de Python, 20 archivos
 JavaScript sin errores de sintaxis y 34 pruebas de Node en cuatro archivos
 (`frontend_chat`, `frontend_ia`, `frontend_learning`, `frontend_operations`).
 Pasar `tests` como carpeta a `node --test` falla: hay que expandir los archivos.
