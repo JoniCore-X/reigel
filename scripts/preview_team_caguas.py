@@ -110,6 +110,13 @@ def main():
     parser.add_argument("--port", type=int, default=8877)
     parser.add_argument("--codigo", metavar="SECRETO", help="Muestra el código actual de una clave sintética de esta demostración y termina.")
     parser.add_argument(
+        "--host-publico",
+        default="",
+        metavar="NOMBRE",
+        help="Nombre de host externo que esta demostración acepta, para publicarla tras un túnel "
+             "(por ejemplo algo.trycloudflare.com). Solo afecta a este proceso y no escribe nada.",
+    )
+    parser.add_argument(
         "--ia-local",
         action="store_true",
         help="Activa la IA con Ollama local (127.0.0.1:11434) solo en este proceso; no descarga modelos ni lee .env.",
@@ -128,6 +135,10 @@ def main():
     import uvicorn
 
     app, directory = build_preview()
+    if args.host_publico:
+        # Se lee en cada petición en api.py, así que no sirve fijarlo solo durante la
+        # construcción: `patch.dict` ya habría salido. Ámbito: este proceso.
+        os.environ["REIGEL_ALLOWED_HOSTS"] = args.host_publico.strip().lower()
     if args.ia_local:
         # Read at request time by ai_chat.enabled(); scoped to this process only.
         os.environ["REIGEL_CHAT_AI"] = "ollama"

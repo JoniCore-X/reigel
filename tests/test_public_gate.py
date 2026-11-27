@@ -78,3 +78,18 @@ def test_body_cap_is_the_visitor_file_limit_only_for_attachments():
     assert gate.body_limit("POST", f"/api/ia/conversations/{CID}/messages", gate.MAX_BODY) == gate.MAX_BODY
     assert gate.body_limit("POST", f"/api/ia/conversations/{CID}/attachments?x=1", gate.MAX_BODY) == gate.MAX_BODY
     assert gate.body_limit("DELETE", f"/api/ia/conversations/{CID}/attachments/{CID}", gate.MAX_BODY) == gate.MAX_BODY
+
+def test_every_asset_the_public_shell_pide_pasa_por_la_puerta():
+    """La puerta nombra una a una las hojas, los scripts y lo vendorizado que deja
+    pasar. Añadir un recurso a `landing.html` y olvidarlo aquí no rompe nada en local
+    —ahí no hay puerta— y en la demostración publicada da 404 en silencio: la página
+    carga pero sin escena, sin tipografía y sin estilos. Pasó el 27 de noviembre de
+    2026 con `solar-hero`, `display-type`, `scroll-cinema`, `solar-hero-3d`, Three.js
+    y la fuente."""
+    import re
+
+    shell = (Path(__file__).resolve().parents[1] / "frontend" / "landing.html").read_text(encoding="utf-8")
+    pedidos = set(re.findall(r'(?:href|src)="(/static/[^"?]+)', shell))
+    assert pedidos, "el shell tiene que pedir algo"
+    bloqueados = [ruta for ruta in sorted(pedidos) if not gate.decide("GET", ruta)]
+    assert not bloqueados, f"la puerta bloquea recursos que la portada pide: {bloqueados}"

@@ -45,11 +45,12 @@ STATIC_CSS = frozenset({
     "google-form", "ia", "panel-mount", "power-solar-identity", "public-header", "public-intents",
     "public-shell", "reigel-loader", "site-loader", "solar-theme", "styles", "system-showcase",
     "tesla-experience", "theme-switch", "uiverse-components",
+    "display-type", "scroll-cinema", "solar-hero",
 })
 STATIC_JS = frozenset({
     "chat", "corporate", "depth-3d", "energy-scene", "header-menu", "ia", "launcher-yield",
     "panel-mount", "public-intents", "reigel-loader", "site-loader", "system-showcase",
-    "tesla-experience", "theme",
+    "tesla-experience", "theme", "solar-hero-3d",
 })
 CONVERSATION = r"[0-9a-f]{32}"
 RE_ASSET = re.compile(r"/static/assets/power-solar/(?:(?:panel-mount|sistema)/)?[a-z0-9][a-z0-9-]*\.(?:webp|png|jpg|svg)")
@@ -59,7 +60,19 @@ RE_CONVERSATION = re.compile(rf"/api/ia/conversations/{CONVERSATION}")
 RE_MESSAGES = re.compile(rf"/api/ia/conversations/{CONVERSATION}/messages")
 RE_ATTACH = re.compile(rf"/api/ia/conversations/{CONVERSATION}/attachments")
 RE_ATTACHMENT = re.compile(rf"/api/ia/conversations/{CONVERSATION}/attachments/{CONVERSATION}")
-LICENSE = "/static/assets/licenses/uiverse-components.txt"
+# Lo vendorizado se sirve por ruta exacta, no por carpeta: la escena del hero y la
+# tipografía de los titulares son los dos únicos archivos de `vendor/` que la página
+# pública pide, y nombrarlos uno a uno deja la puerta tan cerrada como estaba.
+VENDOR = frozenset({
+    "/static/assets/vendor/three/three.module.min.js",
+    "/static/assets/vendor/fonts/space-grotesk-latin-wght-normal.woff2",
+})
+# Publicar algo con licencia MIT u OFL obliga a que su licencia sea alcanzable.
+LICENSES = frozenset({
+    "/static/assets/licenses/uiverse-components.txt",
+    "/static/assets/licenses/three-LICENSE.txt",
+    "/static/assets/licenses/space-grotesk-OFL.txt",
+})
 SAFE_PATH = re.compile(r"/[A-Za-z0-9._/-]*")
 SAFE_QUERY = re.compile(r"[A-Za-z0-9._~%+=&,-]*")
 
@@ -102,7 +115,7 @@ def decide(method: str, target: str) -> bool:
         # HEAD only where the app answers it (StaticFiles); FastAPI routes reply 405.
         if method == "GET" and (path in READ_EXACT or RE_CONVERSATION.fullmatch(path)):
             return True
-        if path == LICENSE or RE_ASSET.fullmatch(path):
+        if path in LICENSES or path in VENDOR or RE_ASSET.fullmatch(path):
             return True
         css = RE_CSS.fullmatch(path)
         if css:
