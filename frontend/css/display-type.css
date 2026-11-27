@@ -1,0 +1,54 @@
+/* Tipografía de titulares del sitio público.
+ *
+ * Hasta el 27 de noviembre de 2026 los titulares iban en `"Segoe UI", system-ui`:
+ * la fuente del sistema, que es exactamente lo que hace que una página se vea como
+ * cualquier otra. Space Grotesk tiene carácter —terminaciones cortadas, cuencos
+ * estrechos, una cursiva mecánica en los números— y a tamaño de hero se nota.
+ *
+ * Está vendorizada, no traída de Google: la política de contenido declara
+ * `font-src 'self'`, así que una fuente de otro origen no cargaría. El archivo es
+ * variable (eje de peso 300–700) y pesa 22 KB en el subconjunto latino, que cubre el
+ * español completo —acentos, eñe, apertura de interrogación y exclamación—. Un solo
+ * archivo para todos los pesos: pedir 400 y 700 por separado costaría más.
+ *
+ * Licencia SIL Open Font 1.1, copia íntegra en
+ * `frontend/assets/licenses/space-grotesk-OFL.txt`.
+ *
+ * Alcance deliberado: solo `.corporate-body`, que es el sitio público. El CRM se
+ * queda con la fuente del sistema, que para leer tablas y formularios a diario es
+ * mejor decisión que una display.
+ */
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  /* Un único archivo cubre el eje entero. */
+  font-weight: 300 700;
+  /* `swap`: antes que un titular invisible, uno con la fuente de respaldo. El enlace
+     de precarga en el shell hace que esa ventana sea casi inexistente. */
+  font-display: swap;
+  src: url("/static/assets/vendor/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Solo los titulares. El texto corrido sigue en la fuente del sistema: una display
+   a 13 px en un párrafo largo se lee peor, y aquí hay párrafos largos que importan.
+   Los rótulos pequeños en mayúsculas con tracking tampoco se tocan: ya funcionan. */
+.corporate-body :is(h1, h2),
+.corporate-body .corp-lead,
+.corporate-body .solar-hero h1 {
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  /* La Space Grotesk monta algo más suelta que la Segoe a tamaños grandes; este
+     ajuste le devuelve la compacidad que tenían los titulares. */
+  letter-spacing: -.028em;
+}
+
+/* La entradilla es texto, no titular: la fuente la hereda para que el bloque se lea
+   como una unidad, pero sin el tracking negativo, que a tamaño de párrafo aprieta. */
+.corporate-body .corp-lead { letter-spacing: -.004em; }
+
+/* Los números de la display tienen anchos distintos; en cualquier cifra alineada en
+   columna conviene fijarlos para que no bailen entre filas. */
+.corporate-body :is(h1, h2) { font-variant-numeric: tabular-nums; }
