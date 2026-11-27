@@ -298,6 +298,13 @@ Lista de comprobación:
       de intentos se compartirían entre todos): detente y revisa el DNS (sin
       intermediarios) e IPv6.
 - [ ] Reinicia el servidor (`sudo reboot`) y comprueba que todo vuelve solo.
+- [ ] **Enciende el motor comercial autónomo.** Llega apagado a propósito. En
+      `/app` → R.E.I.G.E.L., pulsa primero **«Ver el plan sin aplicarlo»** para
+      leer qué decidiría con tus registros reales, y solo entonces **«Encender el
+      motor»**. A partir de ahí revisa la cartera por su cuenta y abre tareas y
+      avisos internos; no envía mensajes, no marca llamadas y no cambia la etapa
+      de ningún registro. El interruptor vive en la base de datos, así que
+      sobrevive a los reinicios, y se apaga con el mismo botón.
 
 `scripts/doctor.py` es el diagnóstico del código en la computadora de
 desarrollo: necesita Git, Node.js y las pruebas, que no viajan en la imagen.
